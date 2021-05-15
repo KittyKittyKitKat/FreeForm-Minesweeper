@@ -329,8 +329,8 @@ class BoardSquare(tk.Label):
                         if isinstance(child_widget, BoardSquare) and child_widget.enabled:
                             self.neighbours[curr_direction] = child_widget
 
-    def uncover(self) -> None:
-        if GameControl.click_mode is ClickMode.FLAG:
+    def uncover(self, override_click_mode: bool = False) -> None:
+        if GameControl.click_mode is ClickMode.FLAG and not override_click_mode:
             self.flag()
         if not self.enabled or GameControl.game_state is GameState.DONE:
             return
@@ -348,7 +348,7 @@ class BoardSquare(tk.Label):
                 if not self.value:
                     for neighbour in self.neighbours.values():
                         if neighbour is not None and not neighbour.flagged:
-                            neighbour.uncover()
+                            neighbour.uncover(override_click_mode=override_click_mode)
             else:
                 if GameControl.grace_rule and GameControl.squares_uncovered == 0:
                     GameControl.reset_game()
@@ -375,7 +375,7 @@ class BoardSquare(tk.Label):
         WindowControl.update_flag_counter()
 
     def chord(self) -> None:
-        if not self.enabled or GameControl.game_state is GameState.DONE or GameControl.click_mode is ClickMode.FLAG:
+        if not self.enabled or GameControl.game_state is GameState.DONE:
             return
         if self.uncovered and not self.flagged:
             flags_around = 0
@@ -384,8 +384,8 @@ class BoardSquare(tk.Label):
                     flags_around += 1
             if flags_around == self.value:
                 for neighbour in self.neighbours.values():
-                    if neighbour is not None:
-                        neighbour.uncover()
+                    if neighbour is not None and not neighbour.flagged:
+                        neighbour.uncover(override_click_mode=True)
 
     def toggle_enable(self) -> None:
         if self.enabled:
