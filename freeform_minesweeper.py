@@ -436,7 +436,7 @@ class WindowControl:
     @staticmethod
     def init_window() -> None:
         WindowControl.root.resizable(0, 0)
-        WindowControl.root.title('FreeForm Minesweeper (Beta)')
+        WindowControl.root.title('FreeForm Minesweeper')
         WindowControl.main_frame.pack_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
         WindowControl.board_frame.grid_propagate(0)
