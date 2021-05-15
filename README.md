@@ -1,7 +1,7 @@
 # FreeForm Minesweeper
 FreeForm Minesweeper is the game of Minesweeper as you know and love, but now with the ability to play the classic game on any shape of board you can draw!
 
-### Running the game
+## Running the game
 Currently there are no game exectuables (those will be coming soon!) while the game is in its beta stage. To play FreeForm Minesweeper, just run `python freeform_minesweeper.py` from the command line with Python version 3.9.4 or greater and Pillow verison 8.2.0 or greater.
 
 ## How to start
@@ -38,6 +38,8 @@ Once you've started playing the game, you play it how normal Minesweeper works! 
    * The Minesweeper flag (flag.ffmnswpr)
    * The Minesweeper winning face (winface.ffmnswpr)
  * An optional font to play the game with. Highly recommended to install! Credit to [Gezoda on FontStruct](https://fontstruct.com/fontstructors/593973/gezoda)
+
+## Requirements
 
 ### Python Requirements
  * Python, version > 3.9.4
