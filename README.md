@@ -32,4 +32,4 @@ Once you've started playing the game, you play it how normal Minesweeper works! 
  * In game timer
 
 ## External Library Requirements
- * Pillow, version >8.2.0
+ * Pillow, version > 8.2.0
