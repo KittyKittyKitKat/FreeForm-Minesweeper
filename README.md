@@ -50,4 +50,5 @@ Once you've started playing the game, you play it how normal Minesweeper works! 
 ## Things to be done
  - [ ] Make executables for the game
  - [ ] Implement themes
+ - [ ] Finish frame colours for consisent appearances
  
