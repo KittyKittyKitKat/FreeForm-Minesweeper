@@ -48,6 +48,6 @@ Once you've started playing the game, you play it how normal Minesweeper works! 
  * Pillow, version > 8.2.0
 
 ## Things to be done
- [] Make executables for the game
- [] Implement themes
+ - [ ] Make executables for the game
+ - [ ] Implement themes
  
