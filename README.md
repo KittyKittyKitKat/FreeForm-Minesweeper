@@ -30,3 +30,6 @@ Once you've started playing the game, you play it how normal Minesweeper works! 
  * New game button
  * Flag Counter
  * In game timer
+
+## External Library Requirements
+ * Pillow, version >8.2.0
