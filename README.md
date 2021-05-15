@@ -2,7 +2,7 @@
 FreeForm Minesweeper is the game of Minesweeper as you know and love, but now with the ability to play the classic game on any shape of board you can draw!
 
 ### Running the game
-Currently there are no game exectuables (those will be coming soon!) while the game is in its beta stage. To play FreeForm Minesweeper, just run `python freeform_minesweeper.py` from the command line with Python version 3.9.4 or greater.
+Currently there are no game exectuables (those will be coming soon!) while the game is in its beta stage. To play FreeForm Minesweeper, just run `python freeform_minesweeper.py` from the command line with Python version 3.9.4 or greater and Pillow verison 8.2.0 or greater.
 
 ## How to start
 When you open the game, you're met with a pretty blank window. Before you start playing, you have to give yourself a board to play on! Simply click on on blacked out square to turn it on, and click on a square that is turned on to turn it back off again. You can also click and drag to paint squares on or off. If drawing a board isn't your fancy, chose one the 4 classic Minesweeper presets at the top: Easy, Medium, Hard, or Expert. These board come with their won difficulty setting so you can truly expericence at the click of a button! You can also use the Fill and Clear buttons to turn all on or off, respectively. After you've drawn yourself a board, select a difficulty from 1 to 4, with 1 being a small amount of mines and 4 being a lot of mines. Then just hit the play button at the top to start the game! If you liked the board you've drawn, you can hit the Save button to play with it again later, using the Load Button.
