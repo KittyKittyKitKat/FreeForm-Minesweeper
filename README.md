@@ -30,6 +30,11 @@ Once you've started playing the game, you play it how normal Minesweeper works! 
  * New game button
  * Flag Counter
  * In game timer
+ * A handful of fun board shapes to play on
+   * The Minesweeper mine (mine.ffmnswpr)
+   * The Minesweeper flag (flag.ffmnswpr)
+   * The Minesweeper winning face (winface.ffmnswpr)
+ * An optional font to play the game with. Highly recommended to install! Credit to [Gezoda on FontStruct](https://fontstruct.com/fontstructors/593973/gezoda)
 
 ## External Library Requirements
  * Pillow, version > 8.2.0
