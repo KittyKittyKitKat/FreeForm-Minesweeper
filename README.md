@@ -39,5 +39,8 @@ Once you've started playing the game, you play it how normal Minesweeper works! 
    * The Minesweeper winning face (winface.ffmnswpr)
  * An optional font to play the game with. Highly recommended to install! Credit to [Gezoda on FontStruct](https://fontstruct.com/fontstructors/593973/gezoda)
 
-## External Library Requirements
+### Python Requirements
+ * Python, version > 3.9.4
+
+### External Library Requirements
  * Pillow, version > 8.2.0
