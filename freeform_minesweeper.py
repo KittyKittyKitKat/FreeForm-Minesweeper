@@ -418,15 +418,21 @@ class WindowControl:
         root, width=Constants.WINDOW_WIDTH,
         height=Constants.BOARD_HEIGHT + Constants.SEGMENT_HEIGHT + 5 * Constants.PADDING_DIST, bg='black'
     )
-    menu_frame = tk.Frame(main_frame, width=Constants.WINDOW_WIDTH, height=Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST)  # , bg=Constants.BACKGROUND_COLOUR)
-    board_frame = tk.Frame(main_frame, width=Constants.WINDOW_WIDTH, height=Constants.BOARD_HEIGHT)
+    menu_frame = tk.Frame(
+        main_frame, width=Constants.WINDOW_WIDTH, height=Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST,
+        bg=Constants.BACKGROUND_COLOUR
+    )
+    board_frame = tk.Frame(
+        main_frame, width=Constants.WINDOW_WIDTH, height=Constants.BOARD_HEIGHT,
+        bg=Constants.BACKGROUND_COLOUR
+    )
 
-    mswpr_frame = tk.Frame(menu_frame)
-    presets_frame = tk.Frame(menu_frame)
-    diff_frame = tk.Frame(menu_frame)
-    timer_frame = tk.Frame(menu_frame)
-    flags_frame = tk.Frame(menu_frame)
-    controls_frame = tk.Frame(menu_frame)
+    mswpr_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
+    presets_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
+    diff_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
+    timer_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
+    flags_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
+    controls_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
 
     reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
     mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
@@ -507,7 +513,7 @@ class WindowControl:
         timer_right.grid(row=0, column=2)
         WindowControl.timer_frame.grid(row=0, column=3)
 
-        diff_label = tk.Label(WindowControl.diff_frame, text='Difficulty', font=Constants.FONT)
+        diff_label = tk.Label(WindowControl.diff_frame, text='Difficulty', font=Constants.FONT, bg=Constants.BACKGROUND_COLOUR)
         diff_1 = tk.Button(
             WindowControl.diff_frame, text='1', font=Constants.FONT,
             command=lambda diff=Difficulty.EASY: GameControl.change_difficulty(diff, diff_1)
