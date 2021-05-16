@@ -273,7 +273,7 @@ class GameControl:
                 board_bits[i] = row[leftmost:]
         # At this point the board is saved as rows of bits that has been trimmed down to the smallest possible dimensions of the board
         # Save to a file
-        board_file = filedialog.asksaveasfilename(initialdir='..', title='Save Board', filetypes=Constants.FILE_TYPE)
+        board_file = filedialog.asksaveasfilename(initialdir='../..', title='Save Board', filetypes=Constants.FILE_TYPE)
         try:
             with open(board_file, 'w') as board_save_file:
                 board_save_file.write('\n'.join(board_bits))
@@ -283,7 +283,7 @@ class GameControl:
 
     @staticmethod
     def load_board(filename: Optional[str] = None) -> None:
-        board_file = filename or filedialog.askopenfilename(initialdir='..', title='Open Board', filetypes=Constants.FILE_TYPE)
+        board_file = filename or filedialog.askopenfilename(initialdir='../..', title='Open Board', filetypes=Constants.FILE_TYPE)
         try:
             with open(board_file, 'r') as board_load_file:
                 board_bits = [line.strip() for line in board_load_file.readlines()]
