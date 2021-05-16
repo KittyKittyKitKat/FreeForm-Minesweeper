@@ -275,6 +275,7 @@ class GameControl:
         try:
             with open(board_file, 'w') as board_save_file:
                 board_save_file.write('\n'.join(board_bits))
+                board_save_file.write('\n')
         except Exception:
             messagebox.showerror(title='Saving Error', message='Was not able to save the file.')
 
