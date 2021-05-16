@@ -106,6 +106,7 @@ class GameControl:
 
     @staticmethod
     def play_game() -> None:
+        WindowControl.root.unbind('<Control-i>')
         num_squares = sum([1 if sq.enabled else 0 for sq in WindowControl.board_frame.grid_slaves()])
         GameControl.num_mines = min(int(num_squares * GameControl.difficulty.value), 999)
         GameControl.squares_to_win = num_squares - GameControl.num_mines
@@ -165,6 +166,7 @@ class GameControl:
     @staticmethod
     def stop_game() -> None:
         GameControl.on_hold = True
+        WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
@@ -296,6 +298,11 @@ class GameControl:
             for curr_col, bit in enumerate(bit_row):
                 if bit == '1':
                     WindowControl.board_frame.grid_slaves(row=curr_row, column=curr_col)[0].toggle_enable()
+
+    @staticmethod
+    def invert_board() -> None:
+        for sq in WindowControl.board_frame.grid_slaves():
+            sq.toggle_enable()
 
 
 class BoardSquare(tk.Label):
@@ -444,6 +451,7 @@ class WindowControl:
     def init_window() -> None:
         WindowControl.root.resizable(0, 0)
         WindowControl.root.title('FreeForm Minesweeper')
+        WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.main_frame.pack_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
         WindowControl.board_frame.grid_propagate(0)
