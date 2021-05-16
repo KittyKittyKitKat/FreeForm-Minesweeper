@@ -470,19 +470,19 @@ class WindowControl:
     def init_menu() -> None:
         preset_easy = tk.Button(
             WindowControl.presets_frame, text='Easy', font=Constants.FONT, width=6,
-            command=lambda: GameControl.change_difficulty(Difficulty.EASY, diff_1) or GameControl.load_board('boards/easy.ffmnswpr')
+            command=lambda: GameControl.change_difficulty(Difficulty.EASY, diff_1) or GameControl.load_board('presets/easy.ffmnswpr')
         )
         preset_medium = tk.Button(
             WindowControl.presets_frame, text='Medium', font=Constants.FONT, width=6,
-            command=lambda: GameControl.change_difficulty(Difficulty.MEDIUM, diff_2) or GameControl.load_board('boards/medium.ffmnswpr')
+            command=lambda: GameControl.change_difficulty(Difficulty.MEDIUM, diff_2) or GameControl.load_board('presets/medium.ffmnswpr')
         )
         preset_hard = tk.Button(
             WindowControl.presets_frame, text='Hard', font=Constants.FONT, width=6,
-            command=lambda: GameControl.change_difficulty(Difficulty.HARD, diff_3) or GameControl.load_board('boards/hard.ffmnswpr')
+            command=lambda: GameControl.change_difficulty(Difficulty.HARD, diff_3) or GameControl.load_board('presets/hard.ffmnswpr')
         )
         preset_expert = tk.Button(
             WindowControl.presets_frame, text='Expert', font=Constants.FONT, width=6,
-            command=lambda: GameControl.change_difficulty(Difficulty.EXPERT, diff_4) or GameControl.load_board('boards/expert.ffmnswpr')
+            command=lambda: GameControl.change_difficulty(Difficulty.EXPERT, diff_4) or GameControl.load_board('presets/expert.ffmnswpr')
         )
         preset_easy.grid(row=0, column=0)
         preset_medium.grid(row=0, column=1)
