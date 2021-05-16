@@ -416,7 +416,7 @@ class WindowControl:
     root = tk.Tk()
     main_frame = tk.Frame(
         root, width=Constants.WINDOW_WIDTH,
-        height=Constants.BOARD_HEIGHT + Constants.SEGMENT_HEIGHT + 5 * Constants.PADDING_DIST, bg='black'
+        height=Constants.BOARD_HEIGHT + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST, bg='black'
     )
     menu_frame = tk.Frame(
         main_frame, width=Constants.WINDOW_WIDTH, height=Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST,
@@ -448,7 +448,7 @@ class WindowControl:
         WindowControl.board_frame.grid_propagate(0)
         for i in range(8):
             WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
-        WindowControl.menu_frame.pack(pady=(0, Constants.PADDING_DIST))
+        WindowControl.menu_frame.pack()
         WindowControl.board_frame.pack()
         WindowControl.main_frame.pack()
 
