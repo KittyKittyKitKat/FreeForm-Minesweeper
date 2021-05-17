@@ -28,15 +28,19 @@ class Difficulty(Enum):
     EXPERT = 0.25
 
 
+class Options:
+    rows = 30
+    cols = 28
+    mutlimines = False
+
+
 class Constants:
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
     SEGMENT_WIDTH = 26
     PADDING_DIST = 5
-    ROWS = 28
-    COLS = 30
-    WINDOW_WIDTH = BOARD_SQUARE_SIZE * COLS
-    BOARD_HEIGHT = BOARD_SQUARE_SIZE * ROWS
+    WINDOW_WIDTH = BOARD_SQUARE_SIZE * Options.cols
+    BOARD_HEIGHT = BOARD_SQUARE_SIZE * Options.rows
     BACKGROUND_COLOUR = '#c0c0c0'
     DEFAULT_COLOUR = '#d9d9d9'
     FONT = ('MINE-SWEEPER', 7, 'normal')
@@ -236,17 +240,17 @@ class GameControl:
     def save_board() -> None:
         # Commented to hell and back in case I ever forget my logic here
         # Keep track of the leftmost enabled sqaure. Set to the right side of the field
-        leftmost = Constants.COLS - 1
+        leftmost = Options.cols - 1
         # Will be the final bit mapping of the board
         board_bits = []
         # A flag for detecting when the first row with an enabled square is hit
         reached_content = False
         # Iterate over the number rows of the field
-        for row in range(Constants.ROWS):
+        for row in range(Options.rows):
             # Define an empty string that will represent the bits in a row
             bit_row = ''
             # Iterate over the number of columns in the field
-            for col in range(Constants.COLS):
+            for col in range(Options.cols):
                 # Get the square at the current position
                 square = WindowControl.board_frame.grid_slaves(row=row, column=col)[0]
                 # Set the next bit in the row to be 1 if the square is enabled and 0 if it is not
@@ -302,7 +306,7 @@ class GameControl:
         except Exception:
             messagebox.showerror(title='Opening Error', message='Was not able to open the file.')
             return
-        if len(board_bits) > Constants.ROWS or len(max(board_bits, key=len)) > Constants.COLS:
+        if len(board_bits) > Options.rows or len(max(board_bits, key=len)) > Options.cols:
             messagebox.showerror(title='Loading Error', message='Board was too large to be loaded properly.')
             return
         GameControl.clear_board()
@@ -475,12 +479,12 @@ class WindowControl:
 
     @staticmethod
     def init_board() -> None:
-        for i in range(Constants.ROWS):
+        for i in range(Options.rows):
             WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
-        for i in range(Constants.COLS):
+        for i in range(Options.cols):
             WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
-        for x in range(Constants.ROWS):
-            for y in range(Constants.COLS):
+        for x in range(Options.rows):
+            for y in range(Options.cols):
                 sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[-2])
                 sq.toggle_enable()
                 sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
@@ -597,7 +601,7 @@ class WindowControl:
         x = (event.x_root - initial_square.master.winfo_rootx()) // Constants.BOARD_SQUARE_SIZE
         y = (event.y_root - initial_square.master.winfo_rooty()) // Constants.BOARD_SQUARE_SIZE
         GameControl.drag_mode = initial_square.enabled
-        if x in range(Constants.ROWS) and y in range(Constants.COLS):
+        if x in range(Options.rows) and y in range(Options.cols):
             try:
                 square = WindowControl.board_frame.grid_slaves(row=y, column=x)[0]
             except IndexError:
