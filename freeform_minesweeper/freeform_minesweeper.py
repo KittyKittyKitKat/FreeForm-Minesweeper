@@ -393,7 +393,7 @@ class BoardSquare(tk.Label):
             GameControl.flags_placed += 1
         elif self.flagged:
             self.flagged = not self.flagged
-            self.image = Constants.BOARD_IMAGES[-2]
+            self.image = Constants.BOARD_IMAGES[19]
             self.config(im=self.image)
             GameControl.flags_placed -= 1
         WindowControl.update_flag_counter()
@@ -413,7 +413,7 @@ class BoardSquare(tk.Label):
 
     def toggle_enable(self) -> None:
         if self.enabled:
-            self.config(im=Constants.BOARD_IMAGES[-1])
+            self.config(im=Constants.BOARD_IMAGES[20])
         else:
             self.config(im=self.image)
         self.enabled = not self.enabled
@@ -424,10 +424,10 @@ class BoardSquare(tk.Label):
 
     def unlock(self) -> None:
         if not self.enabled:
-            self.config(im=Constants.BOARD_IMAGES[-1])
+            self.config(im=Constants.BOARD_IMAGES[20])
 
     def reset(self) -> None:
-        self.image = Constants.BOARD_IMAGES[-2]
+        self.image = Constants.BOARD_IMAGES[19]
         self.config(im=self.image)
         self.uncovered = False
         self.flagged = False
@@ -485,7 +485,7 @@ class WindowControl:
             WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
         for x in range(Options.rows):
             for y in range(Options.cols):
-                sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[-2])
+                sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[19])
                 sq.toggle_enable()
                 sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
                 sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
@@ -615,6 +615,7 @@ def main() -> None:
     WindowControl.init_window()
     Constants.init_board_images()
     Constants.init_sevseg_images()
+    Constants.init_extended_board_images()
     Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
