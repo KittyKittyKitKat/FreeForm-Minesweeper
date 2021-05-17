@@ -69,6 +69,18 @@ class Constants:
                     SEVSEG_IMAGES.append(im2)
         setattr(Constants, 'SEVSEG_IMAGES', SEVSEG_IMAGES)
 
+    @staticmethod
+    def init_extended_board_images() -> None:
+        EXTENDED_BOARD_IMAGES = []
+        with Image.open('assets/board_sheet.png') as board_sheet:
+            x, y = board_sheet.size
+            for i in range(0, y, Constants.BOARD_SQUARE_SIZE):
+                for j in range(0, x, Constants.BOARD_SQUARE_SIZE):
+                    im = board_sheet.crop((j, i, j + Constants.BOARD_SQUARE_SIZE, i + Constants.BOARD_SQUARE_SIZE))
+                    im2 = ImageTk.PhotoImage(im)
+                    EXTENDED_BOARD_IMAGES.append(im2)
+        setattr(Constants, 'BOARD_IMAGES', EXTENDED_BOARD_IMAGES)
+
 
 class GameControl:
     click_mode = ClickMode.UNCOVER
