@@ -255,12 +255,18 @@ class GameControl:
             GameControl.click_mode = ClickMode.FLAG
             WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[18])
             for sq in WindowControl.board_frame.grid_slaves():
-                sq.bind('<Button-1>', lambda event, square=sq: square.flag())
+                if Options.multimines:
+                    sq.bind('<Button-1>', lambda event, square=sq: square.add_flag())
+                    sq.bind('<Button-3>', lambda event, square=sq: square.remove_flag())
+                else:
+                    sq.bind('<Button-1>', lambda event, square=sq: square.flag())
         else:
             GameControl.click_mode = ClickMode.UNCOVER
             WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
             for sq in WindowControl.board_frame.grid_slaves():
                 sq.bind('<Button-1>', lambda event, square=sq: square.uncover())
+                if Options.multimines:
+                    sq.unbind('<Button-3>')
 
     @staticmethod
     def save_board() -> None:
@@ -431,10 +437,10 @@ class BoardSquare(tk.Label):
         WindowControl.update_flag_counter()
 
     def add_flag(self) -> None:  # For multimine
-        ...
+        print('add_flag')
 
     def remove_flag(self) -> None:  # For multimine
-        ...
+        print('remove_flag')
 
     def chord(self) -> None:
         if not self.enabled or GameControl.game_state is GameState.DONE:
