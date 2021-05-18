@@ -361,7 +361,7 @@ class BoardSquare(tk.Label):
         self.uncovered = False
         self.flagged = False
         self.enabled = True
-        self.num_flags = 0
+        self.num_flags = 0  # For multimine
         self.value = 0
         self.directions = ('nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se')
         self.neighbours = dict.fromkeys(self.directions)
@@ -426,21 +426,45 @@ class BoardSquare(tk.Label):
             return
         if not self.flagged and GameControl.flags_placed < GameControl.num_mines:
             self.flagged = not self.flagged
+            self.num_flags = 1
             self.image = Constants.BOARD_IMAGES[11]
             self.config(im=self.image)
             GameControl.flags_placed += 1
         elif self.flagged:
             self.flagged = not self.flagged
+            self.num_flags = 0
             self.image = Constants.BOARD_IMAGES[20]
             self.config(im=self.image)
             GameControl.flags_placed -= 1
         WindowControl.update_flag_counter()
 
     def add_flag(self) -> None:  # For multimine
-        print('add_flag')
+        if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
+            return
+        if self.num_flags < 5:
+            self.num_flags += 1
+            GameControl.flags_placed += 1
+            if self.num_flags == 1:
+                self.image = Constants.BOARD_IMAGES[11]
+            else:
+                self.image = Constants.EXTENDED_BOARD_IMAGES[self.num_flags + 38]
+            self.config(im=self.image)
+        WindowControl.update_flag_counter()
 
     def remove_flag(self) -> None:  # For multimine
-        print('remove_flag')
+        if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
+            return
+        if self.num_flags > 0:
+            self.num_flags -= 1
+            GameControl.flags_placed -= 1
+            if self.num_flags == 1:
+                self.image = Constants.BOARD_IMAGES[11]
+            elif self.num_flags == 0:
+                self.image = Constants.BOARD_IMAGES[20]
+            else:
+                self.image = Constants.EXTENDED_BOARD_IMAGES[self.num_flags + 38]
+            self.config(im=self.image)
+        WindowControl.update_flag_counter()
 
     def chord(self) -> None:
         if not self.enabled or GameControl.game_state is GameState.DONE:
