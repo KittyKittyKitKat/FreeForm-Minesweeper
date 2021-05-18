@@ -509,6 +509,7 @@ class BoardSquare(tk.Label):
         self.config(im=self.image)
         self.uncovered = False
         self.flagged = False
+        self.num_flags = 0
         self.enabled = True
         self.value = 0
         self.neighbours = dict.fromkeys(self.directions)
