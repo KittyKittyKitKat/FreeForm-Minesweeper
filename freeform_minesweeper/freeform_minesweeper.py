@@ -31,8 +31,9 @@ class Difficulty(Enum):
 class Options:
     rows = 28
     cols = 30
-    multimines = False
+    multimines = True
     grace_rule = True
+    multimine_increase = 0.2
 
 
 class Constants:
@@ -137,7 +138,7 @@ class GameControl:
     def play_game() -> None:
         WindowControl.root.unbind('<Control-i>')
         WindowControl.root.bind('<Control-s>', lambda event: GameControl.switch_mode())
-        local_diff = GameControl.difficulty.value + 0.25 if Options.multimines else GameControl.difficulty.value
+        local_diff = GameControl.difficulty.value + Options.multimine_increase if Options.multimines else GameControl.difficulty.value
         num_squares = sum([1 if sq.enabled else 0 for sq in WindowControl.board_frame.grid_slaves()])
         GameControl.num_mines = min(int(num_squares * local_diff), 999)
         GameControl.squares_to_win = num_squares - GameControl.num_mines
