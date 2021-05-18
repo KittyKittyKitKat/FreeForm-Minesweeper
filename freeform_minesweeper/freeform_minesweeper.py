@@ -117,11 +117,11 @@ class GameControl:
             GameControl.flags_placed = GameControl.num_mines
             WindowControl.update_flag_counter()
             for square in WindowControl.board_frame.grid_slaves():
-                if square.enabled and not square.uncovered:
-                    if square.num_flags == 1:
+                if square.enabled and not square.uncovered and square.value < 0:
+                    if square.value == -1:
                         square.config(im=Constants.BOARD_IMAGES[11])
-                    elif square.num_flags > 1:
-                        square.config(im=Constants.EXTENDED_BOARD_IMAGES[square.num_flags + 38])
+                    else:
+                        square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 38])
 
     @staticmethod
     def has_lost() -> None:
@@ -147,7 +147,7 @@ class GameControl:
     @staticmethod
     def play_game() -> None:
         WindowControl.root.unbind('<Control-i>')
-        WindowControl.root.bind('<Control-s>', lambda event: GameControl.switch_mode())
+        WindowControl.root.bind('<Control-f>', lambda event: GameControl.switch_mode())
 
         local_diff = GameControl.difficulty.value + Options.multimine_increase if Options.multimines else GameControl.difficulty.value
         num_squares = sum([1 if sq.enabled else 0 for sq in WindowControl.board_frame.grid_slaves()])
@@ -223,7 +223,7 @@ class GameControl:
     def stop_game() -> None:
         GameControl.on_hold = True
         WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
-        WindowControl.root.unbind('<Control-s>')
+        WindowControl.root.unbind('<Control-f>')
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
@@ -464,7 +464,7 @@ class BoardSquare(tk.Label):
     def add_flag(self) -> None:  # For multimine
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
-        if self.num_flags < 5:
+        if self.num_flags < 5 and GameControl.flags_placed < GameControl.num_mines:
             self.num_flags += 1
             self.flagged = True
             GameControl.flags_placed += 1
