@@ -605,7 +605,7 @@ class WindowControl:
 
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
-        WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19])
+        WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19], command=WindowControl.settings_window)
         WindowControl.mode_switch_button.grid(row=0, column=0)
         WindowControl.reset_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3)
         WindowControl.settings_button.grid(row=0, column=2)
@@ -691,6 +691,10 @@ class WindowControl:
             else:
                 if square.enabled is not GameControl.drag_mode:
                     square.toggle_enable()
+
+    @staticmethod
+    def settings_window() -> None:
+        ...
 
 
 def main() -> None:
