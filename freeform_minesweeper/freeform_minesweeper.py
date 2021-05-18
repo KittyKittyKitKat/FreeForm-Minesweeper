@@ -132,7 +132,13 @@ class GameControl:
                 square.config(im=Constants.BOARD_IMAGES[9])
             elif square.enabled and not square.uncovered and not square.flagged and square.value < -1:
                 square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 30])
+
             if square.flagged and square.value > -1:
+                if square.num_flags == 1:
+                    square.config(im=Constants.BOARD_IMAGES[12])
+                elif square.num_flags > 1:
+                    square.config(im=Constants.EXTENDED_BOARD_IMAGES[square.num_flags + 42])
+            elif square.flagged and square.value <= -1 and square.num_flags != -square.value:
                 if square.num_flags == 1:
                     square.config(im=Constants.BOARD_IMAGES[12])
                 elif square.num_flags > 1:
@@ -378,7 +384,7 @@ class BoardSquare(tk.Label):
         self.uncovered = False
         self.flagged = False
         self.enabled = True
-        self.num_flags = 0  # For multimine
+        self.num_flags = 0
         self.value = 0
         self.directions = ('nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se')
         self.neighbours = dict.fromkeys(self.directions)
@@ -492,7 +498,7 @@ class BoardSquare(tk.Label):
             flags_around = 0
             for neighbour in self.neighbours.values():
                 if neighbour is not None and neighbour.flagged:
-                    flags_around += 1
+                    flags_around += neighbour.num_flags
             if flags_around == self.value:
                 for neighbour in self.neighbours.values():
                     if neighbour is not None and not neighbour.flagged:
