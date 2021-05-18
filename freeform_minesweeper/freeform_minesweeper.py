@@ -176,7 +176,8 @@ class GameControl:
         btns = chain(
             WindowControl.diff_frame.grid_slaves(),
             WindowControl.controls_frame.grid_slaves(),
-            WindowControl.presets_frame.grid_slaves()
+            WindowControl.presets_frame.grid_slaves(),
+            (WindowControl.settings_button,)
         )
         for btn in btns:
             if isinstance(btn, tk.Button):
@@ -215,7 +216,8 @@ class GameControl:
         btns = chain(
             WindowControl.diff_frame.grid_slaves(),
             WindowControl.controls_frame.grid_slaves(),
-            WindowControl.presets_frame.grid_slaves()
+            WindowControl.presets_frame.grid_slaves(),
+            (WindowControl.settings_button,)
         )
         for btn in btns:
             if isinstance(btn, tk.Button):
@@ -495,6 +497,7 @@ class WindowControl:
 
     reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
     mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
+    settings_button = tk.Button(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
     play_button = tk.Button(mswpr_frame, text='Play', font=Constants.FONT, width=5, command=GameControl.play_game)
     stop_button = tk.Button(mswpr_frame, text='Stop', font=Constants.FONT, width=5, command=GameControl.stop_game)
 
@@ -560,9 +563,11 @@ class WindowControl:
 
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
-        WindowControl.mode_switch_button.grid(row=0, column=0, pady=2)
-        WindowControl.reset_button.grid(row=0, column=1)
-        WindowControl.play_button.grid(row=1, column=0, columnspan=2)
+        WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19])
+        WindowControl.mode_switch_button.grid(row=0, column=0)
+        WindowControl.reset_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3)
+        WindowControl.settings_button.grid(row=0, column=2)
+        WindowControl.play_button.grid(row=1, column=0, columnspan=3)
         WindowControl.mswpr_frame.grid(row=0, column=2)
 
         timer_left = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
