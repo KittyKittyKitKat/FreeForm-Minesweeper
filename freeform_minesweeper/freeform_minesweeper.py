@@ -31,8 +31,8 @@ class Difficulty(Enum):
 class Options:
     rows = 28
     cols = 30
-    multimines = True
-    grace_rule = False
+    multimines = False
+    grace_rule = True
 
 
 class Constants:
@@ -122,7 +122,7 @@ class GameControl:
     @staticmethod
     def has_lost() -> None:
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[15])
-        # GameControl.game_state = GameState.DONE
+        GameControl.game_state = GameState.DONE
         for square in WindowControl.board_frame.grid_slaves():
             if square.enabled and not square.uncovered and not square.flagged and square.value == -1:
                 square.config(im=Constants.BOARD_IMAGES[9])
@@ -137,7 +137,7 @@ class GameControl:
     def play_game() -> None:
         WindowControl.root.unbind('<Control-i>')
         WindowControl.root.bind('<Control-s>', lambda event: GameControl.switch_mode())
-        local_diff = GameControl.difficulty.value + 0.25 if Options.multimines else 0
+        local_diff = GameControl.difficulty.value + 0.25 if Options.multimines else GameControl.difficulty.value
         num_squares = sum([1 if sq.enabled else 0 for sq in WindowControl.board_frame.grid_slaves()])
         GameControl.num_mines = min(int(num_squares * local_diff), 999)
         GameControl.squares_to_win = num_squares - GameControl.num_mines
@@ -150,10 +150,11 @@ class GameControl:
         WindowControl.update_flag_counter()
         squares = WindowControl.board_frame.grid_slaves()
         mines_placed = 0
+        max_mines = 1 if not Options.multimines else 5
         while mines_placed < GameControl.num_mines:
             sq = random.choice(squares)
-            if (not sq.value or Options.multimines) and sq.enabled:
-                if sq.value != -5:
+            if sq.enabled:
+                if sq.value != -max_mines:
                     sq.value -= 1
                     mines_placed += 1
 
@@ -409,7 +410,7 @@ class BoardSquare(tk.Label):
                 elif self.value < -1:
                     self.image = Constants.EXTENDED_BOARD_IMAGES[-self.value + 34]
                 self.config(im=self.image)
-        # GameControl.check_win()
+        GameControl.check_win()
 
     def flag(self) -> None:  # For normal gameplay
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
