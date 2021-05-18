@@ -45,12 +45,13 @@ class Constants:
     DEFAULT_COLOUR = '#d9d9d9'
     FONT = ('MINE-SWEEPER', 7, 'normal')
     MAINLOOP_TIME = 0.01
-    BLACK_SQUARE = Image.new('RGBA', size=(32, 32), color=(0, 0, 0))
+    LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(32, 32), color=(0, 0, 0))
+    UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(32, 32), color=(0, 0, 0))
     FILE_TYPE = (('FreeForm Minesweeper Board', '*.ffmnswpr'),)
 
     @staticmethod
     def init_board_images() -> None:
-        Constants.BLACK_SQUARE = ImageTk.PhotoImage(image=Constants.BLACK_SQUARE)
+        Constants.LOCKED_BLACK_SQUARE = ImageTk.PhotoImage(image=Constants.LOCKED_BLACK_SQUARE)
         BOARD_IMAGES = []
         with Image.open('assets/board_sheet.png') as board_sheet:
             x, y = board_sheet.size
@@ -393,7 +394,7 @@ class BoardSquare(tk.Label):
             GameControl.flags_placed += 1
         elif self.flagged:
             self.flagged = not self.flagged
-            self.image = Constants.BOARD_IMAGES[19]
+            self.image = Constants.BOARD_IMAGES[20]
             self.config(im=self.image)
             GameControl.flags_placed -= 1
         WindowControl.update_flag_counter()
@@ -413,21 +414,21 @@ class BoardSquare(tk.Label):
 
     def toggle_enable(self) -> None:
         if self.enabled:
-            self.config(im=Constants.BOARD_IMAGES[20])
+            self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
         else:
             self.config(im=self.image)
         self.enabled = not self.enabled
 
     def lock(self) -> None:
         if not self.enabled:
-            self.config(im=Constants.BLACK_SQUARE)
+            self.config(im=Constants.LOCKED_BLACK_SQUARE)
 
     def unlock(self) -> None:
         if not self.enabled:
-            self.config(im=Constants.BOARD_IMAGES[20])
+            self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
 
     def reset(self) -> None:
-        self.image = Constants.BOARD_IMAGES[19]
+        self.image = Constants.BOARD_IMAGES[20]
         self.config(im=self.image)
         self.uncovered = False
         self.flagged = False
@@ -485,7 +486,7 @@ class WindowControl:
             WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
         for x in range(Options.rows):
             for y in range(Options.cols):
-                sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[19])
+                sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[20])
                 sq.toggle_enable()
                 sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
                 sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
