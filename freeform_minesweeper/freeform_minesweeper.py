@@ -149,7 +149,8 @@ class GameControl:
         GameControl.squares_uncovered = 0
         GameControl.flags_placed = 0
         GameControl.seconds_elpased = 0
-        GameControl.click_mode = ClickMode.UNCOVER
+        if GameControl.click_mode is ClickMode.FLAG:
+            GameControl.switch_mode()
         GameControl.on_hold = False
 
         WindowControl.update_flag_counter()
@@ -446,7 +447,6 @@ class BoardSquare(tk.Label):
         WindowControl.update_flag_counter()
 
     def add_flag(self) -> None:  # For multimine
-        print('reached')
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
         if self.num_flags < 5:
