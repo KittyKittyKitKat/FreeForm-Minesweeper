@@ -45,12 +45,20 @@ class Constants:
     DEFAULT_COLOUR = '#d9d9d9'
     FONT = ('MINE-SWEEPER', 7, 'normal')
     MAINLOOP_TIME = 0.01
-    LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(32, 32), color=(0, 0, 0))
-    UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(32, 32), color=(0, 0, 0))
+    LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
+    UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     FILE_TYPE = (('FreeForm Minesweeper Board', '*.ffmnswpr'),)
 
     @staticmethod
     def init_board_images() -> None:
+        ubs_x, ubs_y = Constants.UNLOCKED_BLACK_SQUARE.size
+        for i in range(ubs_y):
+            Constants.UNLOCKED_BLACK_SQUARE.putpixel((0, i), (128, 128, 128))
+            Constants.UNLOCKED_BLACK_SQUARE.putpixel((1, i), (128, 128, 128))
+        for i in range(ubs_x):
+            Constants.UNLOCKED_BLACK_SQUARE.putpixel((i, 0), (128, 128, 128))
+            Constants.UNLOCKED_BLACK_SQUARE.putpixel((i, 1), (128, 128, 128))
+        Constants.UNLOCKED_BLACK_SQUARE = ImageTk.PhotoImage(image=Constants.UNLOCKED_BLACK_SQUARE)
         Constants.LOCKED_BLACK_SQUARE = ImageTk.PhotoImage(image=Constants.LOCKED_BLACK_SQUARE)
         BOARD_IMAGES = []
         with Image.open('assets/board_sheet.png') as board_sheet:
