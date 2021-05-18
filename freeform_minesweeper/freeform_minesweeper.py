@@ -142,10 +142,10 @@ class GameControl:
     def play_game() -> None:
         WindowControl.root.unbind('<Control-i>')
         WindowControl.root.bind('<Control-s>', lambda event: GameControl.switch_mode())
+
         local_diff = GameControl.difficulty.value + Options.multimine_increase if Options.multimines else GameControl.difficulty.value
         num_squares = sum([1 if sq.enabled else 0 for sq in WindowControl.board_frame.grid_slaves()])
-        GameControl.num_mines = min(int(num_squares * local_diff), 999)
-        GameControl.squares_to_win = num_squares - GameControl.num_mines
+
         GameControl.squares_uncovered = 0
         GameControl.flags_placed = 0
         GameControl.seconds_elpased = 0
@@ -153,16 +153,24 @@ class GameControl:
             GameControl.switch_mode()
         GameControl.on_hold = False
 
-        WindowControl.update_flag_counter()
         squares = WindowControl.board_frame.grid_slaves()
         mines_placed = 0
         max_mines = 1 if not Options.multimines else 5
+        GameControl.num_mines = min(int(num_squares * local_diff), 999)
+
         while mines_placed < GameControl.num_mines:
             sq = random.choice(squares)
             if sq.enabled:
                 if sq.value != -max_mines:
                     sq.value -= 1
                     mines_placed += 1
+
+        squares_wth_mines = 0
+        for sq in squares:
+            if sq.value < 0:
+                squares_wth_mines += 1
+
+        GameControl.squares_to_win = num_squares - squares_wth_mines
 
         for sq in squares:
             sq.lock()
@@ -189,6 +197,7 @@ class GameControl:
             if isinstance(btn, tk.Button):
                 btn.config(state='disabled')
 
+        WindowControl.update_flag_counter()
         GameControl.game_state = GameState.PLAYING
 
     @staticmethod
