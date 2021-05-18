@@ -118,7 +118,10 @@ class GameControl:
             WindowControl.update_flag_counter()
             for square in WindowControl.board_frame.grid_slaves():
                 if square.enabled and not square.uncovered:
-                    square.config(im=Constants.BOARD_IMAGES[11])
+                    if square.num_flags == 1:
+                        square.config(im=Constants.BOARD_IMAGES[11])
+                    elif square.num_flags > 1:
+                        square.config(im=Constants.EXTENDED_BOARD_IMAGES[square.num_flags + 38])
 
     @staticmethod
     def has_lost() -> None:
@@ -129,10 +132,11 @@ class GameControl:
                 square.config(im=Constants.BOARD_IMAGES[9])
             elif square.enabled and not square.uncovered and not square.flagged and square.value < -1:
                 square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 30])
-            else:
-                square.uncover()
-            if square.flagged and square.value != -1:
-                square.config(im=Constants.BOARD_IMAGES[12])
+            if square.flagged and square.value > -1:
+                if square.num_flags == 1:
+                    square.config(im=Constants.BOARD_IMAGES[12])
+                elif square.num_flags > 1:
+                    square.config(im=Constants.EXTENDED_BOARD_IMAGES[square.num_flags + 42])
 
     @staticmethod
     def play_game() -> None:
@@ -258,6 +262,7 @@ class GameControl:
                 if Options.multimines:
                     sq.bind('<Button-1>', lambda event, square=sq: square.add_flag())
                     sq.bind('<Button-3>', lambda event, square=sq: square.remove_flag())
+                    sq.bind('<Double-Button-1>', lambda event, square=sq: square.add_flag(), add='+')
                 else:
                     sq.bind('<Button-1>', lambda event, square=sq: square.flag())
         else:
@@ -267,6 +272,8 @@ class GameControl:
                 sq.bind('<Button-1>', lambda event, square=sq: square.uncover())
                 if Options.multimines:
                     sq.unbind('<Button-3>')
+                    sq.unbind('<Double-Button-1>')
+                    sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
     @staticmethod
     def save_board() -> None:
@@ -439,10 +446,12 @@ class BoardSquare(tk.Label):
         WindowControl.update_flag_counter()
 
     def add_flag(self) -> None:  # For multimine
+        print('reached')
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
         if self.num_flags < 5:
             self.num_flags += 1
+            self.flagged = True
             GameControl.flags_placed += 1
             if self.num_flags == 1:
                 self.image = Constants.BOARD_IMAGES[11]
@@ -461,6 +470,7 @@ class BoardSquare(tk.Label):
                 self.image = Constants.BOARD_IMAGES[11]
             elif self.num_flags == 0:
                 self.image = Constants.BOARD_IMAGES[20]
+                self.flagged = False
             else:
                 self.image = Constants.EXTENDED_BOARD_IMAGES[self.num_flags + 38]
             self.config(im=self.image)
