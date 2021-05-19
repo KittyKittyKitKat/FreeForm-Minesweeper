@@ -189,7 +189,7 @@ class GameControl:
             sq.link_to_neighbours()
             sq.unbind('<B1-Motion>')
             sq.bind('<Button-1>', lambda event, square=sq: square.uncover())
-            if not Options.multimines and not Options.flagless:
+            if not(Options.flagless or Options.multimines):
                 sq.bind('<Button-3>', lambda event, square=sq: square.flag())
             sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
