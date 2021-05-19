@@ -1,6 +1,0 @@
-# Ignore all FreeForm Minesweeper boards in root directory
-/*.ffmnswpr
-*.xcf
-colours.png
-__pycache__
-.gitignore
