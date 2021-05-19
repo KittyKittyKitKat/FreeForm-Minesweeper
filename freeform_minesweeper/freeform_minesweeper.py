@@ -29,23 +29,25 @@ class Difficulty(Enum):
 
 
 class Options:
-    rows = 28
-    cols = 30
-    multimines = True
+    multimines = False
     grace_rule = True
     multimine_increase = 0.2
+    flagless = False
 
 
 class Constants:
+    ROWS = 28
+    COLS = 30
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
     SEGMENT_WIDTH = 26
     PADDING_DIST = 5
-    WINDOW_WIDTH = BOARD_SQUARE_SIZE * Options.cols
-    BOARD_HEIGHT = BOARD_SQUARE_SIZE * Options.rows
+    WINDOW_WIDTH = BOARD_SQUARE_SIZE * COLS
+    BOARD_HEIGHT = BOARD_SQUARE_SIZE * ROWS
     BACKGROUND_COLOUR = '#c0c0c0'
     DEFAULT_COLOUR = '#d9d9d9'
     FONT = ('MINE-SWEEPER', 7, 'normal')
+    FONT_BIG = ('MINE-SWEEPER', 9, 'normal')
     MAINLOOP_TIME = 0.01
     LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
@@ -147,7 +149,11 @@ class GameControl:
     @staticmethod
     def play_game() -> None:
         WindowControl.root.unbind('<Control-i>')
-        WindowControl.root.bind('<Control-f>', lambda event: GameControl.switch_mode())
+        if Options.flagless:
+            WindowControl.mode_switch_button.config(state='disabled')
+        else:
+            WindowControl.root.bind('<Control-f>', lambda event: GameControl.switch_mode())
+            WindowControl.mode_switch_button.bind('<ButtonPress-1>', lambda event: GameControl.switch_mode())
 
         local_diff = GameControl.difficulty.value + Options.multimine_increase if Options.multimines else GameControl.difficulty.value
         num_squares = sum([1 if sq.enabled else 0 for sq in WindowControl.board_frame.grid_slaves()])
@@ -183,13 +189,12 @@ class GameControl:
             sq.link_to_neighbours()
             sq.unbind('<B1-Motion>')
             sq.bind('<Button-1>', lambda event, square=sq: square.uncover())
-            if not Options.multimines:
+            if not Options.multimines and not Options.flagless:
                 sq.bind('<Button-3>', lambda event, square=sq: square.flag())
             sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
         WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
         WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
-        WindowControl.mode_switch_button.bind('<ButtonPress-1>', lambda event: GameControl.switch_mode())
         options = WindowControl.play_button.grid_info()
         WindowControl.play_button.grid_remove()
         WindowControl.stop_button.grid(**options)
@@ -243,6 +248,8 @@ class GameControl:
         for btn in btns:
             if isinstance(btn, tk.Button):
                 btn.config(state='normal')
+        if Options.flagless:
+            WindowControl.mode_switch_button.config(state='normal')
         for sq in WindowControl.board_frame.grid_slaves():
             sq.unlock()
             sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
@@ -295,17 +302,17 @@ class GameControl:
     def save_board() -> None:
         # Commented to hell and back in case I ever forget my logic here
         # Keep track of the leftmost enabled sqaure. Set to the right side of the field
-        leftmost = Options.cols - 1
+        leftmost = Constants.COLS - 1
         # Will be the final bit mapping of the board
         board_bits = []
         # A flag for detecting when the first row with an enabled square is hit
         reached_content = False
         # Iterate over the number rows of the field
-        for row in range(Options.rows):
+        for row in range(Constants.ROWS):
             # Define an empty string that will represent the bits in a row
             bit_row = ''
             # Iterate over the number of columns in the field
-            for col in range(Options.cols):
+            for col in range(Constants.COLS):
                 # Get the square at the current position
                 square = WindowControl.board_frame.grid_slaves(row=row, column=col)[0]
                 # Set the next bit in the row to be 1 if the square is enabled and 0 if it is not
@@ -361,7 +368,7 @@ class GameControl:
         except Exception:
             messagebox.showerror(title='Opening Error', message='Was not able to open the file.')
             return
-        if len(board_bits) > Options.rows or len(max(board_bits, key=len)) > Options.cols:
+        if len(board_bits) > Constants.ROWS or len(max(board_bits, key=len)) > Constants.COLS:
             messagebox.showerror(title='Loading Error', message='Board was too large to be loaded properly.')
             return
         GameControl.clear_board()
@@ -574,12 +581,12 @@ class WindowControl:
 
     @staticmethod
     def init_board() -> None:
-        for i in range(Options.rows):
+        for i in range(Constants.ROWS):
             WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
-        for i in range(Options.cols):
+        for i in range(Constants.COLS):
             WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
-        for x in range(Options.rows):
-            for y in range(Options.cols):
+        for x in range(Constants.ROWS):
+            for y in range(Constants.COLS):
                 sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[20])
                 sq.toggle_enable()
                 sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
@@ -698,7 +705,7 @@ class WindowControl:
         x = (event.x_root - initial_square.master.winfo_rootx()) // Constants.BOARD_SQUARE_SIZE
         y = (event.y_root - initial_square.master.winfo_rooty()) // Constants.BOARD_SQUARE_SIZE
         GameControl.drag_mode = initial_square.enabled
-        if x in range(Options.rows) and y in range(Options.cols):
+        if x in range(Constants.ROWS) and y in range(Constants.COLS):
             try:
                 square = WindowControl.board_frame.grid_slaves(row=y, column=x)[0]
             except IndexError:
@@ -709,7 +716,95 @@ class WindowControl:
 
     @staticmethod
     def settings_window() -> None:
-        ...
+        WindowControl.settings_button.config(state='disabled')
+        WindowControl.play_button.config(state='disabled')
+        settings_root = tk.Toplevel()
+        settings_root.title('Options')
+        settings_root.resizable(0, 0)
+        settings_root.config(bg=Constants.DEFAULT_COLOUR)
+
+        def settings_root_close() -> None:
+            try:
+                WindowControl.settings_button.config(state='normal')
+                WindowControl.play_button.config(state='normal')
+            except Exception:
+                pass
+
+        settings_root.bind('<Destroy>', lambda event: settings_root_close())
+
+        options_label = tk.Label(settings_root, text='Game Options', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        options_label.grid(row=0, column=0, pady=Constants.PADDING_DIST)
+
+        grace_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        gracerule = tk.BooleanVar(settings_root, Options.grace_rule)
+        grace_label = tk.Label(grace_frame, text='Grace Rule', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        grace_on_choice = tk.Radiobutton(
+            grace_frame, text='On', font=Constants.FONT_BIG, variable=gracerule,
+            value=True, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        grace_off_choice = tk.Radiobutton(
+            grace_frame, text='Off', font=Constants.FONT_BIG, variable=gracerule,
+            value=False, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        grace_label.pack(anchor='w')
+        grace_on_choice.pack(anchor='w')
+        grace_off_choice.pack(anchor='w')
+        grace_frame.grid(row=1, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        multimode = tk.BooleanVar(settings_root, Options.multimines)
+        multi_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        multi_label = tk.Label(multi_frame, text='GameMode', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        normal_choice = tk.Radiobutton(
+            multi_frame, text='Normal Mode', font=Constants.FONT_BIG, variable=multimode,
+            value=False, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        multi_choice = tk.Radiobutton(
+            multi_frame, text='MultiMine Mode', font=Constants.FONT_BIG, variable=multimode,
+            value=True, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        multi_label.pack(anchor='w')
+        normal_choice.pack(anchor='w')
+        multi_choice.pack(anchor='w')
+        multi_frame.grid(row=2, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        density = tk.DoubleVar(settings_root, Options.multimine_increase)
+        density_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        density_label = tk.Label(density_frame, text='MultiMine Density Increase', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        density_slider = tk.Scale(
+            density_frame, variable=density, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            resolution=0.01, from_=0.0, to=0.6, length=300, bd=0
+        )
+        density_label.pack(anchor='w')
+        density_slider.pack()
+        density_frame.grid(row=3, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        flagless = tk.BooleanVar(settings_root, Options.flagless)
+        flagless_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        flagless_label = tk.Label(flagless_frame, text='Flagless', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        flagless_on_choice = tk.Radiobutton(
+            flagless_frame, text='Off', font=Constants.FONT_BIG, variable=flagless,
+            value=False, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        flagless_off_choice = tk.Radiobutton(
+            flagless_frame, text='On', font=Constants.FONT_BIG, variable=flagless,
+            value=True, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        flagless_label.pack(anchor='w')
+        flagless_off_choice.pack(anchor='w')
+        flagless_on_choice.pack(anchor='w')
+        flagless_frame.grid(row=4, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        def submit_vars() -> None:
+            Options.grace_rule = gracerule.get()
+            Options.multimines = multimode.get()
+            Options.multimine_increase = density.get()
+            Options.flagless = flagless.get()
+            settings_root.destroy()
+            WindowControl.settings_button.config(state='normal')
+            WindowControl.play_button.config(state='normal')
+
+        submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
+        submit_button.grid(row=5, column=0, pady=Constants.PADDING_DIST)
 
 
 def main() -> None:
