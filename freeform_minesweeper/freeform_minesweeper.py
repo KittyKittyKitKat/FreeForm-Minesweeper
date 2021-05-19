@@ -719,7 +719,7 @@ class WindowControl:
         WindowControl.settings_button.config(state='disabled')
         WindowControl.play_button.config(state='disabled')
         settings_root = tk.Toplevel()
-        settings_root.title('Options')
+        settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
 
