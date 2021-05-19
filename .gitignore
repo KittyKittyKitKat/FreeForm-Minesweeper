@@ -3,3 +3,4 @@
 *.xcf
 colours.png
 __pycache__
+.gitignore
