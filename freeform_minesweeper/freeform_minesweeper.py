@@ -28,25 +28,42 @@ class Difficulty(Enum):
     EXPERT = 0.25
 
 
+class Options:
+    multimines = False
+    grace_rule = True
+    multimine_increase = 0.2
+    flagless = False
+
+
 class Constants:
+    ROWS = 28
+    COLS = 30
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
     SEGMENT_WIDTH = 26
     PADDING_DIST = 5
-    ROWS = 28
-    COLS = 30
     WINDOW_WIDTH = BOARD_SQUARE_SIZE * COLS
     BOARD_HEIGHT = BOARD_SQUARE_SIZE * ROWS
     BACKGROUND_COLOUR = '#c0c0c0'
     DEFAULT_COLOUR = '#d9d9d9'
     FONT = ('MINE-SWEEPER', 7, 'normal')
+    FONT_BIG = ('MINE-SWEEPER', 9, 'normal')
     MAINLOOP_TIME = 0.01
-    BLACK_SQUARE = Image.new('RGBA', size=(32, 32), color=(0, 0, 0))
+    LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
+    UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     FILE_TYPE = (('FreeForm Minesweeper Board', '*.ffmnswpr'),)
 
     @staticmethod
     def init_board_images() -> None:
-        Constants.BLACK_SQUARE = ImageTk.PhotoImage(image=Constants.BLACK_SQUARE)
+        ubs_x, ubs_y = Constants.UNLOCKED_BLACK_SQUARE.size
+        for i in range(ubs_y):
+            Constants.UNLOCKED_BLACK_SQUARE.putpixel((0, i), (128, 128, 128))
+            Constants.UNLOCKED_BLACK_SQUARE.putpixel((1, i), (128, 128, 128))
+        for i in range(ubs_x):
+            Constants.UNLOCKED_BLACK_SQUARE.putpixel((i, 0), (128, 128, 128))
+            Constants.UNLOCKED_BLACK_SQUARE.putpixel((i, 1), (128, 128, 128))
+        Constants.UNLOCKED_BLACK_SQUARE = ImageTk.PhotoImage(image=Constants.UNLOCKED_BLACK_SQUARE)
+        Constants.LOCKED_BLACK_SQUARE = ImageTk.PhotoImage(image=Constants.LOCKED_BLACK_SQUARE)
         BOARD_IMAGES = []
         with Image.open('assets/board_sheet.png') as board_sheet:
             x, y = board_sheet.size
@@ -69,6 +86,18 @@ class Constants:
                     SEVSEG_IMAGES.append(im2)
         setattr(Constants, 'SEVSEG_IMAGES', SEVSEG_IMAGES)
 
+    @staticmethod
+    def init_extended_board_images() -> None:
+        EXTENDED_BOARD_IMAGES = []
+        with Image.open('assets/board_sheet_extended.png') as board_sheet:
+            x, y = board_sheet.size
+            for i in range(0, y, Constants.BOARD_SQUARE_SIZE):
+                for j in range(0, x, Constants.BOARD_SQUARE_SIZE):
+                    im = board_sheet.crop((j, i, j + Constants.BOARD_SQUARE_SIZE, i + Constants.BOARD_SQUARE_SIZE))
+                    im2 = ImageTk.PhotoImage(im)
+                    EXTENDED_BOARD_IMAGES.append(im2)
+        setattr(Constants, 'EXTENDED_BOARD_IMAGES', EXTENDED_BOARD_IMAGES)
+
 
 class GameControl:
     click_mode = ClickMode.UNCOVER
@@ -78,7 +107,6 @@ class GameControl:
     squares_to_win = None
     squares_uncovered = 0
     flags_placed = 0
-    grace_rule = True
     seconds_elpased = 0
     on_hold = True
     drag_mode = True
@@ -91,8 +119,11 @@ class GameControl:
             GameControl.flags_placed = GameControl.num_mines
             WindowControl.update_flag_counter()
             for square in WindowControl.board_frame.grid_slaves():
-                if square.enabled and not square.uncovered:
-                    square.config(im=Constants.BOARD_IMAGES[11])
+                if square.enabled and not square.uncovered and square.value < 0:
+                    if square.value == -1:
+                        square.config(im=Constants.BOARD_IMAGES[11])
+                    else:
+                        square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 38])
 
     @staticmethod
     def has_lost() -> None:
@@ -101,53 +132,83 @@ class GameControl:
         for square in WindowControl.board_frame.grid_slaves():
             if square.enabled and not square.uncovered and not square.flagged and square.value == -1:
                 square.config(im=Constants.BOARD_IMAGES[9])
-            if square.flagged and square.value != -1:
-                square.config(im=Constants.BOARD_IMAGES[12])
+            elif square.enabled and not square.uncovered and not square.flagged and square.value < -1:
+                square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 30])
+
+            if square.flagged and square.value > -1:
+                if square.num_flags == 1:
+                    square.config(im=Constants.BOARD_IMAGES[12])
+                elif square.num_flags > 1:
+                    square.config(im=Constants.EXTENDED_BOARD_IMAGES[square.num_flags + 42])
+            elif square.flagged and square.value <= -1 and square.num_flags != -square.value:
+                if square.num_flags == 1:
+                    square.config(im=Constants.BOARD_IMAGES[12])
+                elif square.num_flags > 1:
+                    square.config(im=Constants.EXTENDED_BOARD_IMAGES[square.num_flags + 42])
 
     @staticmethod
     def play_game() -> None:
         WindowControl.root.unbind('<Control-i>')
+        if Options.flagless:
+            WindowControl.mode_switch_button.config(state='disabled')
+        else:
+            WindowControl.root.bind('<Control-f>', lambda event: GameControl.switch_mode())
+            WindowControl.mode_switch_button.bind('<ButtonPress-1>', lambda event: GameControl.switch_mode())
+
+        local_diff = GameControl.difficulty.value + Options.multimine_increase if Options.multimines else GameControl.difficulty.value
         num_squares = sum([1 if sq.enabled else 0 for sq in WindowControl.board_frame.grid_slaves()])
-        GameControl.num_mines = min(int(num_squares * GameControl.difficulty.value), 999)
-        GameControl.squares_to_win = num_squares - GameControl.num_mines
+
         GameControl.squares_uncovered = 0
         GameControl.flags_placed = 0
         GameControl.seconds_elpased = 0
-        GameControl.click_mode = ClickMode.UNCOVER
+        if GameControl.click_mode is ClickMode.FLAG:
+            GameControl.switch_mode()
         GameControl.on_hold = False
 
-        WindowControl.update_flag_counter()
         squares = WindowControl.board_frame.grid_slaves()
         mines_placed = 0
+        max_mines = 1 if not Options.multimines else 5
+        GameControl.num_mines = min(int(num_squares * local_diff), 999)
+
         while mines_placed < GameControl.num_mines:
             sq = random.choice(squares)
-            if not sq.value and sq.enabled:
-                sq.value = -1
-                mines_placed += 1
+            if sq.enabled:
+                if sq.value != -max_mines:
+                    sq.value -= 1
+                    mines_placed += 1
+
+        squares_wth_mines = 0
+        for sq in squares:
+            if sq.value < 0:
+                squares_wth_mines += 1
+
+        GameControl.squares_to_win = num_squares - squares_wth_mines
 
         for sq in squares:
             sq.lock()
             sq.link_to_neighbours()
             sq.unbind('<B1-Motion>')
             sq.bind('<Button-1>', lambda event, square=sq: square.uncover())
-            sq.bind('<Button-3>', lambda event, square=sq: square.flag())
+            if not Options.multimines and not Options.flagless:
+                sq.bind('<Button-3>', lambda event, square=sq: square.flag())
             sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
         WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
         WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
-        WindowControl.mode_switch_button.bind('<ButtonPress-1>', lambda event: GameControl.swtich_mode())
         options = WindowControl.play_button.grid_info()
         WindowControl.play_button.grid_remove()
         WindowControl.stop_button.grid(**options)
         btns = chain(
             WindowControl.diff_frame.grid_slaves(),
             WindowControl.controls_frame.grid_slaves(),
-            WindowControl.presets_frame.grid_slaves()
+            WindowControl.presets_frame.grid_slaves(),
+            (WindowControl.settings_button,)
         )
         for btn in btns:
             if isinstance(btn, tk.Button):
                 btn.config(state='disabled')
 
+        WindowControl.update_flag_counter()
         GameControl.game_state = GameState.PLAYING
 
     @staticmethod
@@ -167,6 +228,7 @@ class GameControl:
     def stop_game() -> None:
         GameControl.on_hold = True
         WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
+        WindowControl.root.unbind('<Control-f>')
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
@@ -180,11 +242,14 @@ class GameControl:
         btns = chain(
             WindowControl.diff_frame.grid_slaves(),
             WindowControl.controls_frame.grid_slaves(),
-            WindowControl.presets_frame.grid_slaves()
+            WindowControl.presets_frame.grid_slaves(),
+            (WindowControl.settings_button,)
         )
         for btn in btns:
             if isinstance(btn, tk.Button):
                 btn.config(state='normal')
+        if Options.flagless:
+            WindowControl.mode_switch_button.config(state='normal')
         for sq in WindowControl.board_frame.grid_slaves():
             sq.unlock()
             sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
@@ -212,13 +277,26 @@ class GameControl:
                 sq.toggle_enable()
 
     @staticmethod
-    def swtich_mode() -> None:
+    def switch_mode() -> None:
         if GameControl.click_mode is ClickMode.UNCOVER:
             GameControl.click_mode = ClickMode.FLAG
             WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[18])
+            for sq in WindowControl.board_frame.grid_slaves():
+                if Options.multimines:
+                    sq.bind('<Button-1>', lambda event, square=sq: square.add_flag())
+                    sq.bind('<Button-3>', lambda event, square=sq: square.remove_flag())
+                    sq.bind('<Double-Button-1>', lambda event, square=sq: square.add_flag(), add='+')
+                else:
+                    sq.bind('<Button-1>', lambda event, square=sq: square.flag())
         else:
             GameControl.click_mode = ClickMode.UNCOVER
             WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
+            for sq in WindowControl.board_frame.grid_slaves():
+                sq.bind('<Button-1>', lambda event, square=sq: square.uncover())
+                if Options.multimines:
+                    sq.unbind('<Button-3>')
+                    sq.unbind('<Double-Button-1>')
+                    sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
     @staticmethod
     def save_board() -> None:
@@ -313,6 +391,7 @@ class BoardSquare(tk.Label):
         self.uncovered = False
         self.flagged = False
         self.enabled = True
+        self.num_flags = 0
         self.value = 0
         self.directions = ('nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se')
         self.neighbours = dict.fromkeys(self.directions)
@@ -337,49 +416,86 @@ class BoardSquare(tk.Label):
                         if isinstance(child_widget, BoardSquare) and child_widget.enabled:
                             self.neighbours[curr_direction] = child_widget
 
-    def uncover(self, override_click_mode: bool = False) -> None:
-        if GameControl.click_mode is ClickMode.FLAG and not override_click_mode:
-            self.flag()
+    def uncover(self) -> None:
         if not self.enabled or GameControl.game_state is GameState.DONE:
             return
         if not self.uncovered and not self.flagged:
-            if self.value != -1:
+            if self.value > -1:
                 self.uncovered = True
                 GameControl.squares_uncovered += 1
                 mines_around = 0
                 for neighbour in self.neighbours.values():
-                    if neighbour is not None and neighbour.value == -1:
-                        mines_around += 1
+                    if neighbour is not None and neighbour.value <= -1:
+                        mines_around -= neighbour.value
                 self.value = mines_around
-                self.image = Constants.BOARD_IMAGES[self.value]
+                if mines_around < 9:
+                    self.image = Constants.BOARD_IMAGES[self.value]
+                else:
+                    self.image = Constants.EXTENDED_BOARD_IMAGES[self.value - 9]
                 self.config(im=self.image)
                 if not self.value:
                     for neighbour in self.neighbours.values():
                         if neighbour is not None and not neighbour.flagged:
-                            neighbour.uncover(override_click_mode=override_click_mode)
+                            neighbour.uncover()
             else:
-                if GameControl.grace_rule and GameControl.squares_uncovered == 0:
+                if Options.grace_rule and GameControl.squares_uncovered == 0:
                     GameControl.reset_game()
+                    self.uncover()
                     return
                 if GameControl.game_state is GameState.PLAYING:
                     GameControl.has_lost()
-                self.image = Constants.BOARD_IMAGES[10]
+                if self.value == -1:
+                    self.image = Constants.BOARD_IMAGES[10]
+                elif self.value < -1:
+                    self.image = Constants.EXTENDED_BOARD_IMAGES[-self.value + 34]
                 self.config(im=self.image)
         GameControl.check_win()
 
-    def flag(self) -> None:
+    def flag(self) -> None:  # For normal gameplay
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
         if not self.flagged and GameControl.flags_placed < GameControl.num_mines:
             self.flagged = not self.flagged
+            self.num_flags = 1
             self.image = Constants.BOARD_IMAGES[11]
             self.config(im=self.image)
             GameControl.flags_placed += 1
         elif self.flagged:
             self.flagged = not self.flagged
-            self.image = Constants.BOARD_IMAGES[-2]
+            self.num_flags = 0
+            self.image = Constants.BOARD_IMAGES[20]
             self.config(im=self.image)
             GameControl.flags_placed -= 1
+        WindowControl.update_flag_counter()
+
+    def add_flag(self) -> None:  # For multimine
+        if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
+            return
+        if self.num_flags < 5 and GameControl.flags_placed < GameControl.num_mines:
+            self.num_flags += 1
+            self.flagged = True
+            GameControl.flags_placed += 1
+            if self.num_flags == 1:
+                self.image = Constants.BOARD_IMAGES[11]
+            else:
+                self.image = Constants.EXTENDED_BOARD_IMAGES[self.num_flags + 38]
+            self.config(im=self.image)
+        WindowControl.update_flag_counter()
+
+    def remove_flag(self) -> None:  # For multimine
+        if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
+            return
+        if self.num_flags > 0:
+            self.num_flags -= 1
+            GameControl.flags_placed -= 1
+            if self.num_flags == 1:
+                self.image = Constants.BOARD_IMAGES[11]
+            elif self.num_flags == 0:
+                self.image = Constants.BOARD_IMAGES[20]
+                self.flagged = False
+            else:
+                self.image = Constants.EXTENDED_BOARD_IMAGES[self.num_flags + 38]
+            self.config(im=self.image)
         WindowControl.update_flag_counter()
 
     def chord(self) -> None:
@@ -389,32 +505,33 @@ class BoardSquare(tk.Label):
             flags_around = 0
             for neighbour in self.neighbours.values():
                 if neighbour is not None and neighbour.flagged:
-                    flags_around += 1
+                    flags_around += neighbour.num_flags
             if flags_around == self.value:
                 for neighbour in self.neighbours.values():
                     if neighbour is not None and not neighbour.flagged:
-                        neighbour.uncover(override_click_mode=True)
+                        neighbour.uncover()
 
     def toggle_enable(self) -> None:
         if self.enabled:
-            self.config(im=Constants.BOARD_IMAGES[-1])
+            self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
         else:
             self.config(im=self.image)
         self.enabled = not self.enabled
 
     def lock(self) -> None:
         if not self.enabled:
-            self.config(im=Constants.BLACK_SQUARE)
+            self.config(im=Constants.LOCKED_BLACK_SQUARE)
 
     def unlock(self) -> None:
         if not self.enabled:
-            self.config(im=Constants.BOARD_IMAGES[-1])
+            self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
 
     def reset(self) -> None:
-        self.image = Constants.BOARD_IMAGES[-2]
+        self.image = Constants.BOARD_IMAGES[20]
         self.config(im=self.image)
         self.uncovered = False
         self.flagged = False
+        self.num_flags = 0
         self.enabled = True
         self.value = 0
         self.neighbours = dict.fromkeys(self.directions)
@@ -444,6 +561,7 @@ class WindowControl:
 
     reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
     mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
+    settings_button = tk.Button(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
     play_button = tk.Button(mswpr_frame, text='Play', font=Constants.FONT, width=5, command=GameControl.play_game)
     stop_button = tk.Button(mswpr_frame, text='Stop', font=Constants.FONT, width=5, command=GameControl.stop_game)
 
@@ -469,7 +587,7 @@ class WindowControl:
             WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
         for x in range(Constants.ROWS):
             for y in range(Constants.COLS):
-                sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[-2])
+                sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[20])
                 sq.toggle_enable()
                 sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
                 sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
@@ -509,9 +627,11 @@ class WindowControl:
 
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
-        WindowControl.mode_switch_button.grid(row=0, column=0, pady=2)
-        WindowControl.reset_button.grid(row=0, column=1)
-        WindowControl.play_button.grid(row=1, column=0, columnspan=2)
+        WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19], command=WindowControl.settings_window)
+        WindowControl.mode_switch_button.grid(row=0, column=0)
+        WindowControl.reset_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3)
+        WindowControl.settings_button.grid(row=0, column=2)
+        WindowControl.play_button.grid(row=1, column=0, columnspan=3)
         WindowControl.mswpr_frame.grid(row=0, column=2)
 
         timer_left = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
@@ -594,11 +714,104 @@ class WindowControl:
                 if square.enabled is not GameControl.drag_mode:
                     square.toggle_enable()
 
+    @staticmethod
+    def settings_window() -> None:
+        WindowControl.settings_button.config(state='disabled')
+        WindowControl.play_button.config(state='disabled')
+        settings_root = tk.Toplevel()
+        settings_root.title('Options')
+        settings_root.resizable(0, 0)
+        settings_root.config(bg=Constants.DEFAULT_COLOUR)
+
+        def settings_root_close() -> None:
+            try:
+                WindowControl.settings_button.config(state='normal')
+                WindowControl.play_button.config(state='normal')
+            except Exception:
+                pass
+
+        settings_root.bind('<Destroy>', lambda event: settings_root_close())
+
+        options_label = tk.Label(settings_root, text='Game Options', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        options_label.grid(row=0, column=0, pady=Constants.PADDING_DIST)
+
+        grace_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        gracerule = tk.BooleanVar(settings_root, Options.grace_rule)
+        grace_label = tk.Label(grace_frame, text='Grace Rule', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        grace_on_choice = tk.Radiobutton(
+            grace_frame, text='On', font=Constants.FONT_BIG, variable=gracerule,
+            value=True, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        grace_off_choice = tk.Radiobutton(
+            grace_frame, text='Off', font=Constants.FONT_BIG, variable=gracerule,
+            value=False, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        grace_label.pack(anchor='w')
+        grace_on_choice.pack(anchor='w')
+        grace_off_choice.pack(anchor='w')
+        grace_frame.grid(row=1, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        multimode = tk.BooleanVar(settings_root, Options.multimines)
+        multi_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        multi_label = tk.Label(multi_frame, text='GameMode', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        normal_choice = tk.Radiobutton(
+            multi_frame, text='Normal Mode', font=Constants.FONT_BIG, variable=multimode,
+            value=False, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        multi_choice = tk.Radiobutton(
+            multi_frame, text='MultiMine Mode', font=Constants.FONT_BIG, variable=multimode,
+            value=True, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        multi_label.pack(anchor='w')
+        normal_choice.pack(anchor='w')
+        multi_choice.pack(anchor='w')
+        multi_frame.grid(row=2, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        density = tk.DoubleVar(settings_root, Options.multimine_increase)
+        density_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        density_label = tk.Label(density_frame, text='MultiMine Density Increase', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        density_slider = tk.Scale(
+            density_frame, variable=density, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            resolution=0.01, from_=0.0, to=0.6, length=300, bd=0
+        )
+        density_label.pack(anchor='w')
+        density_slider.pack()
+        density_frame.grid(row=3, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        flagless = tk.BooleanVar(settings_root, Options.flagless)
+        flagless_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        flagless_label = tk.Label(flagless_frame, text='Flagless', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        flagless_on_choice = tk.Radiobutton(
+            flagless_frame, text='Off', font=Constants.FONT_BIG, variable=flagless,
+            value=False, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        flagless_off_choice = tk.Radiobutton(
+            flagless_frame, text='On', font=Constants.FONT_BIG, variable=flagless,
+            value=True, bg=Constants.DEFAULT_COLOUR, bd=0
+        )
+        flagless_label.pack(anchor='w')
+        flagless_off_choice.pack(anchor='w')
+        flagless_on_choice.pack(anchor='w')
+        flagless_frame.grid(row=4, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        def submit_vars() -> None:
+            Options.grace_rule = gracerule.get()
+            Options.multimines = multimode.get()
+            Options.multimine_increase = density.get()
+            Options.flagless = flagless.get()
+            settings_root.destroy()
+            WindowControl.settings_button.config(state='normal')
+            WindowControl.play_button.config(state='normal')
+
+        submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
+        submit_button.grid(row=5, column=0, pady=Constants.PADDING_DIST)
+
 
 def main() -> None:
     WindowControl.init_window()
     Constants.init_board_images()
     Constants.init_sevseg_images()
+    Constants.init_extended_board_images()
     Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
