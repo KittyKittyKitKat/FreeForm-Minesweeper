@@ -721,6 +721,7 @@ class WindowControl:
         settings_root = tk.Toplevel()
         settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
+        settings_root.iconphoto(False, Constants.BOARD_IMAGES[19])
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
 
         def settings_root_close() -> None:
@@ -813,6 +814,7 @@ def main() -> None:
     Constants.init_sevseg_images()
     Constants.init_extended_board_images()
     Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
+    WindowControl.root.iconphoto(False, Constants.BOARD_IMAGES[13])
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
     WindowControl.init_board()
