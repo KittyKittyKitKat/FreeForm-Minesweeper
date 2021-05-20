@@ -98,6 +98,13 @@ class Constants:
                     EXTENDED_BOARD_IMAGES.append(im2)
         setattr(Constants, 'EXTENDED_BOARD_IMAGES', EXTENDED_BOARD_IMAGES)
 
+    @staticmethod
+    def init_window_icons() -> None:
+        MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
+        SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
+        setattr(Constants, 'MAIN_ICON', MAIN_ICON)
+        setattr(Constants, 'SETTINGS_ICON', SETTINGS_ICON)
+
 
 class GameControl:
     click_mode = ClickMode.UNCOVER
@@ -721,7 +728,7 @@ class WindowControl:
         settings_root = tk.Toplevel()
         settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
-        settings_root.iconphoto(False, Constants.BOARD_IMAGES[19])
+        settings_root.iconphoto(False, Constants.SETTINGS_ICON)
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
 
         def settings_root_close() -> None:
@@ -813,8 +820,9 @@ def main() -> None:
     Constants.init_board_images()
     Constants.init_sevseg_images()
     Constants.init_extended_board_images()
+    Constants.init_window_icons()
     Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
-    WindowControl.root.iconphoto(False, Constants.BOARD_IMAGES[13])
+    WindowControl.root.iconphoto(False, Constants.MAIN_ICON)
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
     WindowControl.init_board()
