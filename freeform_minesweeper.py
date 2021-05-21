@@ -7,6 +7,7 @@ from itertools import chain
 from tkinter import filedialog
 from tkinter import messagebox
 from typing import Optional
+from platfrom import system as get_os
 
 from PIL import Image, ImageTk
 
@@ -52,6 +53,7 @@ class Constants:
     LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     FILE_TYPE = (('FreeForm Minesweeper Board', '*.ffmnswpr'),)
+    SAVE_LOAD_DIR = '/home' if get_os() == 'Linux' else 'C:\\'
 
     @staticmethod
     def init_board_images() -> None:
@@ -358,7 +360,7 @@ class GameControl:
                 board_bits[i] = row[leftmost:]
         # At this point the board is saved as rows of bits that has been trimmed down to the smallest possible dimensions of the board
         # Save to a file
-        board_file = filedialog.asksaveasfilename(initialdir='../..', title='Save Board', filetypes=Constants.FILE_TYPE)
+        board_file = filedialog.asksaveasfilename(initialdir=Constants.SAVE_LOAD_DIR, title='Save Board', filetypes=Constants.FILE_TYPE)
         try:
             with open(board_file, 'w') as board_save_file:
                 board_save_file.write('\n'.join(board_bits))
@@ -368,7 +370,7 @@ class GameControl:
 
     @staticmethod
     def load_board(filename: Optional[str] = None) -> None:
-        board_file = filename or filedialog.askopenfilename(initialdir='../..', title='Open Board', filetypes=Constants.FILE_TYPE)
+        board_file = filename or filedialog.askopenfilename(initialdir=Constants.SAVE_LOAD_DIR, title='Open Board', filetypes=Constants.FILE_TYPE)
         try:
             with open(board_file, 'r') as board_load_file:
                 board_bits = [line.strip() for line in board_load_file.readlines()]
