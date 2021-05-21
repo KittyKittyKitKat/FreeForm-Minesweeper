@@ -14,7 +14,6 @@ def main() -> None:
     icon_dir_name = 'assets/icon_main.png'
     desktop_dir = '.local/share/applications/'
     desktop_name = 'freeform_minesweeper.desktop'
-    script_name = 'ffmnswpr.sh'
     desktop_lines = [
         '[Desktop Entry]\n',
         'Name=FreeForm Minesweeper\n',
