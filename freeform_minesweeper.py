@@ -7,7 +7,7 @@ from itertools import chain
 from tkinter import filedialog
 from tkinter import messagebox
 from typing import Optional
-from platfrom import system as get_os
+from platform import system as get_os
 
 from PIL import Image, ImageTk
 
