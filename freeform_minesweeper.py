@@ -32,8 +32,9 @@ class Difficulty(Enum):
 class Options:
     multimines = False
     grace_rule = True
-    multimine_increase = 0.2
+    multimine_sq_inc = 0.0
     flagless = False
+    multimine_mine_inc = 0.2
 
 
 class Constants:
@@ -164,7 +165,7 @@ class GameControl:
             WindowControl.root.bind('<Control-f>', lambda event: GameControl.switch_mode())
             WindowControl.mode_switch_button.bind('<ButtonPress-1>', lambda event: GameControl.switch_mode())
 
-        local_diff = GameControl.difficulty.value + Options.multimine_increase if Options.multimines else GameControl.difficulty.value
+        local_diff = GameControl.difficulty.value + Options.multimine_mine_inc if Options.multimines else GameControl.difficulty.value
         num_squares = sum([1 if sq.enabled else 0 for sq in WindowControl.board_frame.grid_slaves()])
 
         GameControl.squares_uncovered = 0
@@ -777,7 +778,18 @@ class WindowControl:
         multi_choice.pack(anchor='w')
         multi_frame.grid(row=2, column=0, sticky='w', pady=Constants.PADDING_DIST)
 
-        density = tk.DoubleVar(settings_root, Options.multimine_increase)
+        mines = tk.DoubleVar(settings_root, Options.multimine_mine_inc)
+        mines_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        mines_label = tk.Label(mines_frame, text='MultiMine Mine Increase', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        mines_slider = tk.Scale(
+            mines_frame, variable=mines, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            resolution=0.01, from_=0.0, to=0.6, length=300, bd=0
+        )
+        mines_label.pack(anchor='w')
+        mines_slider.pack()
+        mines_frame.grid(row=3, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        density = tk.DoubleVar(settings_root, Options.multimine_sq_inc)
         density_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
         density_label = tk.Label(density_frame, text='MultiMine Density Increase', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         density_slider = tk.Scale(
@@ -786,7 +798,7 @@ class WindowControl:
         )
         density_label.pack(anchor='w')
         density_slider.pack()
-        density_frame.grid(row=3, column=0, sticky='w', pady=Constants.PADDING_DIST)
+        density_frame.grid(row=4, column=0, sticky='w', pady=Constants.PADDING_DIST)
 
         flagless = tk.BooleanVar(settings_root, Options.flagless)
         flagless_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
@@ -802,19 +814,20 @@ class WindowControl:
         flagless_label.pack(anchor='w')
         flagless_off_choice.pack(anchor='w')
         flagless_on_choice.pack(anchor='w')
-        flagless_frame.grid(row=4, column=0, sticky='w', pady=Constants.PADDING_DIST)
+        flagless_frame.grid(row=5, column=0, sticky='w', pady=Constants.PADDING_DIST)
 
         def submit_vars() -> None:
             Options.grace_rule = gracerule.get()
             Options.multimines = multimode.get()
-            Options.multimine_increase = density.get()
+            Options.multimine_mine_inc = mines.get()
             Options.flagless = flagless.get()
+            Options.multimine_sq_inc = density.get()
             settings_root.destroy()
             WindowControl.settings_button.config(state='normal')
             WindowControl.play_button.config(state='normal')
 
         submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
-        submit_button.grid(row=5, column=0, pady=Constants.PADDING_DIST)
+        submit_button.grid(row=6, column=0, pady=Constants.PADDING_DIST)
 
 
 def main() -> None:
