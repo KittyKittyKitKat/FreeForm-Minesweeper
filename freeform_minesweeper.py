@@ -176,7 +176,7 @@ class GameControl:
         GameControl.on_hold = False
 
         squares = WindowControl.board_frame.grid_slaves()
-        
+
         GameControl.num_mines = min(int(num_squares * local_diff), 999)
         seed_mines = (GameControl.num_mines // 2) if Options.multimines else GameControl.num_mines
         wave_mines = GameControl.num_mines - seed_mines
