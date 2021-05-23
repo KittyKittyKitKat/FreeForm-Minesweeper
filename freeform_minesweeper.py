@@ -176,10 +176,8 @@ class GameControl:
         GameControl.on_hold = False
 
         squares = WindowControl.board_frame.grid_slaves()
-
-        # max_mines = 1 if not Options.multimines else 5
+        
         GameControl.num_mines = min(int(num_squares * local_diff), 999)
-
         seed_mines = (GameControl.num_mines // 2) if Options.multimines else GameControl.num_mines
         wave_mines = GameControl.num_mines - seed_mines
         seed_mines_placed = 0
@@ -198,8 +196,9 @@ class GameControl:
                     sq.value -= 1
                     wave_mines_placed += 1
             elif sq.enabled and sq.value:
-                sq.value -= 1
-                wave_mines_placed += 1
+                if sq.value != -5:
+                    sq.value -= 1
+                    wave_mines_placed += 1
 
         squares_with_mines = 0
         for sq in squares:
