@@ -32,9 +32,9 @@ class Difficulty(Enum):
 class Options:
     multimines = False
     grace_rule = True
-    multimine_sq_inc = 0.0
+    multimine_sq_inc = 0.1
     flagless = False
-    multimine_mine_inc = 0.2
+    multimine_mine_inc = 0.05
 
 
 class Constants:
@@ -176,23 +176,37 @@ class GameControl:
         GameControl.on_hold = False
 
         squares = WindowControl.board_frame.grid_slaves()
-        mines_placed = 0
-        max_mines = 1 if not Options.multimines else 5
+
+        # max_mines = 1 if not Options.multimines else 5
         GameControl.num_mines = min(int(num_squares * local_diff), 999)
 
-        while mines_placed < GameControl.num_mines:
-            sq = random.choice(squares)
-            if sq.enabled:
-                if sq.value != -max_mines:
-                    sq.value -= 1
-                    mines_placed += 1
+        seed_mines = (GameControl.num_mines // 2) if Options.multimines else GameControl.num_mines
+        wave_mines = GameControl.num_mines - seed_mines
+        seed_mines_placed = 0
+        wave_mines_placed = 0
 
-        squares_wth_mines = 0
+        while seed_mines_placed < seed_mines:
+            sq = random.choice(squares)
+            if sq.enabled and not sq.value:
+                sq.value -= 1
+                seed_mines_placed += 1
+
+        while wave_mines_placed < wave_mines:
+            sq = random.choice(squares)
+            if sq.enabled and not sq.value:
+                if random.random() < 1 - Options.multimine_sq_inc:
+                    sq.value -= 1
+                    wave_mines_placed += 1
+            elif sq.enabled and sq.value:
+                sq.value -= 1
+                wave_mines_placed += 1
+
+        squares_with_mines = 0
         for sq in squares:
             if sq.value < 0:
-                squares_wth_mines += 1
+                squares_with_mines += 1
 
-        GameControl.squares_to_win = num_squares - squares_wth_mines
+        GameControl.squares_to_win = num_squares - squares_with_mines
 
         for sq in squares:
             sq.lock()
@@ -791,10 +805,10 @@ class WindowControl:
 
         density = tk.DoubleVar(settings_root, Options.multimine_sq_inc)
         density_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        density_label = tk.Label(density_frame, text='MultiMine Density Increase', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        density_label = tk.Label(density_frame, text='MultiMine Probability', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         density_slider = tk.Scale(
             density_frame, variable=density, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
-            resolution=0.01, from_=0.0, to=0.6, length=300, bd=0
+            resolution=0.01, from_=0.1, to=0.9, length=300, bd=0
         )
         density_label.pack(anchor='w')
         density_slider.pack()
