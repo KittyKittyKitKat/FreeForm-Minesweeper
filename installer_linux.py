@@ -26,6 +26,9 @@ def main() -> None:
     ]
     pwd = subprocess.run(['pwd'], capture_output=True, encoding='utf-8').stdout.strip() + '/'
     subprocess.run([
+        'rm', '-r', package_dir + binary_dir
+    ], stderr=subprocess.DEVNULL)
+    subprocess.run([
         'cp', '-R', pwd + binary_dir, package_dir
     ])
     with open(user_home + desktop_dir + desktop_name, 'w') as desktop_fp:
