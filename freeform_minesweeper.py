@@ -232,6 +232,8 @@ class GameControl:
                 btn.config(state='disabled')
 
         WindowControl.update_flag_counter()
+        GameControl.switch_mode()
+        GameControl.switch_mode()
         GameControl.game_state = GameState.PLAYING
 
     @staticmethod
