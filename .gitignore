@@ -1,0 +1,10 @@
+#.gitignore
+#package_building/
+#*.spec
+#*.exe
+#build/
+#dist/
+#__pycache__/
+#Freeform-Minesweeper/
+#Freeform-Minesweeper-Windows/
+#*.zip
