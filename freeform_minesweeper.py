@@ -600,9 +600,9 @@ class WindowControl:
         WindowControl.board_frame.grid_propagate(0)
         for i in range(8):
             WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
-        WindowControl.menu_frame.grid(row=0, column=0)
-        WindowControl.board_frame.grid(row=1, column=0)
-        WindowControl.main_frame.grid(row=2, column=0)
+        WindowControl.menu_frame.grid(row=0, column=0, sticky='nsew')
+        WindowControl.board_frame.grid(row=1, column=0, sticky='nsew')
+        WindowControl.main_frame.grid(row=2, column=0, sticky='nsew')
 
     @staticmethod
     def init_board() -> None:
@@ -616,7 +616,7 @@ class WindowControl:
                 sq.toggle_enable()
                 sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
                 sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
-                sq.grid(row=x, column=y)
+                sq.grid(row=x, column=y, sticky='nsew')
 
     @staticmethod
     def init_menu() -> None:
@@ -640,36 +640,36 @@ class WindowControl:
             WindowControl.presets_frame, text='Expert', font=Constants.FONT, width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.EXPERT, diff_4) or GameControl.load_board('presets/expert.ffmnswpr')
         )
-        preset_easy.grid(row=0, column=0)
-        preset_medium.grid(row=0, column=1)
-        preset_hard.grid(row=1, column=0)
-        preset_expert.grid(row=1, column=1)
-        WindowControl.presets_frame.grid(row=0, column=0)
+        preset_easy.grid(row=0, column=0, sticky='nsew')
+        preset_medium.grid(row=0, column=1, sticky='nsew')
+        preset_hard.grid(row=1, column=0, sticky='nsew')
+        preset_expert.grid(row=1, column=1, sticky='nsew')
+        WindowControl.presets_frame.grid(row=0, column=0, sticky='nsew')
 
         flag_left = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         flag_mid = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         flag_right = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        flag_left.grid(row=0, column=0)
-        flag_mid.grid(row=0, column=1)
-        flag_right.grid(row=0, column=2)
-        WindowControl.flags_frame.grid(row=0, column=1)
+        flag_left.grid(row=0, column=0, sticky='nsew')
+        flag_mid.grid(row=0, column=1, sticky='nsew')
+        flag_right.grid(row=0, column=2, sticky='nsew')
+        WindowControl.flags_frame.grid(row=0, column=1, sticky='nsew')
 
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
         WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19], command=WindowControl.settings_window)
-        WindowControl.mode_switch_button.grid(row=0, column=0)
-        WindowControl.reset_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3)
-        WindowControl.settings_button.grid(row=0, column=2)
-        WindowControl.play_button.grid(row=1, column=0, columnspan=3)
-        WindowControl.mswpr_frame.grid(row=0, column=2)
+        WindowControl.mode_switch_button.grid(row=0, column=0, sticky='nsew')
+        WindowControl.reset_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3, sticky='nsew')
+        WindowControl.settings_button.grid(row=0, column=2, sticky='nsew')
+        WindowControl.play_button.grid(row=1, column=0, columnspan=3, sticky='nsew')
+        WindowControl.mswpr_frame.grid(row=0, column=2, sticky='nsew')
 
         timer_left = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         timer_mid = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         timer_right = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        timer_left.grid(row=0, column=0)
-        timer_mid.grid(row=0, column=1)
-        timer_right.grid(row=0, column=2)
-        WindowControl.timer_frame.grid(row=0, column=3)
+        timer_left.grid(row=0, column=0, sticky='nsew')
+        timer_mid.grid(row=0, column=1, sticky='nsew')
+        timer_right.grid(row=0, column=2, sticky='nsew')
+        WindowControl.timer_frame.grid(row=0, column=3, sticky='nsew')
 
         diff_label = tk.Label(WindowControl.diff_frame, text='Difficulty', font=Constants.FONT, bg=Constants.BACKGROUND_COLOUR)
         diff_1 = tk.Button(
@@ -688,22 +688,22 @@ class WindowControl:
             WindowControl.diff_frame, text='4', font=Constants.FONT,
             command=lambda diff=Difficulty.EXPERT: GameControl.change_difficulty(diff, diff_4)
         )
-        diff_label.grid(row=0, column=1, columnspan=4)
-        diff_1.grid(row=1, column=1)
-        diff_2.grid(row=1, column=2)
-        diff_3.grid(row=1, column=3)
-        diff_4.grid(row=1, column=4)
-        WindowControl.diff_frame.grid(row=0, column=4)
+        diff_label.grid(row=0, column=1, columnspan=4, sticky='nsew')
+        diff_1.grid(row=1, column=1, sticky='nsew')
+        diff_2.grid(row=1, column=2, sticky='nsew')
+        diff_3.grid(row=1, column=3, sticky='nsew')
+        diff_4.grid(row=1, column=4, sticky='nsew')
+        WindowControl.diff_frame.grid(row=0, column=4, sticky='nsew')
 
         fill_button = tk.Button(WindowControl.controls_frame, text='Fill', font=Constants.FONT, width=5, command=GameControl.fill_board)
         clear_button = tk.Button(WindowControl.controls_frame, text='Clear', font=Constants.FONT, width=5, command=GameControl.clear_board)
         save_board_button = tk.Button(WindowControl.controls_frame, text='Save', font=Constants.FONT, width=5, command=lambda: GameControl.save_board())
         load_board_button = tk.Button(WindowControl.controls_frame, text='Load', font=Constants.FONT, width=5, command=lambda: GameControl.load_board())
-        fill_button.grid(row=0, column=0)
-        clear_button.grid(row=1, column=0)
-        save_board_button.grid(row=0, column=1, padx=Constants.PADDING_DIST)
-        load_board_button.grid(row=1, column=1)
-        WindowControl.controls_frame.grid(row=0, column=5)
+        fill_button.grid(row=0, column=0, sticky='nsew')
+        clear_button.grid(row=1, column=0, sticky='nsew')
+        save_board_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, sticky='nsew')
+        load_board_button.grid(row=1, column=1, sticky='nsew')
+        WindowControl.controls_frame.grid(row=0, column=5, sticky='nsew')
 
     @staticmethod
     def update_timer() -> None:
