@@ -383,6 +383,12 @@ class GameControl:
         )
         if not board_file:
             return
+        if not board_file.endswith(Constants.FILE_EXTENSION):
+            messagebox.showerror(
+                title='Extension Error',
+                message=f'Invalid extension for FreeForm Minesweeper board ({"".join(board_file.partition(".")[1:])}).'
+            )
+            return
         try:
             with open(board_file, 'w') as board_save_file:
                 board_save_file.write('\n'.join(board_bits))
