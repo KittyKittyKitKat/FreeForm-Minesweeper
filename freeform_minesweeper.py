@@ -381,6 +381,8 @@ class GameControl:
             initialdir=Constants.SAVE_LOAD_DIR, title='Save Board',
             filetypes=Constants.FILE_TYPE, defaultextension=Constants.FILE_EXTENSION
         )
+        if not board_file:
+            return
         try:
             with open(board_file, 'w') as board_save_file:
                 board_save_file.write('\n'.join(board_bits))
