@@ -831,18 +831,55 @@ class WindowControl:
         flagless_on_choice.pack(anchor='w')
         flagless_frame.grid(row=5, column=0, sticky='w', pady=Constants.PADDING_DIST)
 
+        rows = tk.IntVar(settings_root, Constants.ROWS)
+        rows_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        rows_label = tk.Label(rows_frame, text='Rows', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        rows_slider = tk.Scale(
+            rows_frame, variable=rows, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            resolution=1, from_=1, to=30, length=300, bd=0
+        )
+        rows_label.pack(anchor='w')
+        rows_slider.pack()
+        rows_frame.grid(row=6, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        columns = tk.IntVar(settings_root, Constants.COLS)
+        columns_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        columns_label = tk.Label(rows_frame, text='Columns', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        columns_slider = tk.Scale(
+            rows_frame, variable=columns, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            resolution=1, from_=25, to=55, length=300, bd=0
+        )
+        columns_label.pack(anchor='w')
+        columns_slider.pack()
+        columns_frame.grid(row=6, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
         def submit_vars() -> None:
             Options.grace_rule = gracerule.get()
             Options.multimines = multimode.get()
             Options.multimine_mine_inc = mines.get()
             Options.flagless = flagless.get()
             Options.multimine_sq_inc = density.get()
+            if rows.get() != Constants.ROWS:
+                Constants.BOARD_HEIGHT = Constants.BOARD_SQUARE_SIZE * rows.get()
+                WindowControl.main_frame.config(height=Constants.BOARD_HEIGHT + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST)
+                WindowControl.board_frame.config(height=Constants.BOARD_HEIGHT)
+            if columns.get() != Constants.COLS:
+                Constants.WINDOW_WIDTH = Constants.BOARD_SQUARE_SIZE * columns.get()
+                WindowControl.main_frame.config(width=Constants.WINDOW_WIDTH)
+                WindowControl.menu_frame.config(width=Constants.WINDOW_WIDTH)
+                WindowControl.board_frame.config(width=Constants.WINDOW_WIDTH)
+            if rows.get() != Constants.ROWS or columns.get() != Constants.ROWS:
+                Constants.ROWS = rows.get()
+                Constants.COLS = columns.get()
+                for sq in WindowControl.board_frame.grid_slaves():
+                    sq.destroy()
+                WindowControl.init_board()
             settings_root.destroy()
             WindowControl.settings_button.config(state='normal')
             WindowControl.play_button.config(state='normal')
 
         submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
-        submit_button.grid(row=6, column=0, pady=Constants.PADDING_DIST)
+        submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
 
 
 def main() -> None:
