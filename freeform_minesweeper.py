@@ -836,7 +836,7 @@ class WindowControl:
         rows_label = tk.Label(rows_frame, text='Rows', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         rows_slider = tk.Scale(
             rows_frame, variable=rows, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
-            resolution=1, from_=1, to=30, length=300, bd=0
+            resolution=1, from_=1, to=60, length=300, bd=0
         )
         rows_label.pack(anchor='w')
         rows_slider.pack()
@@ -847,7 +847,7 @@ class WindowControl:
         columns_label = tk.Label(rows_frame, text='Columns', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         columns_slider = tk.Scale(
             rows_frame, variable=columns, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
-            resolution=1, from_=25, to=55, length=300, bd=0
+            resolution=1, from_=25, to=60, length=300, bd=0
         )
         columns_label.pack(anchor='w')
         columns_slider.pack()
