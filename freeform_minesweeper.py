@@ -29,23 +29,11 @@ class Difficulty(Enum):
     EXPERT = 0.25
 
 
-class Options:
-    multimines = False
-    grace_rule = True
-    multimine_sq_inc = 0.1
-    flagless = False
-    multimine_mine_inc = 0.05
-
-
 class Constants:
-    ROWS = 28
-    COLS = 30
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
     SEGMENT_WIDTH = 26
     PADDING_DIST = 5
-    WINDOW_WIDTH = BOARD_SQUARE_SIZE * COLS
-    BOARD_HEIGHT = BOARD_SQUARE_SIZE * ROWS
     BACKGROUND_COLOUR = '#c0c0c0'
     DEFAULT_COLOUR = '#d9d9d9'
     FONT = ('MINE-SWEEPER', 7, 'normal')
@@ -107,6 +95,18 @@ class Constants:
         SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
         setattr(Constants, 'MAIN_ICON', MAIN_ICON)
         setattr(Constants, 'SETTINGS_ICON', SETTINGS_ICON)
+
+
+class Options:
+    multimines = False
+    grace_rule = True
+    multimine_sq_inc = 0.1
+    flagless = False
+    multimine_mine_inc = 0.05
+    rows = 28
+    cols = 30
+    window_width = Constants.BOARD_SQUARE_SIZE * cols
+    board_height = Constants.BOARD_SQUARE_SIZE * rows
 
 
 class GameControl:
@@ -327,17 +327,17 @@ class GameControl:
     def save_board() -> None:
         # Commented to hell and back in case I ever forget my logic here
         # Keep track of the leftmost enabled sqaure. Set to the right side of the field
-        leftmost = Constants.COLS - 1
+        leftmost = Options.cols - 1
         # Will be the final bit mapping of the board
         board_bits = []
         # A flag for detecting when the first row with an enabled square is hit
         reached_content = False
         # Iterate over the number rows of the field
-        for row in range(Constants.ROWS):
+        for row in range(Options.rows):
             # Define an empty string that will represent the bits in a row
             bit_row = ''
             # Iterate over the number of columns in the field
-            for col in range(Constants.COLS):
+            for col in range(Options.cols):
                 # Get the square at the current position
                 square = WindowControl.board_frame.grid_slaves(row=row, column=col)[0]
                 # Set the next bit in the row to be 1 if the square is enabled and 0 if it is not
@@ -393,7 +393,7 @@ class GameControl:
         except Exception:
             messagebox.showerror(title='Opening Error', message='Was not able to open the file.')
             return
-        if len(board_bits) > Constants.ROWS or len(max(board_bits, key=len)) > Constants.COLS:
+        if len(board_bits) > Options.rows or len(max(board_bits, key=len)) > Options.cols:
             messagebox.showerror(title='Loading Error', message='Board was too large to be loaded properly.')
             return
         GameControl.clear_board()
@@ -565,15 +565,15 @@ class BoardSquare(tk.Label):
 class WindowControl:
     root = tk.Tk()
     main_frame = tk.Frame(
-        root, width=Constants.WINDOW_WIDTH,
-        height=Constants.BOARD_HEIGHT + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST, bg='black'
+        root, width=Options.window_width,
+        height=Options.board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST, bg='black'
     )
     menu_frame = tk.Frame(
-        main_frame, width=Constants.WINDOW_WIDTH, height=Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST,
+        main_frame, width=Options.window_width, height=Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST,
         bg=Constants.BACKGROUND_COLOUR
     )
     board_frame = tk.Frame(
-        main_frame, width=Constants.WINDOW_WIDTH, height=Constants.BOARD_HEIGHT,
+        main_frame, width=Options.window_width, height=Options.board_height,
         bg=Constants.BACKGROUND_COLOUR
     )
 
@@ -606,12 +606,12 @@ class WindowControl:
 
     @staticmethod
     def init_board() -> None:
-        for i in range(Constants.ROWS):
+        for i in range(Options.rows):
             WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
-        for i in range(Constants.COLS):
+        for i in range(Options.cols):
             WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
-        for x in range(Constants.ROWS):
-            for y in range(Constants.COLS):
+        for x in range(Options.rows):
+            for y in range(Options.cols):
                 sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[20])
                 sq.toggle_enable()
                 sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
@@ -730,7 +730,7 @@ class WindowControl:
         x = (event.x_root - initial_square.master.winfo_rootx()) // Constants.BOARD_SQUARE_SIZE
         y = (event.y_root - initial_square.master.winfo_rooty()) // Constants.BOARD_SQUARE_SIZE
         GameControl.drag_mode = initial_square.enabled
-        if x in range(Constants.ROWS) and y in range(Constants.COLS):
+        if x in range(Options.rows) and y in range(Options.cols):
             try:
                 square = WindowControl.board_frame.grid_slaves(row=y, column=x)[0]
             except IndexError:
@@ -831,7 +831,7 @@ class WindowControl:
         flagless_on_choice.pack(anchor='w')
         flagless_frame.grid(row=5, column=0, sticky='w', pady=Constants.PADDING_DIST)
 
-        rows = tk.IntVar(settings_root, Constants.ROWS)
+        rows = tk.IntVar(settings_root, Options.rows)
         rows_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
         rows_label = tk.Label(rows_frame, text='Rows', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         rows_slider = tk.Scale(
@@ -842,7 +842,7 @@ class WindowControl:
         rows_slider.pack()
         rows_frame.grid(row=6, column=0, sticky='w', pady=Constants.PADDING_DIST)
 
-        columns = tk.IntVar(settings_root, Constants.COLS)
+        columns = tk.IntVar(settings_root, Options.cols)
         columns_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
         columns_label = tk.Label(rows_frame, text='Columns', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         columns_slider = tk.Scale(
@@ -859,18 +859,18 @@ class WindowControl:
             Options.multimine_mine_inc = mines.get()
             Options.flagless = flagless.get()
             Options.multimine_sq_inc = density.get()
-            if rows.get() != Constants.ROWS:
-                Constants.BOARD_HEIGHT = Constants.BOARD_SQUARE_SIZE * rows.get()
-                WindowControl.main_frame.config(height=Constants.BOARD_HEIGHT + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST)
-                WindowControl.board_frame.config(height=Constants.BOARD_HEIGHT)
-            if columns.get() != Constants.COLS:
-                Constants.WINDOW_WIDTH = Constants.BOARD_SQUARE_SIZE * columns.get()
-                WindowControl.main_frame.config(width=Constants.WINDOW_WIDTH)
-                WindowControl.menu_frame.config(width=Constants.WINDOW_WIDTH)
-                WindowControl.board_frame.config(width=Constants.WINDOW_WIDTH)
-            if rows.get() != Constants.ROWS or columns.get() != Constants.ROWS:
-                Constants.ROWS = rows.get()
-                Constants.COLS = columns.get()
+            if rows.get() != Options.rows:
+                Options.board_height = Constants.BOARD_SQUARE_SIZE * rows.get()
+                WindowControl.main_frame.config(height=Options.board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST)
+                WindowControl.board_frame.config(height=Options.board_height)
+            if columns.get() != Options.cols:
+                Options.window_width = Constants.BOARD_SQUARE_SIZE * columns.get()
+                WindowControl.main_frame.config(width=Options.window_width)
+                WindowControl.menu_frame.config(width=Options.window_width)
+                WindowControl.board_frame.config(width=Options.window_width)
+            if rows.get() != Options.rows or columns.get() != Options.rows:
+                Options.rows = rows.get()
+                Options.cols = columns.get()
                 for sq in WindowControl.board_frame.grid_slaves():
                     sq.destroy()
                 WindowControl.init_board()
