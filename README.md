@@ -55,7 +55,7 @@ In addition to the regular Minesweeper experience, FreeForm Minesweeper also has
    * Change the probability of getting multimines in MultiMine mode
    * Play the game with no flags
 
-## Requirements
+## Requirements (When running source)
 
 ### Python Requirements
  * Python, version >= 3.9.0
@@ -63,6 +63,3 @@ In addition to the regular Minesweeper experience, FreeForm Minesweeper also has
 ### Library Requirements
  * TKinter, verison >= 8.6
  * Pillow, version >= 8.2.0
-
-## Things to be done
- - [ ] Make executables for the game
