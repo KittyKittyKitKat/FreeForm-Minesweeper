@@ -595,28 +595,28 @@ class WindowControl:
         WindowControl.root.resizable(0, 0)
         WindowControl.root.title('FreeForm Minesweeper')
         WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
-        WindowControl.main_frame.pack_propagate(0)
+        WindowControl.main_frame.grid_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
         WindowControl.board_frame.grid_propagate(0)
-        for i in range(8):
+        for i in range(6):
             WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
-        WindowControl.menu_frame.pack()
-        WindowControl.board_frame.pack()
-        WindowControl.main_frame.pack()
+        WindowControl.menu_frame.grid(row=0, column=0, sticky='nsew')
+        WindowControl.board_frame.grid(row=1, column=0, sticky='nsew')
+        WindowControl.main_frame.grid(row=2, column=0, sticky='nsew')
 
     @staticmethod
     def init_board() -> None:
         for i in range(Constants.ROWS):
-            WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
+            WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
         for i in range(Constants.COLS):
-            WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
+            WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
         for x in range(Constants.ROWS):
             for y in range(Constants.COLS):
                 sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[20])
                 sq.toggle_enable()
                 sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
                 sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
-                sq.grid(row=x, column=y)
+                sq.grid(row=x, column=y, sticky='nsew')
 
     @staticmethod
     def init_menu() -> None:
@@ -636,35 +636,35 @@ class WindowControl:
             WindowControl.presets_frame, text='Expert', font=Constants.FONT, width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.EXPERT, diff_4) or GameControl.load_board('presets/expert.ffmnswpr')
         )
-        preset_easy.grid(row=0, column=0)
-        preset_medium.grid(row=0, column=1)
-        preset_hard.grid(row=1, column=0)
-        preset_expert.grid(row=1, column=1)
+        preset_easy.grid(row=0, column=0, sticky='nsew')
+        preset_medium.grid(row=0, column=1, sticky='nsew')
+        preset_hard.grid(row=1, column=0, sticky='nsew')
+        preset_expert.grid(row=1, column=1, sticky='nsew')
         WindowControl.presets_frame.grid(row=0, column=0)
 
         flag_left = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         flag_mid = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         flag_right = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        flag_left.grid(row=0, column=0)
-        flag_mid.grid(row=0, column=1)
-        flag_right.grid(row=0, column=2)
+        flag_left.grid(row=0, column=0, sticky='nsew')
+        flag_mid.grid(row=0, column=1, sticky='nsew')
+        flag_right.grid(row=0, column=2, sticky='nsew')
         WindowControl.flags_frame.grid(row=0, column=1)
 
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
         WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19], command=WindowControl.settings_window)
-        WindowControl.mode_switch_button.grid(row=0, column=0)
-        WindowControl.reset_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3)
-        WindowControl.settings_button.grid(row=0, column=2)
-        WindowControl.play_button.grid(row=1, column=0, columnspan=3)
+        WindowControl.mode_switch_button.grid(row=0, column=0, sticky='nsew')
+        WindowControl.reset_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3, sticky='nsew')
+        WindowControl.settings_button.grid(row=0, column=2, sticky='nsew')
+        WindowControl.play_button.grid(row=1, column=0, columnspan=3, sticky='nsew')
         WindowControl.mswpr_frame.grid(row=0, column=2)
 
         timer_left = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         timer_mid = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         timer_right = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        timer_left.grid(row=0, column=0)
-        timer_mid.grid(row=0, column=1)
-        timer_right.grid(row=0, column=2)
+        timer_left.grid(row=0, column=0, sticky='nsew')
+        timer_mid.grid(row=0, column=1, sticky='nsew')
+        timer_right.grid(row=0, column=2, sticky='nsew')
         WindowControl.timer_frame.grid(row=0, column=3)
 
         diff_label = tk.Label(WindowControl.diff_frame, text='Difficulty', font=Constants.FONT, bg=Constants.BACKGROUND_COLOUR)
@@ -684,21 +684,21 @@ class WindowControl:
             WindowControl.diff_frame, text='4', font=Constants.FONT,
             command=lambda diff=Difficulty.EXPERT: GameControl.change_difficulty(diff, diff_4)
         )
-        diff_label.grid(row=0, column=1, columnspan=4)
-        diff_1.grid(row=1, column=1)
-        diff_2.grid(row=1, column=2)
-        diff_3.grid(row=1, column=3)
-        diff_4.grid(row=1, column=4)
+        diff_label.grid(row=0, column=1, columnspan=4, sticky='nsew')
+        diff_1.grid(row=1, column=1, sticky='nsew')
+        diff_2.grid(row=1, column=2, sticky='nsew')
+        diff_3.grid(row=1, column=3, sticky='nsew')
+        diff_4.grid(row=1, column=4, sticky='nsew')
         WindowControl.diff_frame.grid(row=0, column=4)
 
         fill_button = tk.Button(WindowControl.controls_frame, text='Fill', font=Constants.FONT, width=5, command=GameControl.fill_board)
         clear_button = tk.Button(WindowControl.controls_frame, text='Clear', font=Constants.FONT, width=5, command=GameControl.clear_board)
         save_board_button = tk.Button(WindowControl.controls_frame, text='Save', font=Constants.FONT, width=5, command=lambda: GameControl.save_board())
         load_board_button = tk.Button(WindowControl.controls_frame, text='Load', font=Constants.FONT, width=5, command=lambda: GameControl.load_board())
-        fill_button.grid(row=0, column=0)
-        clear_button.grid(row=1, column=0)
-        save_board_button.grid(row=0, column=1, padx=Constants.PADDING_DIST)
-        load_board_button.grid(row=1, column=1)
+        fill_button.grid(row=0, column=0, sticky='nsew')
+        clear_button.grid(row=1, column=0, sticky='nsew')
+        save_board_button.grid(row=0, column=1, sticky='nsew')
+        load_board_button.grid(row=1, column=1, sticky='nsew')
         WindowControl.controls_frame.grid(row=0, column=5)
 
     @staticmethod
@@ -831,18 +831,55 @@ class WindowControl:
         flagless_on_choice.pack(anchor='w')
         flagless_frame.grid(row=5, column=0, sticky='w', pady=Constants.PADDING_DIST)
 
+        rows = tk.IntVar(settings_root, Constants.ROWS)
+        rows_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        rows_label = tk.Label(rows_frame, text='Rows', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        rows_slider = tk.Scale(
+            rows_frame, variable=rows, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            resolution=1, from_=1, to=60, length=300, bd=0
+        )
+        rows_label.pack(anchor='w')
+        rows_slider.pack()
+        rows_frame.grid(row=6, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
+        columns = tk.IntVar(settings_root, Constants.COLS)
+        columns_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
+        columns_label = tk.Label(rows_frame, text='Columns', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        columns_slider = tk.Scale(
+            rows_frame, variable=columns, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            resolution=1, from_=25, to=60, length=300, bd=0
+        )
+        columns_label.pack(anchor='w')
+        columns_slider.pack()
+        columns_frame.grid(row=6, column=0, sticky='w', pady=Constants.PADDING_DIST)
+
         def submit_vars() -> None:
             Options.grace_rule = gracerule.get()
             Options.multimines = multimode.get()
             Options.multimine_mine_inc = mines.get()
             Options.flagless = flagless.get()
             Options.multimine_sq_inc = density.get()
+            if rows.get() != Constants.ROWS:
+                Constants.BOARD_HEIGHT = Constants.BOARD_SQUARE_SIZE * rows.get()
+                WindowControl.main_frame.config(height=Constants.BOARD_HEIGHT + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST)
+                WindowControl.board_frame.config(height=Constants.BOARD_HEIGHT)
+            if columns.get() != Constants.COLS:
+                Constants.WINDOW_WIDTH = Constants.BOARD_SQUARE_SIZE * columns.get()
+                WindowControl.main_frame.config(width=Constants.WINDOW_WIDTH)
+                WindowControl.menu_frame.config(width=Constants.WINDOW_WIDTH)
+                WindowControl.board_frame.config(width=Constants.WINDOW_WIDTH)
+            if rows.get() != Constants.ROWS or columns.get() != Constants.ROWS:
+                Constants.ROWS = rows.get()
+                Constants.COLS = columns.get()
+                for sq in WindowControl.board_frame.grid_slaves():
+                    sq.destroy()
+                WindowControl.init_board()
             settings_root.destroy()
             WindowControl.settings_button.config(state='normal')
             WindowControl.play_button.config(state='normal')
 
         submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
-        submit_button.grid(row=6, column=0, pady=Constants.PADDING_DIST)
+        submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
 
 
 def main() -> None:
