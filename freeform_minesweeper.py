@@ -607,9 +607,9 @@ class WindowControl:
     @staticmethod
     def init_board() -> None:
         for i in range(Constants.ROWS):
-            WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
+            WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
         for i in range(Constants.COLS):
-            WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE)
+            WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
         for x in range(Constants.ROWS):
             for y in range(Constants.COLS):
                 sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[20])
