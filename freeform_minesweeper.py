@@ -4,10 +4,10 @@ import time
 
 from enum import Enum, auto
 from itertools import chain
+from os.path import expanduser
 from tkinter import filedialog
 from tkinter import messagebox
 from typing import Optional
-from platform import system as get_os
 
 from PIL import Image, ImageTk
 
@@ -42,7 +42,7 @@ class Constants:
     LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     FILE_TYPE = (('FreeForm Minesweeper Board', '*.ffmnswpr'),)
-    SAVE_LOAD_DIR = '/home' if get_os() == 'Linux' else 'C:\\'
+    SAVE_LOAD_DIR = expanduser("~/Desktop")
 
     @staticmethod
     def init_board_images() -> None:
