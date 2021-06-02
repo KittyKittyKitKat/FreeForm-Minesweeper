@@ -41,7 +41,8 @@ class Constants:
     MAINLOOP_TIME = 0.01
     LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
-    FILE_TYPE = (('FreeForm Minesweeper Board', '*.ffmnswpr'),)
+    FILE_EXTENSION = '.ffmnswpr'
+    FILE_TYPE = (('FreeForm Minesweeper Board', f'*.{FILE_EXTENSION}'),)
     SAVE_LOAD_DIR = expanduser("~/Desktop")
 
     @staticmethod
@@ -376,7 +377,10 @@ class GameControl:
                 board_bits[i] = row[leftmost:]
         # At this point the board is saved as rows of bits that has been trimmed down to the smallest possible dimensions of the board
         # Save to a file
-        board_file = filedialog.asksaveasfilename(initialdir=Constants.SAVE_LOAD_DIR, title='Save Board', filetypes=Constants.FILE_TYPE)
+        board_file = filedialog.asksaveasfilename(
+            initialdir=Constants.SAVE_LOAD_DIR, title='Save Board',
+            filetypes=Constants.FILE_TYPE, defaultextension=Constants.FILE_EXTENSION
+        )
         try:
             with open(board_file, 'w') as board_save_file:
                 board_save_file.write('\n'.join(board_bits))
