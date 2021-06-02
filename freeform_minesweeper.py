@@ -595,14 +595,14 @@ class WindowControl:
         WindowControl.root.resizable(0, 0)
         WindowControl.root.title('FreeForm Minesweeper')
         WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
-        WindowControl.main_frame.pack_propagate(0)
+        WindowControl.main_frame.grid_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
         WindowControl.board_frame.grid_propagate(0)
         for i in range(8):
             WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
-        WindowControl.menu_frame.pack()
-        WindowControl.board_frame.pack()
-        WindowControl.main_frame.pack()
+        WindowControl.menu_frame.grid(row=0, column=0)
+        WindowControl.board_frame.grid(row=1, column=0)
+        WindowControl.main_frame.grid(row=2, column=0)
 
     @staticmethod
     def init_board() -> None:
