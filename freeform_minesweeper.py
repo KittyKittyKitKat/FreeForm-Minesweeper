@@ -598,7 +598,7 @@ class WindowControl:
         WindowControl.main_frame.grid_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
         WindowControl.board_frame.grid_propagate(0)
-        for i in range(8):
+        for i in range(6):
             WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
         WindowControl.menu_frame.grid(row=0, column=0, sticky='nsew')
         WindowControl.board_frame.grid(row=1, column=0, sticky='nsew')
@@ -620,10 +620,6 @@ class WindowControl:
 
     @staticmethod
     def init_menu() -> None:
-        for i in range(5):
-            WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
-        for i in range(1):
-            WindowControl.menu_frame.grid_rowconfigure(i, weight=1)
         preset_easy = tk.Button(
             WindowControl.presets_frame, text='Easy', font=Constants.FONT, width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.EASY, diff_1) or GameControl.load_board('presets/easy.ffmnswpr')
