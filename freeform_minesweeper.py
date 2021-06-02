@@ -620,6 +620,10 @@ class WindowControl:
 
     @staticmethod
     def init_menu() -> None:
+        for i in range(5):
+            WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
+        for i in range(1):
+            WindowControl.menu_frame.grid_rowconfigure(i, weight=1)
         preset_easy = tk.Button(
             WindowControl.presets_frame, text='Easy', font=Constants.FONT, width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.EASY, diff_1) or GameControl.load_board('presets/easy.ffmnswpr')
