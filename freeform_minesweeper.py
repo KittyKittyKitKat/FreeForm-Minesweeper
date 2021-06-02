@@ -399,6 +399,8 @@ class GameControl:
     @staticmethod
     def load_board(filename: Optional[str] = None) -> None:
         board_file = filename or filedialog.askopenfilename(initialdir=Constants.SAVE_LOAD_DIR, title='Open Board', filetypes=Constants.FILE_TYPE)
+        if not board_file:
+            return
         try:
             with open(board_file, 'r') as board_load_file:
                 board_bits = [line.strip() for line in board_load_file.readlines()]
