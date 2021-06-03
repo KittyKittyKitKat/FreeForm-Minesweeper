@@ -42,7 +42,7 @@ class Constants:
     LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     FILE_EXTENSION = '.ffmnswpr'
-    FILE_TYPE = (('FreeForm Minesweeper Board', f'*.{FILE_EXTENSION}'),)
+    FILE_TYPE = (('FreeForm Minesweeper Board', f'*{FILE_EXTENSION}'),)
     SAVE_LOAD_DIR = expanduser("~/Desktop")
 
     @staticmethod
