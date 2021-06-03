@@ -882,7 +882,7 @@ class WindowControl:
                 WindowControl.main_frame.config(width=Options.window_width)
                 WindowControl.menu_frame.config(width=Options.window_width)
                 WindowControl.board_frame.config(width=Options.window_width)
-            if rows.get() != Options.rows or columns.get() != Options.rows:
+            if rows.get() != Options.rows or columns.get() != Options.cols:
                 Options.rows = rows.get()
                 Options.cols = columns.get()
                 for sq in WindowControl.board_frame.grid_slaves():
