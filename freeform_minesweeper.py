@@ -239,6 +239,13 @@ class GameControl:
 
     @staticmethod
     def reset_game() -> None:
+        reset = messagebox.askyesno(
+            title='Reset Game?',
+            message='Are you sure you want to start a new game?',
+            default=messagebox.NO
+        )
+        if not reset:
+            return
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
