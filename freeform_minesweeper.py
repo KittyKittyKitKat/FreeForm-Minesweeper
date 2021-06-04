@@ -1,15 +1,54 @@
 import random
+import requests
 import tkinter as tk
 import time
 
 from enum import Enum, auto
-from itertools import chain
+from itertools import chain, groupby
 from os.path import expanduser
 from tkinter import filedialog
 from tkinter import messagebox
 from typing import Optional
 
 from PIL import Image, ImageTk
+
+
+class MetaData:
+    github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
+    github_releases_url = 'https://git.io/JGunj'
+    platform = 'Linux'
+    version = 'v1.3.3'
+
+    @staticmethod
+    def get_release_tags(url: str) -> list[str]:
+        github_release_data = requests.get(url).json()
+        tags = [release['tag_name'] for release in github_release_data]
+        tags_linux, tags_windows = [
+            list(g) for _, g in groupby(sorted(tags), key=lambda s: s[0])
+        ]
+        if MetaData.platform == 'Linux':
+            return tags_linux
+        elif MetaData.platform == 'Windows':
+            return tags_windows
+
+    @staticmethod
+    def is_release_up_to_date() -> bool:
+        tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
+        up_to_date_release = tags[-1]
+        current_release = MetaData.platform + '-' + MetaData.version
+        print(up_to_date_release)
+        return up_to_date_release == current_release
+
+    @staticmethod
+    def outdated_notice() -> None:
+        message = (
+            f'This release is not up to date, and as such you may be missing out on important new features or bug fixes.\n'
+            f'Please go to {MetaData.github_releases_url} to download and install the lastest release.'
+        )
+        messagebox.showwarning(
+            title='Outdated Release',
+            message=message
+        )
 
 
 class ClickMode(Enum):
@@ -914,6 +953,8 @@ def main() -> None:
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
     WindowControl.init_board()
+    if not MetaData.is_release_up_to_date():
+        MetaData.outdated_notice()
     while True:
         try:
             WindowControl.root.update_idletasks()
