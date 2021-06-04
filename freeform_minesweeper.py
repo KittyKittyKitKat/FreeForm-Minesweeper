@@ -14,13 +14,18 @@ from PIL import Image, ImageTk
 
 
 class MetaData:
+    """Provide variables and utitlies for checking current release against the most up to date release"""
     github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
     github_releases_url = 'https://git.io/JGunj'
-    platform = 'Linux'
-    version = 'v1.3.3'
+    # These are dummy variable for the purpose of source code.
+    # The releases will have the proper information contained within
+    # This information will directly correlate to the release info on GitHub
+    platform = 'OS'
+    version = 'vX.X.X'
 
     @staticmethod
     def get_release_tags(url: str) -> list[str]:
+        """Fetch the releases tags from GitHub's repo API"""
         github_release_data = requests.get(url).json()
         tags = [release['tag_name'] for release in github_release_data]
         tags_linux, tags_windows = [
@@ -33,6 +38,7 @@ class MetaData:
 
     @staticmethod
     def is_release_up_to_date() -> bool:
+        """Compare release to most up to date"""
         tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
         up_to_date_release = tags[-1]
         current_release = MetaData.platform + '-' + MetaData.version
@@ -41,8 +47,10 @@ class MetaData:
 
     @staticmethod
     def outdated_notice() -> None:
+        """Display pop up message detailing release is out of date"""
         message = (
-            f'This release is not up to date, and as such you may be missing out on important new features or bug fixes.\n'
+            f'This release is not up to date, '
+            'and as such you may be missing out on important new features or bug fixes.\n'
             f'Please go to {MetaData.github_releases_url} to download and install the lastest release.'
         )
         messagebox.showwarning(
