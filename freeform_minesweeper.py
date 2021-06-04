@@ -13,16 +13,19 @@ from PIL import Image, ImageTk
 
 
 class ClickMode(Enum):
+    """Enum represeting the current clicking mode of the game"""
     UNCOVER = auto()
     FLAG = auto()
 
 
 class GameState(Enum):
+    """Enum representing the current state of the game"""
     DONE = auto()
     PLAYING = auto()
 
 
 class Difficulty(Enum):
+    """Enum representing the difficulty values for the game, in percentages"""
     EASY = 0.13
     MEDIUM = 0.16
     HARD = 0.207
@@ -239,6 +242,13 @@ class GameControl:
 
     @staticmethod
     def reset_game() -> None:
+        reset = messagebox.askyesno(
+            title='Reset Game?',
+            message='Are you sure you want to start a new game?',
+            default=messagebox.NO
+        )
+        if not reset:
+            return
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
