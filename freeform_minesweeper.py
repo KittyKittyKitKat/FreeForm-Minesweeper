@@ -252,6 +252,13 @@ class GameControl:
 
     @staticmethod
     def stop_game() -> None:
+        stop = messagebox.askyesno(
+            title='Stop Playing?',
+            message='Are you sure you want to stop playing?',
+            default=messagebox.NO
+        )
+        if not stop:
+            return
         GameControl.on_hold = True
         WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.root.unbind('<Control-f>')
