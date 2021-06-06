@@ -33,6 +33,17 @@ class Difficulty(Enum):
 
 
 class Constants:
+    """Utility class for various game constants
+
+    BOARD_SQUARE_SIZE, SEGMENT_HEIGHT, SEGMENT_WIDTH, and PADDING_DIST are pixel values
+    BACKGROUND_COLOUR and DEFAULT_COLOUR are colour codes in hex format
+    FONT and FONT_BIG are tuples of font data TKinter recognixes, of the format (name, point, style)
+    MAINLOOP_TIME controls the speed of the root window's mainloop
+    LOCKED_BLACK_SQUARE and UNLOCKED_BLACK_SQUARE are inital black PIL images of size BOARD_SQUARE_SIZE
+    FILE_EXTENSION is the extension used for saving and loading game boards
+    FILE_TYPE is a tuple of file data messagebox recgonizes, of the form (extension_name, extension)
+    SAVE_LOAD_DIR is a path pointing to the users Desktop, used for saving and loading boards
+    """
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
     SEGMENT_WIDTH = 26
@@ -50,6 +61,13 @@ class Constants:
 
     @staticmethod
     def init_board_images() -> None:
+        """Initializes the images used for the game board
+
+        First the proper sprite is drawn on UNLOCKED_BLACK_SQUARE
+        Doing this procedurally keeps the spritesheet tidy
+        The board spritesheet is load and cut into the individual squares
+        All the PIL images are converted to PhotoImage objects for TKinter
+        """
         ubs_x, ubs_y = Constants.UNLOCKED_BLACK_SQUARE.size
         for i in range(ubs_y):
             Constants.UNLOCKED_BLACK_SQUARE.putpixel((0, i), (128, 128, 128))
@@ -71,6 +89,11 @@ class Constants:
 
     @staticmethod
     def init_sevseg_images() -> None:
+        """Initializes the images used for the seven segment displays
+
+        The seven segment spritesheet is load and cut into the individual numbers
+        All the PIL images are converted to PhotoImage objects for TKinter
+        """
         SEVSEG_IMAGES = []
         with Image.open('assets/sevseg_sheet.png') as sevseg_sheet:
             x, y = sevseg_sheet.size
@@ -83,6 +106,11 @@ class Constants:
 
     @staticmethod
     def init_extended_board_images() -> None:
+        """Initializes the images used for the multimine mode
+
+        The extened board spritesheet is load and cut into the individual squares
+        All the PIL images are converted to PhotoImage objects for TKinter
+        """
         EXTENDED_BOARD_IMAGES = []
         with Image.open('assets/board_sheet_extended.png') as board_sheet:
             x, y = board_sheet.size
@@ -95,6 +123,10 @@ class Constants:
 
     @staticmethod
     def init_window_icons() -> None:
+        """Initializes the images used for the window icons
+
+        The PIL images are converted to PhotoImage objects for TKinter
+        """
         MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
         SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
         setattr(Constants, 'MAIN_ICON', MAIN_ICON)
