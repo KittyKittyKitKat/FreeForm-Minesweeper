@@ -134,6 +134,18 @@ class Constants:
 
 
 class Options:
+    """Utility class for various game options
+
+    multimines is the flag used for the multimine gamemode
+    grace_rule is the used for the enabled status of the grace rule
+    multimine_sq_inc is the probabilyt mines will be multimines
+    flagless is the flag used for flagless gameplay
+    multimine_mine_inc is the increase in the number of mines in multimine mode
+    rows is the number of rows in the game space
+    cols is the number of rows in the game space
+    window_width is the width of the windoe based on the number of cols
+    board_height is the height of the board based on the number of rows
+    """
     multimines = False
     grace_rule = True
     multimine_sq_inc = 0.1
