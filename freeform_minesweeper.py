@@ -6,6 +6,7 @@ import time
 from enum import Enum, auto
 from itertools import chain, groupby
 from os.path import expanduser
+from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
 from typing import Optional
@@ -20,7 +21,7 @@ class MetaData:
     # These are dummy variable for the purpose of source code.
     # The releases will have the proper information contained within
     # This information will directly correlate to the release info on GitHub
-    platform = 'OS'
+    platform = get_os()
     version = 'vX.X.X'
 
     @staticmethod
