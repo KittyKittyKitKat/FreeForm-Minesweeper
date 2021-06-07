@@ -5,9 +5,10 @@ import time
 from enum import Enum, auto
 from itertools import chain
 from os.path import expanduser
+from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
-from typing import Optional
+from typing import Optional, Union
 
 from PIL import Image, ImageTk
 
@@ -92,10 +93,12 @@ class Constants:
 
     @staticmethod
     def init_window_icons() -> None:
-        MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
-        SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
-        setattr(Constants, 'MAIN_ICON', MAIN_ICON)
-        setattr(Constants, 'SETTINGS_ICON', SETTINGS_ICON)
+        MAIN_ICON_PNG = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
+        SETTINGS_ICON_PNG = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
+        setattr(Constants, 'MAIN_ICON_PNG', MAIN_ICON_PNG)
+        setattr(Constants, 'SETTINGS_ICON_PNG', SETTINGS_ICON_PNG)
+        setattr(Constants, 'MAIN_ICON_ICO', 'assets/icon_main.ico')
+        setattr(Constants, 'SETTINGS_ICON_ICO', 'assets/icon_settings.ico')
 
 
 class Options:
@@ -730,6 +733,13 @@ class WindowControl:
         WindowControl.controls_frame.grid(row=0, column=5)
 
     @staticmethod
+    def load_window_icon(window: Union[tk.Tk, tk.Toplevel], icon_png: str, icon_ico: str) -> None:
+        if get_os() == 'Windows':
+            window.iconbitmap(icon_ico)
+        elif get_os() == 'Linux':
+            window.iconphoto(False, icon_png)
+
+    @staticmethod
     def update_timer() -> None:
         if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
             seconds = list(str(int(GameControl.seconds_elpased)).zfill(3))
@@ -774,7 +784,11 @@ class WindowControl:
         settings_root = tk.Toplevel()
         settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
-        settings_root.iconphoto(False, Constants.SETTINGS_ICON)
+        WindowControl.load_window_icon(
+            WindowControl.settings_root,
+            Constants.SETTINGS_ICON_PNG,
+            Constants.SETTINGS_ICON_ICO
+        )
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
 
         def settings_root_close() -> None:
@@ -917,7 +931,7 @@ def main() -> None:
     Constants.init_extended_board_images()
     Constants.init_window_icons()
     Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
-    WindowControl.root.iconphoto(False, Constants.MAIN_ICON)
+    WindowControl.load_window_icon(WindowControl.root, Constants.MAIN_ICON_PNG, Constants.MAIN_ICON_ICO)
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
     WindowControl.init_board()
