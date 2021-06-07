@@ -158,6 +158,18 @@ class Options:
 
 
 class GameControl:
+    """Class for handling gameplay utilities
+
+    click_mode controls the actions tied to clicking squares
+    game_state is a flag to repreestn if the game is in progress or done
+    difficulty is the current difficulty of the game
+    num_mines is the number of mines in the current game
+    squares_to_win is the required number of squares to uncover to win
+    flags_placed is the current number of flags on the board
+    seconds_elpased is how long the game has been running (max 999)
+    on_hold is a flag that represets if the game running or if the play is placing squares
+    drag_mode is a helper varuabel for clicking and dragging to draw squares
+    """
     click_mode = ClickMode.UNCOVER
     game_state = GameState.PLAYING
     difficulty = Difficulty.EASY
@@ -171,6 +183,7 @@ class GameControl:
 
     @staticmethod
     def check_win() -> None:
+        """Check if the game has been won, and if so place all flags and set reset button to win face"""
         if GameControl.squares_uncovered == GameControl.squares_to_win:
             WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[16])
             GameControl.game_state = GameState.DONE
@@ -185,6 +198,7 @@ class GameControl:
 
     @staticmethod
     def has_lost() -> None:
+        """When the game has been lost reveal all mines and set reset button to lose face"""
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[15])
         GameControl.game_state = GameState.DONE
         for square in WindowControl.board_frame.grid_slaves():
