@@ -40,6 +40,8 @@ class MetaData:
     @staticmethod
     def is_release_up_to_date() -> bool:
         """Compare release to most up to date"""
+        if MetaData.version == 'vX.X.X':
+            return True
         tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
         if tags == '':
             messagebox.showwarning(
@@ -49,7 +51,7 @@ class MetaData:
                     'You can safely ignore this message.'
                 )
             )
-            return
+            return True
         up_to_date_release = tags[-1]
         current_release = MetaData.platform + '-' + MetaData.version
         return up_to_date_release == current_release
@@ -100,6 +102,8 @@ class Constants:
     FILE_EXTENSION = '.ffmnswpr'
     FILE_TYPE = (('FreeForm Minesweeper Board', f'*{FILE_EXTENSION}'),)
     SAVE_LOAD_DIR = expanduser("~/Desktop")
+    MAIN_ICON_ICO = 'assets/icon_main.ico'
+    SETTINGS_ICON_ICO = 'assets/icon_settings.ico'
 
     @staticmethod
     def init_board_images() -> None:
@@ -150,8 +154,8 @@ class Constants:
     def init_window_icons() -> None:
         MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
         SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
-        setattr(Constants, 'MAIN_ICON', MAIN_ICON)
-        setattr(Constants, 'SETTINGS_ICON', SETTINGS_ICON)
+        setattr(Constants, 'MAIN_ICON_PNG', MAIN_ICON)
+        setattr(Constants, 'SETTINGS_ICON_PNG', SETTINGS_ICON)
 
 
 class Options:
@@ -823,7 +827,10 @@ class WindowControl:
         settings_root = tk.Toplevel()
         settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
-        settings_root.iconphoto(False, Constants.SETTINGS_ICON)
+        if get_os() == 'Windows':
+            WindowControl.root.iconphoto(False, Constants.SETTINGS_ICON_ICO)
+        elif get_os() == 'Linux':
+            WindowControl.root.iconphoto(False, Constants.SETTINGS_ICON_PNGs)
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
 
         def settings_root_close() -> None:
@@ -966,7 +973,10 @@ def main() -> None:
     Constants.init_extended_board_images()
     Constants.init_window_icons()
     Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
-    WindowControl.root.iconphoto(False, Constants.MAIN_ICON)
+    if get_os() == 'Windows':
+        WindowControl.root.iconphoto(False, Constants.MAIN_ICON_ICO)
+    elif get_os() == 'Linux':
+        WindowControl.root.iconphoto(False, Constants.MAIN_ICON_PNG)
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
     WindowControl.init_board()
