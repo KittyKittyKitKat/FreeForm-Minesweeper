@@ -47,7 +47,7 @@ class MetaData:
                 message=(
                     'Could not retrieve operating system information to queue updates.\n'
                     'You can safely ignore this message.'
-                )s
+                )
             )
             return
         up_to_date_release = tags[-1]
