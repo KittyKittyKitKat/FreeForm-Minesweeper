@@ -18,10 +18,10 @@ class MetaData:
     """Provide variables and utitlies for checking current release against the most up to date release"""
     github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
     github_releases_url = 'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
-    # These are dummy variable for the purpose of source code.
+    platform = get_os()
+    # This is a dummy variable for the purpose of source code.
     # The releases will have the proper information contained within
     # This information will directly correlate to the release info on GitHub
-    platform = get_os()
     version = 'vX.X.X'
 
     @staticmethod
