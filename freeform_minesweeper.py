@@ -1,16 +1,72 @@
 import random
+import requests
 import tkinter as tk
 import time
 
 from enum import Enum, auto
-from itertools import chain
+from itertools import chain, groupby
 from os.path import expanduser
 from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
-from typing import Optional, Union
+from typing import Optional
 
 from PIL import Image, ImageTk
+
+
+class MetaData:
+    """Provide variables and utitlies for checking current release against the most up to date release"""
+    github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
+    github_releases_url = 'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
+    platform = get_os()
+    # This is a dummy variable for the purpose of source code.
+    # The releases will have the proper information contained within
+    # This information will directly correlate to the release info on GitHub
+    version = 'vX.X.X'
+
+    @staticmethod
+    def get_release_tags(url: str) -> list[str]:
+        """Fetch the releases tags from GitHub's repo API"""
+        github_release_data = requests.get(url).json()
+        tags = [release['tag_name'] for release in github_release_data]
+        tags_linux, tags_windows = [
+            list(g) for _, g in groupby(sorted(tags), key=lambda s: s[0])
+        ]
+        if MetaData.platform == 'Linux':
+            return tags_linux
+        elif MetaData.platform == 'Windows':
+            return tags_windows
+
+    @staticmethod
+    def is_release_up_to_date() -> bool:
+        """Compare release to most up to date"""
+        tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
+        if tags == '':
+            messagebox.showwarning(
+                title='OS Fetching Error',
+                message=(
+                    'Could not retrieve operating system information to queue updates.\n'
+                    'You can safely ignore this message.'
+                )s
+            )
+            return
+        up_to_date_release = tags[-1]
+        current_release = MetaData.platform + '-' + MetaData.version
+        print(up_to_date_release)
+        return up_to_date_release == current_release
+
+    @staticmethod
+    def outdated_notice() -> None:
+        """Display pop up message detailing release is out of date"""
+        message = (
+            f'This release is not up to date, '
+            'and as such you may be missing out on important new features or bug fixes.\n'
+            f'Please go to {MetaData.github_releases_url} to download and install the lastest release.'
+        )
+        messagebox.showwarning(
+            title='Outdated Release',
+            message=message
+        )
 
 
 class ClickMode(Enum):
@@ -93,12 +149,10 @@ class Constants:
 
     @staticmethod
     def init_window_icons() -> None:
-        MAIN_ICON_PNG = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
-        SETTINGS_ICON_PNG = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
-        setattr(Constants, 'MAIN_ICON_PNG', MAIN_ICON_PNG)
-        setattr(Constants, 'SETTINGS_ICON_PNG', SETTINGS_ICON_PNG)
-        setattr(Constants, 'MAIN_ICON_ICO', 'assets/icon_main.ico')
-        setattr(Constants, 'SETTINGS_ICON_ICO', 'assets/icon_settings.ico')
+        MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
+        SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
+        setattr(Constants, 'MAIN_ICON', MAIN_ICON)
+        setattr(Constants, 'SETTINGS_ICON', SETTINGS_ICON)
 
 
 class Options:
@@ -242,13 +296,6 @@ class GameControl:
 
     @staticmethod
     def reset_game() -> None:
-        reset = messagebox.askyesno(
-            title='Reset Game?',
-            message='Are you sure you want to start a new game?',
-            default=messagebox.NO
-        )
-        if not reset:
-            return
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
@@ -733,13 +780,6 @@ class WindowControl:
         WindowControl.controls_frame.grid(row=0, column=5)
 
     @staticmethod
-    def load_window_icon(window: Union[tk.Tk, tk.Toplevel], icon_png: str, icon_ico: str) -> None:
-        if get_os() == 'Windows':
-            window.iconbitmap(icon_ico)
-        elif get_os() == 'Linux':
-            window.iconphoto(False, icon_png)
-
-    @staticmethod
     def update_timer() -> None:
         if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
             seconds = list(str(int(GameControl.seconds_elpased)).zfill(3))
@@ -784,11 +824,7 @@ class WindowControl:
         settings_root = tk.Toplevel()
         settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
-        WindowControl.load_window_icon(
-            WindowControl.settings_root,
-            Constants.SETTINGS_ICON_PNG,
-            Constants.SETTINGS_ICON_ICO
-        )
+        settings_root.iconphoto(False, Constants.SETTINGS_ICON)
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
 
         def settings_root_close() -> None:
@@ -931,10 +967,12 @@ def main() -> None:
     Constants.init_extended_board_images()
     Constants.init_window_icons()
     Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
-    WindowControl.load_window_icon(WindowControl.root, Constants.MAIN_ICON_PNG, Constants.MAIN_ICON_ICO)
+    WindowControl.root.iconphoto(False, Constants.MAIN_ICON)
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
     WindowControl.init_board()
+    if not MetaData.is_release_up_to_date():
+        MetaData.outdated_notice()
     while True:
         try:
             WindowControl.root.update_idletasks()
