@@ -41,6 +41,12 @@ class MetaData:
     def is_release_up_to_date() -> bool:
         """Compare release to most up to date"""
         tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
+        if tags == '':
+            messagebox.showwarning(
+                title='OS Fetching Error',
+                message='Could not retrieve operating system information to queue updates.'
+            )
+            return
         up_to_date_release = tags[-1]
         current_release = MetaData.platform + '-' + MetaData.version
         print(up_to_date_release)
