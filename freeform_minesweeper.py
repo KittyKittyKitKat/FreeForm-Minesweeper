@@ -52,7 +52,6 @@ class MetaData:
             return
         up_to_date_release = tags[-1]
         current_release = MetaData.platform + '-' + MetaData.version
-        print(up_to_date_release)
         return up_to_date_release == current_release
 
     @staticmethod
