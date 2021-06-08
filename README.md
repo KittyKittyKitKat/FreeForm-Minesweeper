@@ -56,6 +56,7 @@ In addition to the regular Minesweeper experience, FreeForm Minesweeper also has
    * Play the game with no flags
    * Change the number of rows in the game space (1 to 60)
    * Change the number of columns in the game space (25 to 60)
+ * Automatically detect if an update is available
 
 ## Requirements (When running source)
 
@@ -65,3 +66,4 @@ In addition to the regular Minesweeper experience, FreeForm Minesweeper also has
 ### Library Requirements
  * TKinter, verison >= 8.6
  * Pillow, version >= 8.2.0
+ * requests, verison >= 2.25.1
