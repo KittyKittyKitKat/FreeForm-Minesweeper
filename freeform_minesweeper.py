@@ -828,7 +828,7 @@ class WindowControl:
         settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
         if get_os() == 'Windows':
-            settings_root.iconphoto(False, Constants.SETTINGS_ICON_ICO)
+            settings_root.iconbitmap(Constants.SETTINGS_ICON_ICO)
         elif get_os() == 'Linux':
             settings_root.iconphoto(False, Constants.SETTINGS_ICON_PNG)
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
