@@ -4,9 +4,10 @@ import os
 import winshell
 from win32com.client import Dispatch
 
+
 def main() -> None:
-    package_dir = 'C:\\Program Files (x86)\\'
-    executable_dir = 'FreeForm-Minesweeper'
+    package_dir = os.path.expanduser('~') + '\\'
+    executable_dir = '.FreeForm-Minesweeper'
     executable_name = 'FreeForm-Minesweeper.exe'
     pwd = subprocess.run(
         ['cd'], capture_output=True, encoding=sys.getdefaultencoding(), shell=True
@@ -29,6 +30,7 @@ def main() -> None:
     shortcut.WorkingDirectory = w_dir
     shortcut.IconLocation = icon
     shortcut.save()
+
 
 if __name__ == '__main__':
     main()
