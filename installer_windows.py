@@ -7,7 +7,7 @@ from win32com.client import Dispatch
 
 def main() -> None:
     package_dir = os.path.expanduser('~') + '\\'
-    executable_dir = '.FreeForm-Minesweeper'
+    executable_dir = 'FreeForm-Minesweeper'
     executable_name = 'FreeForm-Minesweeper.exe'
     pwd = subprocess.run(
         ['cd'], capture_output=True, encoding=sys.getdefaultencoding(), shell=True
