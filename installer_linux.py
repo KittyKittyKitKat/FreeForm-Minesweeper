@@ -1,15 +1,11 @@
 import subprocess
 import os
-import sys
 
 
 def main() -> None:
-    try:
-        user_home = f"/home/{os.environ['SUDO_USER']}/"
-    except KeyError:
-        sys.exit('Not executed as sudo')
-    package_dir = '/usr/local/share/'
+    package_dir = os.path.expanduser('~') + '/'
     binary_dir = 'FreeForm-Minesweeper/'
+    hidden_marker = '.'
     binary_name = 'FreeForm-Minesweeper.sh'
     icon_dir_name = 'assets/icon_main.png'
     desktop_dir = '.local/share/applications/'
@@ -20,18 +16,18 @@ def main() -> None:
         'StartupWMClass=FreeForm Minesweeper\n',
         'Comment=Play FreeForm Minesweeper\n',
         'GenericName=Game\n',
-        f'Exec=sh -c "cd {package_dir + binary_dir} && {package_dir + binary_dir + binary_name}"\n',
-        f'Icon={package_dir + binary_dir + icon_dir_name}\n',
+        f'Exec=sh -c "cd {package_dir + hidden_marker + binary_dir} && {package_dir + hidden_marker + binary_dir + binary_name}"\n',
+        f'Icon={package_dir + hidden_marker + binary_dir + icon_dir_name}\n',
         'Type=Application\n'
     ]
     pwd = subprocess.run(['pwd'], capture_output=True, encoding='utf-8').stdout.strip() + '/'
     subprocess.run([
-        'rm', '-r', package_dir + binary_dir
+        'rm', '-r', package_dir + hidden_marker + binary_dir
     ], stderr=subprocess.DEVNULL)
     subprocess.run([
-        'cp', '-R', pwd + binary_dir, package_dir
+        'cp', '-r', pwd + binary_dir, package_dir + hidden_marker + binary_dir
     ])
-    with open(user_home + desktop_dir + desktop_name, 'w') as desktop_fp:
+    with open(package_dir + desktop_dir + desktop_name, 'w') as desktop_fp:
         desktop_fp.writelines(desktop_lines)
 
 
