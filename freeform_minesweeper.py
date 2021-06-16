@@ -1,5 +1,4 @@
 import random
-import requests
 import tkinter as tk
 import time
 
@@ -10,6 +9,8 @@ from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
 from typing import Optional
+
+import requests
 
 from PIL import Image, ImageTk
 
