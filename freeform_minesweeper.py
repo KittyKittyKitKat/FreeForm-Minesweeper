@@ -158,17 +158,20 @@ class Options:
 
 
 class GameControl:
-    """Class for handling gameplay utilities
+    """Container for utilites to control the game
 
-    click_mode controls the actions tied to clicking squares
-    game_state is a flag to repreestn if the game is in progress or done
-    difficulty is the current difficulty of the game
-    num_mines is the number of mines in the current game
-    squares_to_win is the required number of squares to uncover to win
-    flags_placed is the current number of flags on the board
-    seconds_elpased is how long the game has been running (max 999)
-    on_hold is a flag that represets if the game running or if the play is placing squares
-    drag_mode is a helper varuabel for clicking and dragging to draw squares
+    Attributes:
+        click_mode: Flag controlling how mouse events are handled.
+        game_state: Flag controlling if the game is in progress.
+        difficulty: Flag representing the current difficulty of the game.
+        num_mines: Number of mines in the board.
+        squares_to_win: Number of squares to uncover needed to win.
+        squares_uncovered: Number of squares that have been uncovered.
+        flags_placed: Number of flags placed on the board.
+        seconds_elpased: Time elapsed playing the game, in seconds.
+        on_hold: Flag controlling if the game is on hold, ie, creating a board.
+        drag_mode: Flag controlling if clicking dragging adds or remove squares in board creation.
+
     """
     click_mode = ClickMode.UNCOVER
     game_state = GameState.PLAYING
@@ -183,7 +186,7 @@ class GameControl:
 
     @staticmethod
     def check_win() -> None:
-        """Check if the game has been won, and if so place all flags and set reset button to win face"""
+        """Checks if the game has been won, and executes winning sequence if so."""
         if GameControl.squares_uncovered == GameControl.squares_to_win:
             WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[16])
             GameControl.game_state = GameState.DONE
@@ -198,7 +201,7 @@ class GameControl:
 
     @staticmethod
     def has_lost() -> None:
-        """When the game has been lost reveal all mines and set reset button to lose face"""
+        """Checks if the game has been lost, and executes losing sequence if so."""
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[15])
         GameControl.game_state = GameState.DONE
         for square in WindowControl.board_frame.grid_slaves():
@@ -220,6 +223,7 @@ class GameControl:
 
     @staticmethod
     def play_game() -> None:
+        """Core gameplay loop when it is being played as Minesweeper, or a variant."""
         WindowControl.root.unbind('<Control-i>')
         if Options.flagless:
             WindowControl.mode_switch_button.config(state='disabled')
@@ -300,6 +304,7 @@ class GameControl:
 
     @staticmethod
     def reset_game() -> None:
+        """Display dialouge prompt to start a new game, and reset if confirmed."""
         reset = messagebox.askyesno(
             title='Reset Game?',
             message='Are you sure you want to start a new game?',
@@ -320,6 +325,7 @@ class GameControl:
 
     @staticmethod
     def stop_game() -> None:
+        """Display dialouge prompt to stop the current game, and place game on hold if confirmed."""
         stop = messagebox.askyesno(
             title='Stop Playing?',
             message='Are you sure you want to stop playing?',
@@ -359,6 +365,13 @@ class GameControl:
 
     @staticmethod
     def change_difficulty(difficulty: Difficulty, btn_pressed: tk.Button) -> None:
+        """Change the difficulty of the game.
+
+        Args:
+            difficulty: The new difficulty to apply.
+            btn_pressed: The button pressed corresponding to the difficulty.
+
+        """
         GameControl.difficulty = difficulty
         for diff_btn in WindowControl.diff_frame.grid_slaves():
             if isinstance(diff_btn, tk.Button):
@@ -367,18 +380,21 @@ class GameControl:
 
     @staticmethod
     def fill_board() -> None:
+        """Fill the board with squares."""
         for sq in WindowControl.board_frame.grid_slaves():
             if not sq.enabled:
                 sq.toggle_enable()
 
     @staticmethod
     def clear_board() -> None:
+        """Empty the board of all squares."""
         for sq in WindowControl.board_frame.grid_slaves():
             if sq.enabled:
                 sq.toggle_enable()
 
     @staticmethod
     def switch_mode() -> None:
+        """Switch the effect clcking has a square during the game."""
         if GameControl.click_mode is ClickMode.UNCOVER:
             GameControl.click_mode = ClickMode.FLAG
             WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[18])
@@ -401,7 +417,7 @@ class GameControl:
 
     @staticmethod
     def save_board() -> None:
-        # Commented to hell and back in case I ever forget my logic here
+        """Save the current board in its smallest possible form."""
         # Keep track of the leftmost enabled sqaure. Set to the right side of the field
         leftmost = Options.cols - 1
         # Will be the final bit mapping of the board
@@ -473,6 +489,12 @@ class GameControl:
 
     @staticmethod
     def load_board(filename: Optional[str] = None) -> None:
+        """Load an external board into the game.
+
+        Args:
+            filename: Name of the board file to load.
+
+        """
         board_file = filename or filedialog.askopenfilename(initialdir=Constants.SAVE_LOAD_DIR, title='Open Board', filetypes=Constants.FILE_TYPE)
         if not board_file:
             return
@@ -493,6 +515,7 @@ class GameControl:
 
     @staticmethod
     def invert_board() -> None:
+        """Toggle all the squares on the board betwixt those used in game and inactive."""
         for sq in WindowControl.board_frame.grid_slaves():
             sq.toggle_enable()
 
