@@ -134,17 +134,19 @@ class Constants:
 
 
 class Options:
-    """Utility class for various game options
+    """Short summary.
 
-    multimines is the flag used for the multimine gamemode
-    grace_rule is the used for the enabled status of the grace rule
-    multimine_sq_inc is the probabilyt mines will be multimines
-    flagless is the flag used for flagless gameplay
-    multimine_mine_inc is the increase in the number of mines in multimine mode
-    rows is the number of rows in the game space
-    cols is the number of rows in the game space
-    window_width is the width of the windoe based on the number of cols
-    board_height is the height of the board based on the number of rows
+    Attributes:
+        multimines: Description of parameter `multimines`.
+        grace_rule: Description of parameter `grace_rule`.
+        multimine_sq_inc: Description of parameter `multimine_sq_inc`.
+        flagless: Description of parameter `flagless`.
+        multimine_mine_inc: Description of parameter `multimine_mine_inc`.
+        rows: Description of parameter `rows`.
+        cols: Description of parameter `cols`.
+        window_width: Description of parameter `window_width`.
+        board_height: Description of parameter `board_height`.
+
     """
     multimines = False
     grace_rule = True
@@ -704,6 +706,30 @@ class BoardSquare(tk.Label):
 
 
 class WindowControl:
+    """Short summary.
+
+    Attributes:
+        root: Description of parameter `root`.
+        main_frame: Description of parameter `main_frame`.
+        root, width: Description of parameter `root, width`.
+        height: Description of parameter `height`.
+        menu_frame: Description of parameter `menu_frame`.
+        main_frame, width: Description of parameter `main_frame, width`.
+        bg: Description of parameter `bg`.
+        board_frame: Description of parameter `board_frame`.
+        mswpr_frame: Description of parameter `mswpr_frame`.
+        presets_frame: Description of parameter `presets_frame`.
+        diff_frame: Description of parameter `diff_frame`.
+        timer_frame: Description of parameter `timer_frame`.
+        flags_frame: Description of parameter `flags_frame`.
+        controls_frame: Description of parameter `controls_frame`.
+        reset_button: Description of parameter `reset_button`.
+        mode_switch_button: Description of parameter `mode_switch_button`.
+        settings_button: Description of parameter `settings_button`.
+        play_button: Description of parameter `play_button`.
+        stop_button: Description of parameter `stop_button`.
+
+    """
     root = tk.Tk()
     main_frame = tk.Frame(
         root, width=Options.window_width,
