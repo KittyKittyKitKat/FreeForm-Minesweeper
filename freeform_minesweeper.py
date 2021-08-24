@@ -380,14 +380,14 @@ class GameControl:
 
     @staticmethod
     def fill_board() -> None:
-        """Fill the board with squares."""
+        """Make all squares enabled."""
         for sq in WindowControl.board_frame.grid_slaves():
             if not sq.enabled:
                 sq.toggle_enable()
 
     @staticmethod
     def clear_board() -> None:
-        """Empty the board of all squares."""
+        """Make all squares disabled."""
         for sq in WindowControl.board_frame.grid_slaves():
             if sq.enabled:
                 sq.toggle_enable()
@@ -418,7 +418,7 @@ class GameControl:
     @staticmethod
     def save_board() -> None:
         """Save the current board in its smallest possible form."""
-        # Keep track of the leftmost enabled sqaure. Set to the right side of the field
+        # Keep track of the leftmost enabled square. Set to the right side of the field
         leftmost = Options.cols - 1
         # Will be the final bit mapping of the board
         board_bits = []
@@ -515,12 +515,31 @@ class GameControl:
 
     @staticmethod
     def invert_board() -> None:
-        """Toggle all the squares on the board betwixt those used in game and inactive."""
+        """Toggle all the squares on the board betwixt enabled and disabled."""
         for sq in WindowControl.board_frame.grid_slaves():
             sq.toggle_enable()
 
 
 class BoardSquare(tk.Label):
+    """A toggable square used in playing Minesweeper.
+
+    Args:
+        master: Parent widget.
+        size: Dimensions, in pixels.
+        tk_image: Image displayed in square.
+
+    Attributes:
+        master: Parent widget
+        image: Image displayed in square.
+        uncovered: Flag for if the square has been uncovered.
+        flagged: Flag for if the square has been flagged.
+        enabled: Flag if the square is enabled to use in game.
+        num_flags: Number of flags on the square.
+        value: Number in the square.
+        directions: 8 main directions.
+        neighbours: Neighbouring squares, in each of the 8 directions.
+
+    """
     def __init__(self, master: tk.Widget, size: int, tk_image: tk.PhotoImage) -> None:
         super().__init__(master, height=size, width=size, im=tk_image, bd=0)
         self.master = master
@@ -534,6 +553,7 @@ class BoardSquare(tk.Label):
         self.neighbours = dict.fromkeys(self.directions)
 
     def link_to_neighbours(self) -> None:
+        """Find and store all neighbouring squares"""
         grid_x = self.grid_info()['row']
         grid_y = self.grid_info()['column']
         directions = list(self.directions)
@@ -554,6 +574,7 @@ class BoardSquare(tk.Label):
                             self.neighbours[curr_direction] = child_widget
 
     def uncover(self) -> None:
+        """Uncover the square."""
         if not self.enabled or GameControl.game_state is GameState.DONE:
             return
         if not self.uncovered and not self.flagged:
@@ -589,6 +610,7 @@ class BoardSquare(tk.Label):
         GameControl.check_win()
 
     def flag(self) -> None:  # For normal gameplay
+        """Toggle a flag on the square."""
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
         if not self.flagged and GameControl.flags_placed < GameControl.num_mines:
@@ -606,6 +628,7 @@ class BoardSquare(tk.Label):
         WindowControl.update_flag_counter()
 
     def add_flag(self) -> None:  # For multimine
+        """Add a flag to the square."""
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
         if self.num_flags < 5 and GameControl.flags_placed < GameControl.num_mines:
@@ -620,6 +643,7 @@ class BoardSquare(tk.Label):
         WindowControl.update_flag_counter()
 
     def remove_flag(self) -> None:  # For multimine
+        """Remove a flag from the square."""
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
         if self.num_flags > 0:
@@ -636,6 +660,7 @@ class BoardSquare(tk.Label):
         WindowControl.update_flag_counter()
 
     def chord(self) -> None:
+        """Chord the square (click all the squares around it if appropriate)."""
         if not self.enabled or GameControl.game_state is GameState.DONE:
             return
         if self.uncovered and not self.flagged:
@@ -649,6 +674,7 @@ class BoardSquare(tk.Label):
                         neighbour.uncover()
 
     def toggle_enable(self) -> None:
+        """Toggle square betwixt enabled and disabled"""
         if self.enabled:
             self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
         else:
@@ -656,14 +682,17 @@ class BoardSquare(tk.Label):
         self.enabled = not self.enabled
 
     def lock(self) -> None:
+        """Lock the square so it can't be toggled."""
         if not self.enabled:
             self.config(im=Constants.LOCKED_BLACK_SQUARE)
 
     def unlock(self) -> None:
+        """Unlock the square so it can be toggled."""
         if not self.enabled:
             self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
 
     def reset(self) -> None:
+        """Reset the square back to base initialization"""
         self.image = Constants.BOARD_IMAGES[20]
         self.config(im=self.image)
         self.uncovered = False
