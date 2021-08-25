@@ -16,7 +16,15 @@ from PIL import Image, ImageTk
 
 
 class MetaData:
-    """Provide variables and utitlies for checking current release against the most up to date release"""
+    """Provide variables and utitlies for checking current release against the most up to date release.
+    
+    Attributes:
+        github_api_releases_url: URL to fetch data from.
+        github_releases_url: URL to releases page for project.
+        plaform: The OS of the system the program is running on.
+        version: The version of the code, shipped with releases.
+        
+    """
     github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
     github_releases_url = 'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
     platform = get_os()
@@ -27,7 +35,7 @@ class MetaData:
 
     @staticmethod
     def get_release_tags(url: str) -> list[str]:
-        """Fetch the releases tags from GitHub's repo API"""
+        """Fetch the releases tags from GitHub's repo API."""
         github_release_data = requests.get(url).json()
         tags = [release['tag_name'] for release in github_release_data]
         tags_linux, tags_windows = [
@@ -40,7 +48,7 @@ class MetaData:
 
     @staticmethod
     def is_release_up_to_date() -> bool:
-        """Compare release to most up to date"""
+        """Compare release to most up to date."""
         if MetaData.version == 'vX.X.X':
             return True
         tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
@@ -59,7 +67,7 @@ class MetaData:
 
     @staticmethod
     def outdated_notice() -> None:
-        """Display pop up message detailing release is out of date"""
+        """Display pop up message detailing release is out of date."""
         message = (
             f'This release is not up to date, '
             'and as such you may be missing out on important new features or bug fixes.\n'
