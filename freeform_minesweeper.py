@@ -33,6 +33,24 @@ class Difficulty(Enum):
 
 
 class Constants:
+    """Container for various game constants.
+
+    Attributes:
+        BOARD_SQUARE_SIZE: Size of a square on the board, in pixels.
+        SEGMENT_HEIGHT: Height of a seven segment number, in pixels.
+        SEGMENT_WIDTH: Width of a seven segment number, in pixels.
+        PADDING_DIST: Padding distance to space various widgets, in pixels.
+        BACKGROUND_COLOUR: Background colour of the window, in #rrggbb
+        DEFAULT_COLOUR: Default colour of the window, in #rrggbb
+        FONT: Smaller font used for in game text.
+        FONT_BIG: Larger font used for in game text.
+        MAINLOOP_TIME: Time spent sleeping in mainloop of game.
+        LOCKED_BLACK_SQUARE: Sprite for a locked disabled square.
+        UNLOCKED_BLACK_SQUARE: Sprint for an unlocked disabled square.
+        FILE_EXTENSION: File extension used for saving and loading board files.
+        FILE_TYPE: File type and extension, for file dialogues.
+        SAVE_LOAD_DIR: Default directory for saving and loading board files.
+    """
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
     SEGMENT_WIDTH = 26
