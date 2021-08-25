@@ -1,3 +1,7 @@
+"""The game FreeForm Minesweeper, bundled with MultiMinesweeper mode.
+
+The only code intended to be executed is the main() function. Any other use may result in errors or other undefined behaviour.
+"""
 import random
 import tkinter as tk
 import time
