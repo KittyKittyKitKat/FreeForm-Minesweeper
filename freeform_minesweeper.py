@@ -33,17 +33,6 @@ class Difficulty(Enum):
 
 
 class Constants:
-    """Utility class for various game constants
-
-    BOARD_SQUARE_SIZE, SEGMENT_HEIGHT, SEGMENT_WIDTH, and PADDING_DIST are pixel values
-    BACKGROUND_COLOUR and DEFAULT_COLOUR are colour codes in hex format
-    FONT and FONT_BIG are tuples of font data TKinter recognixes, of the format (name, point, style)
-    MAINLOOP_TIME controls the speed of the root window's mainloop
-    LOCKED_BLACK_SQUARE and UNLOCKED_BLACK_SQUARE are inital black PIL images of size BOARD_SQUARE_SIZE
-    FILE_EXTENSION is the extension used for saving and loading game boards
-    FILE_TYPE is a tuple of file data messagebox recgonizes, of the form (extension_name, extension)
-    SAVE_LOAD_DIR is a path pointing to the users Desktop, used for saving and loading boards
-    """
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
     SEGMENT_WIDTH = 26
@@ -61,7 +50,7 @@ class Constants:
 
     @staticmethod
     def init_board_images() -> None:
-        """Initializes the images used for the game board
+        """Initialize the images used for the game board
 
         First the proper sprite is drawn on UNLOCKED_BLACK_SQUARE
         Doing this procedurally keeps the spritesheet tidy
@@ -89,7 +78,7 @@ class Constants:
 
     @staticmethod
     def init_sevseg_images() -> None:
-        """Initializes the images used for the seven segment displays
+        """Initialize the images used for the seven segment displays
 
         The seven segment spritesheet is load and cut into the individual numbers
         All the PIL images are converted to PhotoImage objects for TKinter
@@ -106,7 +95,7 @@ class Constants:
 
     @staticmethod
     def init_extended_board_images() -> None:
-        """Initializes the images used for the multimine mode
+        """Initialize the images used for the multimine mode
 
         The extened board spritesheet is load and cut into the individual squares
         All the PIL images are converted to PhotoImage objects for TKinter
@@ -123,7 +112,7 @@ class Constants:
 
     @staticmethod
     def init_window_icons() -> None:
-        """Initializes the images used for the window icons
+        """Initialize the images used for the window icons
 
         The PIL images are converted to PhotoImage objects for TKinter
         """
@@ -134,18 +123,18 @@ class Constants:
 
 
 class Options:
-    """Short summary.
+    """Container for utilites to customize the game
 
     Attributes:
-        multimines: Description of parameter `multimines`.
-        grace_rule: Description of parameter `grace_rule`.
-        multimine_sq_inc: Description of parameter `multimine_sq_inc`.
-        flagless: Description of parameter `flagless`.
-        multimine_mine_inc: Description of parameter `multimine_mine_inc`.
-        rows: Description of parameter `rows`.
-        cols: Description of parameter `cols`.
-        window_width: Description of parameter `window_width`.
-        board_height: Description of parameter `board_height`.
+        multimines: Flag if the game is in multimine mode.
+        grace_rule: Flag if the grace rule is set.
+        multimine_sq_inc: Probability of getting multimines buff.
+        flagless: Flag if the game is in flagless mode.
+        multimine_mine_inc: Percentage mine increase in multimine mode.
+        rows: Number of rows in the game space.
+        cols: DNumber of colummns in the game space.
+        window_width: Width of the window, in pixels.
+        board_height: Height of the game board, in pixels.
 
     """
     multimines = False
@@ -188,7 +177,7 @@ class GameControl:
 
     @staticmethod
     def check_win() -> None:
-        """Checks if the game has been won, and executes winning sequence if so."""
+        """Check if the game has been won, and executes winning sequence if so."""
         if GameControl.squares_uncovered == GameControl.squares_to_win:
             WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[16])
             GameControl.game_state = GameState.DONE
@@ -203,7 +192,7 @@ class GameControl:
 
     @staticmethod
     def has_lost() -> None:
-        """Checks if the game has been lost, and executes losing sequence if so."""
+        """Check if the game has been lost, and executes losing sequence if so."""
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[15])
         GameControl.game_state = GameState.DONE
         for square in WindowControl.board_frame.grid_slaves():
@@ -447,7 +436,7 @@ class GameControl:
                 reached_content = True
                 # Append the bit row from the beginning to the rightmost index. This trims off all the ending 0 in the bit row
                 board_bits.append(bit_row[:rightmost_index])
-            # Otherwise, if the bit row has 1 but is in the content of the board
+            # Otherwise, if the bit row has no 1 but is in the content of the board
             elif '1' not in bit_row and reached_content:
                 # Set the row to be 0 to represent the empty row in the middle of the field
                 board_bits.append('0')
@@ -706,28 +695,24 @@ class BoardSquare(tk.Label):
 
 
 class WindowControl:
-    """Short summary.
+    """Utility class containing the window objects and related funuctions.
 
     Attributes:
-        root: Description of parameter `root`.
-        main_frame: Description of parameter `main_frame`.
-        root, width: Description of parameter `root, width`.
-        height: Description of parameter `height`.
-        menu_frame: Description of parameter `menu_frame`.
-        main_frame, width: Description of parameter `main_frame, width`.
-        bg: Description of parameter `bg`.
-        board_frame: Description of parameter `board_frame`.
-        mswpr_frame: Description of parameter `mswpr_frame`.
-        presets_frame: Description of parameter `presets_frame`.
-        diff_frame: Description of parameter `diff_frame`.
-        timer_frame: Description of parameter `timer_frame`.
-        flags_frame: Description of parameter `flags_frame`.
-        controls_frame: Description of parameter `controls_frame`.
-        reset_button: Description of parameter `reset_button`.
-        mode_switch_button: Description of parameter `mode_switch_button`.
-        settings_button: Description of parameter `settings_button`.
-        play_button: Description of parameter `play_button`.
-        stop_button: Description of parameter `stop_button`.
+        root: Main window of the program.
+        main_frame: Primary frame all other widgets reside in.
+        menu_frame: Frame all control widgets reside in.        
+        board_frame: Frame all squares of the board reside in.
+        mswpr_frame: Frame to group various game widgets.
+        presets_frame: Frame to group preset widgets.
+        diff_frame: Frame to group difficulty widgets.
+        timer_frame: Frame to group timer widgets.
+        flags_frame: Frame to group flag widgets.
+        controls_frame: Frame to group control widgets.
+        reset_button: Game reset button.
+        mode_switch_button: Click mode switch button.
+        settings_button: Settings button.
+        play_button: Play game button.
+        stop_button: Stop game button.
 
     """
     root = tk.Tk()
@@ -759,6 +744,7 @@ class WindowControl:
 
     @staticmethod
     def init_window() -> None:
+        """Initialize window widgets."""
         WindowControl.root.resizable(0, 0)
         WindowControl.root.title('FreeForm Minesweeper')
         WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
@@ -773,6 +759,7 @@ class WindowControl:
 
     @staticmethod
     def init_board() -> None:
+        """Initialize board widgets."""
         for i in range(Options.rows):
             WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
         for i in range(Options.cols):
@@ -787,6 +774,7 @@ class WindowControl:
 
     @staticmethod
     def init_menu() -> None:
+        """Initialize menu widgets."""
         preset_easy = tk.Button(
             WindowControl.presets_frame, text='Easy', font=Constants.FONT, width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.EASY, diff_1) or GameControl.load_board('presets/easy.ffmnswpr')
@@ -870,6 +858,7 @@ class WindowControl:
 
     @staticmethod
     def update_timer() -> None:
+        """Update timer widgets."""
         if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
             seconds = list(str(int(GameControl.seconds_elpased)).zfill(3))
             for number in WindowControl.timer_frame.grid_slaves():
@@ -877,11 +866,13 @@ class WindowControl:
 
     @staticmethod
     def reset_timer() -> None:
+        """Reset timer widgets."""
         for number in WindowControl.timer_frame.grid_slaves():
             number.config(im=Constants.SEVSEG_IMAGES[0])
 
     @staticmethod
     def update_flag_counter() -> None:
+        """Update flag widgets."""
         flags = GameControl.num_mines - GameControl.flags_placed
         value_container = list(str(flags).zfill(3))
         for number in WindowControl.flags_frame.grid_slaves():
@@ -889,11 +880,18 @@ class WindowControl:
 
     @staticmethod
     def reset_flag_counter() -> None:
+        """Reset flag widgets."""
         for number in WindowControl.flags_frame.grid_slaves():
             number.config(im=Constants.SEVSEG_IMAGES[0])
 
     @staticmethod
     def drag_enable_toggle(event: tk.EventType.Motion, initial_square: BoardSquare) -> None:
+        """Turn all squares under the mouse to a sate based on an inital square while dragging.
+
+        Args:
+            event: Mouse motion event.
+            initial_square: The initial square the dragging began on.
+        """
         x = (event.x_root - initial_square.master.winfo_rootx()) // Constants.BOARD_SQUARE_SIZE
         y = (event.y_root - initial_square.master.winfo_rooty()) // Constants.BOARD_SQUARE_SIZE
         GameControl.drag_mode = initial_square.enabled
@@ -908,6 +906,7 @@ class WindowControl:
 
     @staticmethod
     def settings_window() -> None:
+        """Create and display the settings window."""
         WindowControl.settings_button.config(state='disabled')
         WindowControl.play_button.config(state='disabled')
         settings_root = tk.Toplevel()
@@ -917,6 +916,7 @@ class WindowControl:
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
 
         def settings_root_close() -> None:
+            """Return button states to normal upon window close."""
             try:
                 WindowControl.settings_button.config(state='normal')
                 WindowControl.play_button.config(state='normal')
@@ -1021,6 +1021,7 @@ class WindowControl:
         columns_frame.grid(row=6, column=0, sticky='w', pady=Constants.PADDING_DIST)
 
         def submit_vars() -> None:
+            """Save options to the Options container class, and close the window."""
             Options.grace_rule = gracerule.get()
             Options.multimines = multimode.get()
             Options.multimine_mine_inc = mines.get()
@@ -1050,6 +1051,7 @@ class WindowControl:
 
 
 def main() -> None:
+    """Initialize all game components and run the mainloop."""
     WindowControl.init_window()
     Constants.init_board_images()
     Constants.init_sevseg_images()
