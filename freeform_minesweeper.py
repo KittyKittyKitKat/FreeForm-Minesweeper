@@ -1,5 +1,6 @@
 """The game FreeForm Minesweeper, bundled with MultiMinesweeper mode.
 
+Play the game by execute the file as a program, and have fun!
 The only code intended to be executed is the main() function. Any other use may result in errors or other undefined behaviour.
 """
 import random
