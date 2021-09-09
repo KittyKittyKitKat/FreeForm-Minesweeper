@@ -3,6 +3,7 @@
 Play the game by executing the file as a program, and have fun!
 The only code intended to be executed is the main() function. Any other use may result in errors or other undefined behaviour.
 """
+import base64
 import random
 import tkinter as tk
 import time
@@ -13,6 +14,7 @@ from os.path import expanduser
 from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
+from tkinter import font
 from typing import Optional
 
 import requests
@@ -22,13 +24,13 @@ from PIL import Image, ImageTk
 
 class MetaData:
     """Provide variables and utitlies for checking current release against the most up to date release.
-    
+
     Attributes:
         github_api_releases_url: URL to fetch data from.
         github_releases_url: URL to releases page for project.
         plaform: The OS of the system the program is running on.
         version: The version of the code, shipped with releases.
-        
+
     """
     github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
     github_releases_url = 'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
@@ -108,6 +110,9 @@ class Constants:
     """Container for various game constants.
 
     Attributes:
+        BOARD_IMAGES: Sprites used for the base Minesweeper game.
+        SEVSEG_IMAGES: Sprites used for seven segment displays.
+        EXTENDED_BOARD_IMAGES: Sprites used for multimine mode.
         BOARD_SQUARE_SIZE: Size of a square on the board, in pixels.
         SEGMENT_HEIGHT: Height of a seven segment number, in pixels.
         SEGMENT_WIDTH: Width of a seven segment number, in pixels.
@@ -121,7 +126,10 @@ class Constants:
         UNLOCKED_BLACK_SQUARE: Sprint for an unlocked disabled square.
         FILE_EXTENSION: File extension used for saving and loading board files.
         FILE_TYPE: File type and extension, for file dialogues.
+        LEADERBOARD_FILENAME: Path to the leaderboard JSON used to save times.
         SAVE_LOAD_DIR: Default directory for saving and loading board files.
+        MAIN_ICON_ICO: Path to main window icon, relatively.
+        SETTINGS_ICON_ICO: Path to settings window icon, relatively.
     """
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
@@ -136,9 +144,20 @@ class Constants:
     UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     FILE_EXTENSION = '.ffmnswpr'
     FILE_TYPE = (('FreeForm Minesweeper Board', f'*{FILE_EXTENSION}'),)
+    LEADERBOARD_FILENAME = 'assets/leaderboard.json'
     SAVE_LOAD_DIR = expanduser("~/Desktop")
     MAIN_ICON_ICO = 'assets/icon_main.ico'
     SETTINGS_ICON_ICO = 'assets/icon_settings.ico'
+
+    @staticmethod
+    def ternary(n):
+        """Convert an integer to ternary"""
+        if n == 0:
+            return ''
+        else:
+            e = n // 3
+            q = n % 3
+            return Constants.ternary(e) + str(q)
 
     @staticmethod
     def init_board_images() -> None:
@@ -259,8 +278,8 @@ class GameControl:
     click_mode = ClickMode.UNCOVER
     game_state = GameState.PLAYING
     difficulty = Difficulty.EASY
-    num_mines = None
-    squares_to_win = None
+    num_mines = 0
+    squares_to_win = 0
     squares_uncovered = 0
     flags_placed = 0
     seconds_elpased = 0
@@ -281,10 +300,13 @@ class GameControl:
                         square.config(im=Constants.BOARD_IMAGES[11])
                     else:
                         square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 38])
+            save_time = messagebox.askyesno(title='FreeForm Minesweeper', message='You Win!\nSave your time to the leaderboard?')
+            if save_time:
+                pass#GameControl.save_time_to_file()
 
     @staticmethod
     def has_lost() -> None:
-        """Check if the game has been lost, and executes losing sequence if so."""
+        """Execute lsoing sequence."""
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[15])
         GameControl.game_state = GameState.DONE
         for square in WindowControl.board_frame.grid_slaves():
@@ -388,13 +410,15 @@ class GameControl:
     @staticmethod
     def reset_game() -> None:
         """Display dialouge prompt to start a new game, and reset if confirmed."""
-        reset = messagebox.askyesno(
-            title='Reset Game?',
-            message='Are you sure you want to start a new game?',
-            default=messagebox.NO
-        )
-        if not reset:
-            return
+        if GameControl.game_state is GameState.PLAYING:
+            reset = messagebox.askyesno(
+                title='Reset Game?',
+                message='Are you sure you want to start a new game?',
+                default=messagebox.NO
+            )
+            if not reset:
+                return
+        GameControl.game_state = GameState.DONE
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
@@ -409,13 +433,15 @@ class GameControl:
     @staticmethod
     def stop_game() -> None:
         """Display dialouge prompt to stop the current game, and place game on hold if confirmed."""
-        stop = messagebox.askyesno(
-            title='Stop Playing?',
-            message='Are you sure you want to stop playing?',
-            default=messagebox.NO
-        )
-        if not stop:
-            return
+        if GameControl.game_state is GameState.PLAYING:
+            stop = messagebox.askyesno(
+                title='Stop Playing?',
+                message='Are you sure you want to stop playing?',
+                default=messagebox.NO
+            )
+            if not stop:
+                return
+        GameControl.game_state = GameState.DONE
         GameControl.on_hold = True
         WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.root.unbind('<Control-f>')
@@ -499,8 +525,8 @@ class GameControl:
                     sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
     @staticmethod
-    def save_board() -> None:
-        """Save the current board in its smallest possible form."""
+    def compress_board() -> list[str]:
+        """Compress the current board to its smallest possible form."""
         # Keep track of the leftmost enabled square. Set to the right side of the field
         leftmost = Options.cols - 1
         # Will be the final bit mapping of the board
@@ -550,7 +576,12 @@ class GameControl:
                 # Trim the bigging of the row from the index of the leftmost enabled square
                 board_bits[i] = row[leftmost:]
         # At this point the board is saved as rows of bits that has been trimmed down to the smallest possible dimensions of the board
-        # Save to a file
+        return board_bits
+
+    @staticmethod
+    def save_board() -> None:
+        """Save the current board to a file."""
+        compressed_board = GameControl.compress_board()
         board_file = filedialog.asksaveasfilename(
             initialdir=Constants.SAVE_LOAD_DIR, title='Save Board',
             filetypes=Constants.FILE_TYPE, defaultextension=Constants.FILE_EXTENSION
@@ -565,7 +596,7 @@ class GameControl:
             return
         try:
             with open(board_file, 'w') as board_save_file:
-                board_save_file.write('\n'.join(board_bits))
+                board_save_file.write('\n'.join(compressed_board))
                 board_save_file.write('\n')
         except Exception:
             messagebox.showerror(title='Saving Error', message='Was not able to save the file.')
@@ -601,6 +632,42 @@ class GameControl:
         """Toggle all the squares on the board betwixt enabled and disabled."""
         for sq in WindowControl.board_frame.grid_slaves():
             sq.toggle_enable()
+
+    @staticmethod
+    def save_time_to_file(filename: str = Constants.LEADERBOARD_FILENAME) -> None:
+        """Save the completion time for the current board to the leaderboard file.
+
+        Args:
+            filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
+        """
+        name = tk.StringVar(value='')
+        player = tk.StringVar(value='')
+
+        name_player_entry_root = tk.Toplevel()
+        name_player_entry_root.title('Save to Leaderboard')
+        name_player_entry_root.resizable(0, 0)
+        name_player_frame = tk.Frame(name_player_entry_root, bg=Constants.BACKGROUND_COLOUR, width=280, height=200)
+        name_player_frame.grid_propagate(False)
+        name_label = tk.Label(name_player_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        player_label = tk.Label(name_player_frame, text='Your Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        name_entry = tk.Entry(name_player_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name)
+        player_entry = tk.Entry(name_player_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player)
+        save_button = tk.Button(name_player_frame, text='Save Time', font=Constants.FONT_BIG)
+        name_player_frame.grid(row=0, column=0)
+        name_label.grid(row=1, column=0)
+        name_entry.grid(row=2, column=0, padx=6)
+        player_label.grid(row=3, column=0)
+        player_entry.grid(row=4, column=0, padx=6)
+        save_button.grid(row=5, column=0, pady=6)
+
+        
+        current_compressed_board = GameControl.compress_board()
+        board_str = 'N'.join(current_compressed_board)
+        leaderboard_id = board_str.replace('1', 'S').replace('0', 'E')
+        leaderboard_id = ''.join(str(len(list(g)))+k for k, g in groupby(leaderboard_id))
+        # print(leaderboard_id)
+
+        
 
 
 class BoardSquare(tk.Label):
@@ -792,7 +859,7 @@ class WindowControl:
     Attributes:
         root: Main window of the program.
         main_frame: Primary frame all other widgets reside in.
-        menu_frame: Frame all control widgets reside in.        
+        menu_frame: Frame all control widgets reside in.
         board_frame: Frame all squares of the board reside in.
         mswpr_frame: Frame to group various game widgets.
         presets_frame: Frame to group preset widgets.
@@ -1162,6 +1229,8 @@ def main() -> None:
     WindowControl.init_board()
     if not MetaData.is_release_up_to_date():
         MetaData.outdated_notice()
+    font.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT[0], size=Constants.FONT_BIG[1])
+    WindowControl.root.bind('y', lambda e: GameControl.save_time_to_file())
     while True:
         try:
             WindowControl.root.update_idletasks()
