@@ -366,7 +366,7 @@ class GameControl:
             sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
         WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
-        WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
+        WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
         options = WindowControl.play_button.grid_info()
         WindowControl.play_button.grid_remove()
         WindowControl.stop_button.grid(**options)
@@ -386,7 +386,7 @@ class GameControl:
         GameControl.game_state = GameState.PLAYING
 
     @staticmethod
-    def reset_game() -> None:
+    def new_game() -> None:
         """Display dialouge prompt to start a new game, and reset if confirmed."""
         if GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
             reset = messagebox.askyesno(
@@ -425,7 +425,7 @@ class GameControl:
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
-        GameControl.reset_game()
+        GameControl.new_game()
         WindowControl.reset_timer()
         WindowControl.reset_flag_counter()
         options = WindowControl.stop_button.grid_info()
@@ -682,7 +682,7 @@ class BoardSquare(tk.Label):
                             neighbour.uncover()
             else:
                 if Options.grace_rule and GameControl.squares_uncovered == 0:
-                    GameControl.reset_game()
+                    GameControl.new_game()
                     self.uncover()
                     return
                 if GameControl.game_state is GameState.PLAYING:
