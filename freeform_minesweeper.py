@@ -122,6 +122,10 @@ class Constants:
         FILE_EXTENSION: File extension used for saving and loading board files.
         FILE_TYPE: File type and extension, for file dialogues.
         SAVE_LOAD_DIR: Default directory for saving and loading board files.
+        MAIN_ICON_ICO: Path to main window icon, relatively.
+        SETTINGS_ICON_ICO: Path to settings window icon, relatively.
+        MAIN_ICON_PNG: PNG image for main window icon.
+        SETTINGS_ICON_PNG: PNG image for settings window icon.
     """
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
