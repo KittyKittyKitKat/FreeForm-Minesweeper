@@ -666,10 +666,6 @@ class GameControl:
 
         
         current_compressed_board = GameControl.compress_board()
-        board_str = 'N'.join(current_compressed_board)
-        leaderboard_id = board_str.replace('1', 'S').replace('0', 'E')
-        leaderboard_id = ''.join(str(len(list(g)))+k for k, g in groupby(leaderboard_id))
-        # print(leaderboard_id)
 
         
 
