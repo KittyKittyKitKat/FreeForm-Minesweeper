@@ -828,9 +828,14 @@ class WindowControl:
     flags_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     controls_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
 
-    reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
-    mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
-    settings_button = tk.Button(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
+    reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0, bg=Constants.BACKGROUND_COLOUR)
+    mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0, bg=Constants.BACKGROUND_COLOUR)
+    settings_button = tk.Button(
+        mswpr_frame,
+        width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
+        bd=0, highlightthickness=0,
+        bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
+    )
     play_button = tk.Button(mswpr_frame, text='Play', font=Constants.FONT, width=5, command=GameControl.play_game)
     stop_button = tk.Button(mswpr_frame, text='Stop', font=Constants.FONT, width=5, command=GameControl.stop_game)
 
