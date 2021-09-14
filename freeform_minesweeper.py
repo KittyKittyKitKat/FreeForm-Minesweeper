@@ -650,9 +650,9 @@ class GameControl:
         name_player_entry_root.title('Save to Leaderboard')
         name_player_entry_root.resizable(0, 0)
         if get_os() == 'Windows':
-            name_player_entry_root.iconbitmap(Constants.MAIN_ICON_ICO)
+            name_player_entry_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
         elif get_os() == 'Linux':
-            name_player_entry_root.iconphoto(False, Constants.MAIN_ICON_PNG)
+            name_player_entry_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
         
         name_player_frame = tk.Frame(name_player_entry_root, bg=Constants.BACKGROUND_COLOUR, width=280, height=200)
         name_player_frame.grid_propagate(False)
