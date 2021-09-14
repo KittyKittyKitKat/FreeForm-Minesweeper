@@ -3,7 +3,6 @@
 Play the game by executing the file as a program, and have fun!
 The only code intended to be executed is the main() function. Any other use may result in errors or other undefined behaviour.
 """
-import base64
 import random
 import tkinter as tk
 import time
@@ -149,16 +148,6 @@ class Constants:
     SAVE_LOAD_DIR = expanduser("~/Desktop")
     MAIN_ICON_ICO = 'assets/icon_main.ico'
     SETTINGS_ICON_ICO = 'assets/icon_settings.ico'
-
-    @staticmethod
-    def ternary(n):
-        """Convert an integer to ternary"""
-        if n == 0:
-            return ''
-        else:
-            e = n // 3
-            q = n % 3
-            return Constants.ternary(e) + str(q)
 
     @staticmethod
     def init_board_images() -> None:
