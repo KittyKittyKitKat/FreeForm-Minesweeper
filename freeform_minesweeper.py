@@ -388,18 +388,20 @@ class GameControl:
     @staticmethod
     def reset_game() -> None:
         """Display dialouge prompt to start a new game, and reset if confirmed."""
-        reset = messagebox.askyesno(
-            title='Reset Game?',
-            message='Are you sure you want to start a new game?',
-            default=messagebox.NO
-        )
-        if not reset:
-            return
+        if GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
+            reset = messagebox.askyesno(
+                title='Reset Game?',
+                message='Are you sure you want to start a new game?',
+                default=messagebox.NO
+            )
+            if reset:
+                WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
+                return
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
-        WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
-        WindowControl.reset_timer()
+        WindowControl.mode_switch_button.unbind('<ButtonPress-1>')        
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
+        WindowControl.reset_timer()
         for square in WindowControl.board_frame.grid_slaves():
             if square.enabled:
                 square.reset()
