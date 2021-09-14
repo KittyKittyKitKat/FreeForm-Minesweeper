@@ -130,6 +130,7 @@ class Constants:
         SAVE_LOAD_DIR: Default directory for saving and loading board files.
         MAIN_ICON_ICO: Path to main window icon, relatively.
         SETTINGS_ICON_ICO: Path to settings window icon, relatively.
+        LEADERBOARD_ICON_ICO: Path to leaderboard window icon, relatively.
     """
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
@@ -229,8 +230,10 @@ class Constants:
         """
         MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
         SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
+        LEADERBOARD_ICON_PNG = ImageTk.PhotoImage(Image.open('assets/icon_leaderboard.png'))
         setattr(Constants, 'MAIN_ICON_PNG', MAIN_ICON)
         setattr(Constants, 'SETTINGS_ICON_PNG', SETTINGS_ICON)
+        setattr(Constants, 'LEADERBOARD_ICON_PNG', LEADERBOARD_ICON_PNG)
 
 
 class Options:
@@ -646,18 +649,30 @@ class GameControl:
         name_player_entry_root = tk.Toplevel()
         name_player_entry_root.title('Save to Leaderboard')
         name_player_entry_root.resizable(0, 0)
+        if get_os() == 'Windows':
+            name_player_entry_root.iconbitmap(Constants.MAIN_ICON_ICO)
+        elif get_os() == 'Linux':
+            name_player_entry_root.iconphoto(False, Constants.MAIN_ICON_PNG)
+        
         name_player_frame = tk.Frame(name_player_entry_root, bg=Constants.BACKGROUND_COLOUR, width=280, height=200)
         name_player_frame.grid_propagate(False)
+        
         name_label = tk.Label(name_player_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        player_label = tk.Label(name_player_frame, text='Your Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
         name_entry = tk.Entry(name_player_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name)
+        
+        player_label = tk.Label(name_player_frame, text='Your Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
         player_entry = tk.Entry(name_player_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player)
+        
         save_button = tk.Button(name_player_frame, text='Save Time', font=Constants.FONT_BIG)
+        
         name_player_frame.grid(row=0, column=0)
+        
         name_label.grid(row=1, column=0)
         name_entry.grid(row=2, column=0, padx=6)
+       
         player_label.grid(row=3, column=0)
         player_entry.grid(row=4, column=0, padx=6)
+        
         save_button.grid(row=5, column=0, pady=6)
 
         
