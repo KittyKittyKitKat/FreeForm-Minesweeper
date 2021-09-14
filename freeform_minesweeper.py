@@ -262,7 +262,7 @@ class GameControl:
         squares_to_win: Number of squares to uncover needed to win.
         squares_uncovered: Number of squares that have been uncovered.
         flags_placed: Number of flags placed on the board.
-        seconds_elpased: Time elapsed playing the game, in seconds.
+        seconds_elapsed: Time elapsed playing the game, in seconds.
         on_hold: Flag controlling if the game is on hold, ie, creating a board.
         drag_mode: Flag controlling if clicking dragging adds or remove squares in board creation.
 
@@ -274,7 +274,7 @@ class GameControl:
     squares_to_win = 0
     squares_uncovered = 0
     flags_placed = 0
-    seconds_elpased = 0
+    seconds_elapsed = 0
     on_hold = True
     drag_mode = True
 
@@ -333,7 +333,7 @@ class GameControl:
 
         GameControl.squares_uncovered = 0
         GameControl.flags_placed = 0
-        GameControl.seconds_elpased = 0
+        GameControl.seconds_elapsed = 0
         if GameControl.click_mode is ClickMode.FLAG:
             GameControl.switch_mode()
         GameControl.on_hold = False
@@ -635,35 +635,36 @@ class GameControl:
         name = tk.StringVar(value='')
         player = tk.StringVar(value='')
 
-        name_player_entry_root = tk.Toplevel()
-        name_player_entry_root.title('Save to Leaderboard')
-        name_player_entry_root.resizable(0, 0)
+        save_time_root = tk.Toplevel()
+        save_time_root.title('Save to Leaderboard')
+        save_time_root.resizable(0, 0)
         if get_os() == 'Windows':
-            name_player_entry_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
+            save_time_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
         elif get_os() == 'Linux':
-            name_player_entry_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
-        
-        name_player_frame = tk.Frame(name_player_entry_root, bg=Constants.BACKGROUND_COLOUR, width=280, height=200)
-        name_player_frame.grid_propagate(False)
-        
-        name_label = tk.Label(name_player_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        name_entry = tk.Entry(name_player_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name)
-        
-        player_label = tk.Label(name_player_frame, text='Your Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        player_entry = tk.Entry(name_player_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player)
-        
-        save_button = tk.Button(name_player_frame, text='Save Time', font=Constants.FONT_BIG)
-        
-        name_player_frame.grid(row=0, column=0)
-        
-        name_label.grid(row=1, column=0)
-        name_entry.grid(row=2, column=0, padx=6)
-       
-        player_label.grid(row=3, column=0)
-        player_entry.grid(row=4, column=0, padx=6)
-        
-        save_button.grid(row=5, column=0, pady=6)
+            save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
 
+        save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=320, height=200)
+        save_time_frame.grid_propagate(False)
+        save_time_frame.grid_columnconfigure(0, weight=1)
+
+        time_label = tk.Label(
+            save_time_frame,
+            text=f'Your time was: {GameControl.seconds_elapsed} seconds.', font=Constants.FONT_BIG,
+            bg=Constants.BACKGROUND_COLOUR
+        )
+        name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name)
+        player_label = tk.Label(save_time_frame, text='Player Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player)
+        save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG)
+
+        time_label.grid(row=0, column=0, pady=6)
+        name_label.grid(row=1, column=0)
+        name_entry.grid(row=2, column=0)
+        player_label.grid(row=3, column=0)
+        player_entry.grid(row=4, column=0)
+        save_button.grid(row=5, column=0, pady=(6, 0))
+        save_time_frame.grid(row=0, column=0)
         
         current_compressed_board = GameControl.compress_board()
 
@@ -1019,7 +1020,7 @@ class WindowControl:
     def update_timer() -> None:
         """Update timer widgets."""
         if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
-            seconds = list(str(int(GameControl.seconds_elpased)).zfill(3))
+            seconds = list(str(int(GameControl.seconds_elapsed)).zfill(3))
             for number in WindowControl.timer_frame.grid_slaves():
                 number.config(im=Constants.SEVSEG_IMAGES[int(seconds.pop())])
 
@@ -1240,8 +1241,8 @@ def main() -> None:
         else:
             time.sleep(Constants.MAINLOOP_TIME)
             if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING:
-                GameControl.seconds_elpased = min(round(GameControl.seconds_elpased + Constants.MAINLOOP_TIME, 2), 999)
-                if int(GameControl.seconds_elpased) == GameControl.seconds_elpased:
+                GameControl.seconds_elapsed = min(round(GameControl.seconds_elapsed + Constants.MAINLOOP_TIME, 2), 999)
+                if int(GameControl.seconds_elapsed) == GameControl.seconds_elapsed:
                     WindowControl.update_timer()
 
 
