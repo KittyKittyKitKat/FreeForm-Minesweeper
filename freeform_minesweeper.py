@@ -815,7 +815,7 @@ class WindowControl:
 
     """
     hidden_root = tk.Tk()
-    game_root = tk.Toplevel()
+    game_root = tk.Toplevel(class_='FreeForm Minesweeper')
     main_frame = tk.Frame(
         game_root, width=Options.window_width,
         height=Options.board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST, bg='black'
@@ -1016,7 +1016,7 @@ class WindowControl:
         """Create and display the settings window."""
         WindowControl.settings_button.config(state='disabled')
         WindowControl.play_button.config(state='disabled')
-        settings_root = tk.Toplevel()
+        settings_root = tk.Toplevel(class_='FFM Options')
         settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
         if get_os() == 'Windows':
