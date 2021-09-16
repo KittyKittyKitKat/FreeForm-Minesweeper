@@ -22,13 +22,13 @@ from PIL import Image, ImageTk
 
 class MetaData:
     """Provide variables and utitlies for checking current release against the most up to date release.
-    
+
     Attributes:
         github_api_releases_url: URL to fetch data from.
         github_releases_url: URL to releases page for project.
         plaform: The OS of the system the program is running on.
         version: The version of the code, shipped with releases.
-        
+
     """
     github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
     github_releases_url = 'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
@@ -403,7 +403,7 @@ class GameControl:
                 return
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
-        WindowControl.mode_switch_button.unbind('<ButtonPress-1>')        
+        WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
         WindowControl.reset_timer()
         for square in WindowControl.board_frame.grid_slaves():
@@ -798,7 +798,7 @@ class WindowControl:
     Attributes:
         root: Main window of the program.
         main_frame: Primary frame all other widgets reside in.
-        menu_frame: Frame all control widgets reside in.        
+        menu_frame: Frame all control widgets reside in.
         board_frame: Frame all squares of the board reside in.
         mswpr_frame: Frame to group various game widgets.
         presets_frame: Frame to group preset widgets.
