@@ -635,7 +635,7 @@ class GameControl:
         name = tk.StringVar(value='')
         player = tk.StringVar(value='')
 
-        save_time_root = tk.Toplevel()
+        save_time_root = tk.Toplevel(class_='FFM Leaderboard')
         save_time_root.title('Save to Leaderboard')
         save_time_root.resizable(0, 0)
         if get_os() == 'Windows':
@@ -665,10 +665,10 @@ class GameControl:
         player_entry.grid(row=4, column=0)
         save_button.grid(row=5, column=0, pady=(6, 0))
         save_time_frame.grid(row=0, column=0)
-        
+
         current_compressed_board = GameControl.compress_board()
 
-        
+
 
 
 class BoardSquare(tk.Label):
