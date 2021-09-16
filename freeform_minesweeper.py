@@ -311,11 +311,11 @@ class GameControl:
     @staticmethod
     def play_game() -> None:
         """Core gameplay loop when it is being played as Minesweeper, or a variant."""
-        WindowControl.root.unbind('<Control-i>')
+        WindowControl.game_root.unbind('<Control-i>')
         if Options.flagless:
             WindowControl.mode_switch_button.config(state='disabled')
         else:
-            WindowControl.root.bind('<Control-f>', lambda event: GameControl.switch_mode())
+            WindowControl.game_root.bind('<Control-f>', lambda event: GameControl.switch_mode())
             WindowControl.mode_switch_button.bind('<ButtonPress-1>', lambda event: GameControl.switch_mode())
 
         local_diff = GameControl.difficulty.value + Options.multimine_mine_inc if Options.multimines else GameControl.difficulty.value
@@ -423,8 +423,8 @@ class GameControl:
         if not stop:
             return
         GameControl.on_hold = True
-        WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
-        WindowControl.root.unbind('<Control-f>')
+        WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
+        WindowControl.game_root.unbind('<Control-f>')
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
@@ -796,7 +796,8 @@ class WindowControl:
     """Utility class containing the window objects and related funuctions.
 
     Attributes:
-        root: Main window of the program.
+        hidden_root: Absolute parent of the program. Only used for handling game close.
+        game_root: Main window of the program.
         main_frame: Primary frame all other widgets reside in.
         menu_frame: Frame all control widgets reside in.
         board_frame: Frame all squares of the board reside in.
@@ -813,9 +814,10 @@ class WindowControl:
         stop_button: Stop game button.
 
     """
-    root = tk.Tk()
+    hidden_root = tk.Tk()
+    game_root = tk.Toplevel()
     main_frame = tk.Frame(
-        root, width=Options.window_width,
+        game_root, width=Options.window_width,
         height=Options.board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST, bg='black'
     )
     menu_frame = tk.Frame(
@@ -848,9 +850,11 @@ class WindowControl:
     @staticmethod
     def init_window() -> None:
         """Initialize window widgets."""
-        WindowControl.root.resizable(0, 0)
-        WindowControl.root.title('FreeForm Minesweeper')
-        WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
+        WindowControl.hidden_root.withdraw()
+        WindowControl.game_root.resizable(0, 0)
+        WindowControl.game_root.title('FreeForm Minesweeper')
+        WindowControl.game_root.protocol("WM_DELETE_WINDOW", WindowControl.hidden_root.destroy)
+        WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.main_frame.grid_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
         WindowControl.board_frame.grid_propagate(0)
@@ -1163,11 +1167,11 @@ def main() -> None:
     Constants.init_sevseg_images()
     Constants.init_extended_board_images()
     Constants.init_window_icons()
-    Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
+    Constants.DEFAULT_COLOUR = WindowControl.game_root.cget('bg')
     if get_os() == 'Windows':
-        WindowControl.root.iconbitmap(Constants.MAIN_ICON_ICO)
+        WindowControl.game_root.iconbitmap(Constants.MAIN_ICON_ICO)
     elif get_os() == 'Linux':
-        WindowControl.root.iconphoto(False, Constants.MAIN_ICON_PNG)
+        WindowControl.game_root.iconphoto(False, Constants.MAIN_ICON_PNG)
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
     WindowControl.init_board()
@@ -1175,8 +1179,8 @@ def main() -> None:
         MetaData.outdated_notice()
     while True:
         try:
-            WindowControl.root.update_idletasks()
-            WindowControl.root.update()
+            WindowControl.game_root.update_idletasks()
+            WindowControl.game_root.update()
         except tk.TclError:
             break
         else:
