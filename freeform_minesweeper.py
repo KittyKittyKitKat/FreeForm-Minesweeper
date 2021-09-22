@@ -643,9 +643,10 @@ class GameControl:
         elif get_os() == 'Linux':
             save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
 
-        save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=320, height=200)
+        save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=350, height=200 if not Options.multimines else 250)
         save_time_frame.grid_propagate(False)
         save_time_frame.grid_columnconfigure(0, weight=1)
+        save_time_frame.grid_rowconfigure(8, weight=1)
 
         time_label = tk.Label(
             save_time_frame,
@@ -658,12 +659,26 @@ class GameControl:
         player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player)
         save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG)
 
+        if Options.multimines:
+            mutlimine_label = tk.Label(save_time_frame, text='You played on multimine mode:', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+            multimine_sq_inc_label = tk.Label(
+                save_time_frame, text=f'Multimines Proabability: {int(Options.multimine_sq_inc * 100)}%',
+                font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR
+            )
+            multimine_mine_inc_label = tk.Label(
+                save_time_frame, text=f'Mine Increase: {int(Options.multimine_mine_inc * 100)}%',
+                font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR
+            )
+            mutlimine_label.grid(row=5, column=0, pady=6)
+            multimine_sq_inc_label.grid(row=6, column=0)
+            multimine_mine_inc_label.grid(row=7, column=0)
+
         time_label.grid(row=0, column=0, pady=6)
         name_label.grid(row=1, column=0)
         name_entry.grid(row=2, column=0)
         player_label.grid(row=3, column=0)
         player_entry.grid(row=4, column=0)
-        save_button.grid(row=5, column=0, pady=(6, 0))
+        save_button.grid(row=8, column=0)
         save_time_frame.grid(row=0, column=0)
 
         current_compressed_board = GameControl.compress_board()
