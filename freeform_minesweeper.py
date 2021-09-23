@@ -59,6 +59,7 @@ class MetaData:
             return True
         tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
         if tags == '':
+            WindowControl.messagebox_open = True
             messagebox.showwarning(
                 title='OS Fetching Error',
                 message=(
@@ -66,6 +67,7 @@ class MetaData:
                     'You can safely ignore this message.'
                 )
             )
+            WindowControl.messagebox_open = False
             return True
         up_to_date_release = tags[-1]
         current_release = MetaData.platform + '-' + MetaData.version
@@ -79,10 +81,12 @@ class MetaData:
             'and as such you may be missing out on important new features or bug fixes.\n'
             f'Please go to {MetaData.github_releases_url} to download and install the lastest release.'
         )
+        WindowControl.messagebox_open = True
         messagebox.showwarning(
             title='Outdated Release',
             message=message
         )
+        WindowControl.messagebox_open = False
 
 
 class ClickMode(Enum):
@@ -403,13 +407,17 @@ class GameControl:
     def reset_game() -> None:
         """Display dialouge prompt to start a new game, and reset if confirmed."""
         if GameControl.game_state is GameState.PLAYING:
+            WindowControl.messagebox_open = True
             reset = messagebox.askyesno(
                 title='Reset Game?',
                 message='Are you sure you want to start a new game?',
                 default=messagebox.NO
             )
             if not reset:
+                WindowControl.messagebox_open = False
                 return
+            else:
+                WindowControl.messagebox_open = False
         GameControl.game_state = GameState.DONE
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
@@ -426,13 +434,17 @@ class GameControl:
     def stop_game() -> None:
         """Display dialouge prompt to stop the current game, and place game on hold if confirmed."""
         if GameControl.game_state is GameState.PLAYING:
+            WindowControl.messagebox_open = True
             stop = messagebox.askyesno(
                 title='Stop Playing?',
                 message='Are you sure you want to stop playing?',
                 default=messagebox.NO
             )
             if not stop:
+                WindowControl.messagebox_open = False
                 return
+            else:
+                WindowControl.messagebox_open = False
         GameControl.game_state = GameState.DONE
         GameControl.on_hold = True
         WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
@@ -581,17 +593,21 @@ class GameControl:
         if not board_file:
             return
         if not board_file.endswith(Constants.FILE_EXTENSION):
+            WindowControl.messagebox_open = True
             messagebox.showerror(
                 title='Extension Error',
                 message=f'Invalid extension for FreeForm Minesweeper board ({"".join(board_file.partition(".")[1:])}).'
             )
+            WindowControl.messagebox_open = False
             return
         try:
             with open(board_file, 'w') as board_save_file:
                 board_save_file.write('\n'.join(compressed_board))
                 board_save_file.write('\n')
         except Exception:
+            WindowControl.messagebox_open = True
             messagebox.showerror(title='Saving Error', message='Was not able to save the file.')
+            WindowControl.messagebox_open = False
 
     @staticmethod
     def load_board(filename: Optional[str] = None) -> None:
@@ -608,10 +624,14 @@ class GameControl:
             with open(board_file, 'r') as board_load_file:
                 board_bits = [line.strip() for line in board_load_file.readlines()]
         except Exception:
+            WindowControl.messagebox_open = True
             messagebox.showerror(title='Opening Error', message='Was not able to open the file.')
+            WindowControl.messagebox_open = False
             return
         if len(board_bits) > Options.rows or len(max(board_bits, key=len)) > Options.cols:
+            WindowControl.messagebox_open = True
             messagebox.showerror(title='Loading Error', message='Board was too large to be loaded properly.')
+            WindowControl.messagebox_open = False
             return
         GameControl.clear_board()
         for curr_row, bit_row in enumerate(board_bits):
@@ -829,6 +849,7 @@ class WindowControl:
     """Utility class containing the window objects and related funuctions.
 
     Attributes:
+        messagebox_open: Flag if a messagebo is open so multiple are not created and stacked.
         root: Main window of the program.
         main_frame: Primary frame all other widgets reside in.
         menu_frame: Frame all control widgets reside in.
@@ -844,8 +865,8 @@ class WindowControl:
         settings_button: Settings button.
         play_button: Play game button.
         stop_button: Stop game button.
-
     """
+    messagebox_open = False
     root = tk.Tk()
     main_frame = tk.Frame(
         root, width=Options.window_width,
