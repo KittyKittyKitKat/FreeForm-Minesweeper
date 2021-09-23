@@ -294,7 +294,7 @@ class GameControl:
                         square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 38])
             save_time = messagebox.askyesno(title='FreeForm Minesweeper', message='You Win!\nSave your time to the leaderboard?')
             if save_time:
-                pass#GameControl.save_time_to_file()
+                GameControl.save_time_to_file()
 
     @staticmethod
     def has_lost() -> None:
@@ -632,8 +632,12 @@ class GameControl:
         Args:
             filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
         """
-        WindowControl.leaderboard_window()
-        current_compressed_board = GameControl.compress_board()
+        name = tk.StringVar(value='')
+        player = tk.StringVar(value='')
+        submitted = tk.BooleanVar(value=False)
+        WindowControl.leaderboard_window(name, player, submitted)
+        # current_compressed_board = GameControl.compress_board()
+        print(name.get(), player.get())
 
 
 
@@ -1180,11 +1184,8 @@ class WindowControl:
         submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
 
     @staticmethod
-    def leaderboard_window() -> None:
+    def leaderboard_window(name_var: tk.StringVar, player_var: tk.StringVar, submit_flag: tk.BooleanVar) -> tuple[str, str]:
         """Create and display the leaderboard entry window"""
-        name = tk.StringVar(value='')
-        player = tk.StringVar(value='')
-
         save_time_root = tk.Toplevel(class_='FFM Leaderboard')
         save_time_root.title('Save to Leaderboard')
         save_time_root.resizable(0, 0)
@@ -1192,6 +1193,14 @@ class WindowControl:
             save_time_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
         elif get_os() == 'Linux':
             save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
+
+        def save_time_root_close() -> None:
+            try:
+                ...
+            except Exception:
+                pass
+
+        save_time_root.bind('<Destroy>', lambda event: save_time_root_close())
 
         save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=400, height=200 if not Options.multimines else 250)
         save_time_frame.grid_propagate(False)
@@ -1204,10 +1213,15 @@ class WindowControl:
             bg=Constants.BACKGROUND_COLOUR
         )
         name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name)
+        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name_var)
         player_label = tk.Label(save_time_frame, text='Player Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player)
-        save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG)
+        player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var)
+
+        def submit_name_player():
+            submit_flag.set(True)
+            save_time_root.destroy()
+            messagebox.showinfo(title='Save to Leaderboard', message='Time saved successfully!')
+        save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
 
         if Options.multimines:
             mutlimine_label = tk.Label(save_time_frame, text='You played on multimine mode:', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
@@ -1231,6 +1245,7 @@ class WindowControl:
         save_button.grid(row=8, column=0)
         save_time_frame.grid(row=0, column=0)
 
+        save_button.wait_variable(submit_flag)
 
 def main() -> None:
     """Initialize all game components and run the mainloop."""
