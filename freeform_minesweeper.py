@@ -632,55 +632,7 @@ class GameControl:
         Args:
             filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
         """
-        name = tk.StringVar(value='')
-        player = tk.StringVar(value='')
-
-        save_time_root = tk.Toplevel(class_='FFM Leaderboard')
-        save_time_root.title('Save to Leaderboard')
-        save_time_root.resizable(0, 0)
-        if get_os() == 'Windows':
-            save_time_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
-        elif get_os() == 'Linux':
-            save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
-
-        save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=350, height=200 if not Options.multimines else 250)
-        save_time_frame.grid_propagate(False)
-        save_time_frame.grid_columnconfigure(0, weight=1)
-        save_time_frame.grid_rowconfigure(8, weight=1)
-
-        time_label = tk.Label(
-            save_time_frame,
-            text=f'Your time was: {GameControl.seconds_elapsed} seconds.', font=Constants.FONT_BIG,
-            bg=Constants.BACKGROUND_COLOUR
-        )
-        name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name)
-        player_label = tk.Label(save_time_frame, text='Player Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player)
-        save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG)
-
-        if Options.multimines:
-            mutlimine_label = tk.Label(save_time_frame, text='You played on multimine mode:', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-            multimine_sq_inc_label = tk.Label(
-                save_time_frame, text=f'Multimines Proabability: {int(Options.multimine_sq_inc * 100)}%',
-                font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR
-            )
-            multimine_mine_inc_label = tk.Label(
-                save_time_frame, text=f'Mine Increase: {int(Options.multimine_mine_inc * 100)}%',
-                font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR
-            )
-            mutlimine_label.grid(row=5, column=0, pady=6)
-            multimine_sq_inc_label.grid(row=6, column=0)
-            multimine_mine_inc_label.grid(row=7, column=0)
-
-        time_label.grid(row=0, column=0, pady=6)
-        name_label.grid(row=1, column=0)
-        name_entry.grid(row=2, column=0)
-        player_label.grid(row=3, column=0)
-        player_entry.grid(row=4, column=0)
-        save_button.grid(row=8, column=0)
-        save_time_frame.grid(row=0, column=0)
-
+        WindowControl.leaderboard_window()
         current_compressed_board = GameControl.compress_board()
 
 
@@ -1061,7 +1013,7 @@ class WindowControl:
 
     @staticmethod
     def drag_enable_toggle(event: tk.EventType.Motion, initial_square: BoardSquare) -> None:
-        """Turn all squares under the mouse to a sate based on an inital square while dragging.
+        """Turn all squares under the mouse to a state based on an inital square while dragging.
 
         Args:
             event: Mouse motion event.
@@ -1226,6 +1178,58 @@ class WindowControl:
 
         submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
         submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
+
+    @staticmethod
+    def leaderboard_window() -> None:
+        """Create and display the leaderboard entry window"""
+        name = tk.StringVar(value='')
+        player = tk.StringVar(value='')
+
+        save_time_root = tk.Toplevel(class_='FFM Leaderboard')
+        save_time_root.title('Save to Leaderboard')
+        save_time_root.resizable(0, 0)
+        if get_os() == 'Windows':
+            save_time_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
+        elif get_os() == 'Linux':
+            save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
+
+        save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=400, height=200 if not Options.multimines else 250)
+        save_time_frame.grid_propagate(False)
+        save_time_frame.grid_columnconfigure(0, weight=1)
+        save_time_frame.grid_rowconfigure(8, weight=1)
+
+        time_label = tk.Label(
+            save_time_frame,
+            text=f'Your time was: {GameControl.seconds_elapsed} seconds.', font=Constants.FONT_BIG,
+            bg=Constants.BACKGROUND_COLOUR
+        )
+        name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name)
+        player_label = tk.Label(save_time_frame, text='Player Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player)
+        save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG)
+
+        if Options.multimines:
+            mutlimine_label = tk.Label(save_time_frame, text='You played on multimine mode:', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+            multimine_sq_inc_label = tk.Label(
+                save_time_frame, text=f'Multimines Proabability: {int(Options.multimine_sq_inc * 100)}%',
+                font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR
+            )
+            multimine_mine_inc_label = tk.Label(
+                save_time_frame, text=f'Mine Increase: {int(Options.multimine_mine_inc * 100)}%',
+                font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR
+            )
+            mutlimine_label.grid(row=5, column=0, pady=6)
+            multimine_sq_inc_label.grid(row=6, column=0)
+            multimine_mine_inc_label.grid(row=7, column=0)
+
+        time_label.grid(row=0, column=0, pady=6)
+        name_label.grid(row=1, column=0)
+        name_entry.grid(row=2, column=0)
+        player_label.grid(row=3, column=0)
+        player_entry.grid(row=4, column=0)
+        save_button.grid(row=8, column=0)
+        save_time_frame.grid(row=0, column=0)
 
 
 def main() -> None:
