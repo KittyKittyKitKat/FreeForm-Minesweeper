@@ -13,7 +13,6 @@ from os.path import expanduser
 from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
-from typing import Optional
 
 import requests
 
@@ -577,7 +576,7 @@ class GameControl:
             messagebox.showerror(title='Saving Error', message='Was not able to save the file.')
 
     @staticmethod
-    def load_board(filename: Optional[str] = None) -> None:
+    def load_board(filename: str = None) -> None:
         """Load an external board into the game.
 
         Args:
