@@ -705,6 +705,7 @@ class BoardSquare(tk.Label):
                             neighbour.uncover()
             else:
                 if Options.grace_rule and GameControl.squares_uncovered == 0:
+                    GameControl.game_state = GameState.DONE
                     GameControl.new_game()
                     self.uncover()
                     return
