@@ -353,6 +353,7 @@ class GameControl:
         while seed_mines_placed < seed_mines:
             sq = random.choice(squares)
             if sq.enabled and not sq.value:
+                sq.config(im=Constants.BOARD_IMAGES[11])
                 sq.value -= 1
                 seed_mines_placed += 1
 
@@ -739,6 +740,7 @@ class BoardSquare(tk.Label):
                             neighbour.uncover()
             else:
                 if Options.grace_rule and GameControl.squares_uncovered == 0:
+                    GameControl.game_state = GameState.DONE
                     GameControl.reset_game()
                     self.uncover()
                     return
