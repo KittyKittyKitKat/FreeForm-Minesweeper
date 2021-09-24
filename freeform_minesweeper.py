@@ -655,10 +655,10 @@ class GameControl:
         """
         name = tk.StringVar(value='')
         player = tk.StringVar(value='')
-        submitted = tk.BooleanVar(value=False)
+        submitted = tk.StringVar(value='None')
         WindowControl.leaderboard_window(name, player, submitted)
         # current_compressed_board = GameControl.compress_board()
-        print(name.get(), player.get())
+        # print(name.get(), player.get())
 
 
 class BoardSquare(tk.Label):
@@ -1205,7 +1205,7 @@ class WindowControl:
         submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
 
     @staticmethod
-    def leaderboard_window(name_var: tk.StringVar, player_var: tk.StringVar, submit_flag: tk.BooleanVar) -> tuple[str, str]:
+    def leaderboard_window(name_var: tk.StringVar, player_var: tk.StringVar, submit_flag: tk.StringVar) -> tuple[str, str]:
         """Create and display the leaderboard entry window"""
         WindowControl.settings_button.config(state='disabled')
         WindowControl.stop_button.config(state='disabled')
@@ -1227,6 +1227,8 @@ class WindowControl:
                 WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
             except Exception:
                 pass
+            finally:
+                submit_flag.set('Failed')
 
         save_time_root.bind('<Destroy>', lambda event: save_time_root_close())
 
@@ -1246,7 +1248,7 @@ class WindowControl:
         player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var)
 
         def submit_name_player():
-            submit_flag.set(True)
+            submit_flag.set('Success')
             save_time_root.destroy()
             messagebox.showinfo(title='Save to Leaderboard', message='Time saved successfully!')
         save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
