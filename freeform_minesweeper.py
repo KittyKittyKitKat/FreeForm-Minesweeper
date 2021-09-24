@@ -432,7 +432,7 @@ class GameControl:
             WindowControl.messagebox_open = False
             return
         else:
-            WindowControl.messagebox_open = True
+            WindowControl.messagebox_open = False
         GameControl.on_hold = True
         WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.game_root.unbind('<Control-f>')
@@ -816,7 +816,7 @@ class WindowControl:
     """Utility class containing the window objects and related funuctions.
 
     Attributes:
-        messagebox_open: Flag if a messagebo is open so multiple are not created and stacked
+        messagebox_open: Flag if a messagebo is open so multiple are not created and stacked.
         hidden_root: Absolute parent of the program. Only used for handling game close.
         game_root: Main window of the program.
         main_frame: Primary frame all other widgets reside in.
