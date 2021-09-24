@@ -661,8 +661,6 @@ class GameControl:
         print(name.get(), player.get())
 
 
-
-
 class BoardSquare(tk.Label):
     """A toggable square used in playing Minesweeper.
 
@@ -1209,6 +1207,10 @@ class WindowControl:
     @staticmethod
     def leaderboard_window(name_var: tk.StringVar, player_var: tk.StringVar, submit_flag: tk.BooleanVar) -> tuple[str, str]:
         """Create and display the leaderboard entry window"""
+        WindowControl.settings_button.config(state='disabled')
+        WindowControl.stop_button.config(state='disabled')
+        WindowControl.reset_button.unbind('<ButtonPress-1>')
+        WindowControl.reset_button.unbind('<ButtonRelease-1>')
         save_time_root = tk.Toplevel(class_='FFM Leaderboard')
         save_time_root.title('Save to Leaderboard')
         save_time_root.resizable(0, 0)
@@ -1219,7 +1221,10 @@ class WindowControl:
 
         def save_time_root_close() -> None:
             try:
-                ...
+                WindowControl.settings_button.config(state='normal')
+                WindowControl.stop_button.config(state='normal')
+                WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
+                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
             except Exception:
                 pass
 
@@ -1269,6 +1274,7 @@ class WindowControl:
         save_time_frame.grid(row=0, column=0)
 
         save_button.wait_variable(submit_flag)
+
 
 def main() -> None:
     """Initialize all game components and run the mainloop."""
