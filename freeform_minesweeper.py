@@ -3,6 +3,7 @@
 Play the game by executing the file as a program, and have fun!
 The only code intended to be executed is the main() function. Any other use may result in errors or other undefined behaviour.
 """
+import json
 import random
 import tkinter as tk
 import time
@@ -152,6 +153,7 @@ class Constants:
     SAVE_LOAD_DIR = expanduser("~/Desktop")
     MAIN_ICON_ICO = 'assets/icon_main.ico'
     SETTINGS_ICON_ICO = 'assets/icon_settings.ico'
+    LEADERBOARD_ICON_ICO = 'assets/icon_leaderboard.ico'
 
     @staticmethod
     def init_board_images() -> None:
@@ -285,7 +287,7 @@ class GameControl:
     @staticmethod
     def check_win() -> None:
         """Check if the game has been won, and executes winning sequence if so."""
-        if GameControl.squares_uncovered == GameControl.squares_to_win:
+        if GameControl.squares_uncovered == GameControl.squares_to_win and GameControl.game_state is GameState.PLAYING:
             WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[16])
             GameControl.game_state = GameState.DONE
             GameControl.flags_placed = GameControl.num_mines
@@ -353,7 +355,6 @@ class GameControl:
         while seed_mines_placed < seed_mines:
             sq = random.choice(squares)
             if sq.enabled and not sq.value:
-                sq.config(im=Constants.BOARD_IMAGES[11])
                 sq.value -= 1
                 seed_mines_placed += 1
 
@@ -653,12 +654,75 @@ class GameControl:
         Args:
             filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
         """
-        name = tk.StringVar(value='')
-        player = tk.StringVar(value='')
+        board_name = tk.StringVar(value='')
+        player_name = tk.StringVar(value='')
         submitted = tk.StringVar(value='None')
-        WindowControl.leaderboard_window(name, player, submitted)
-        # current_compressed_board = GameControl.compress_board()
-        # print(name.get(), player.get())
+        WindowControl.leaderboard_window(board_name, player_name, submitted)
+
+        board= 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
+        board_id = ''.join(str(len(list(g)))+k for k, g in groupby(board))
+        with open(Constants.LEADERBOARD_FILENAME) as read_fp:
+            current_leaderboard = json.load(read_fp)
+
+        if submitted.get().startswith('Failed:'):
+            error_msg = submitted.get().split(':')[1]
+            try:
+                WindowControl.root.state()
+            except:
+                return
+            WindowControl.messagebox_open = True
+            messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
+            WindowControl.messagebox_open = False
+
+        elif submitted.get() == 'Success':
+            WindowControl.messagebox_open = True
+            messagebox.showinfo(title='Save to Leaderboard', message='Time saved successfully!')
+            WindowControl.messagebox_open = False
+
+        elif player_name.get() in current_leaderboard and board_name.get() in (current_player := current_leaderboard[player_name.get()]):
+            if current_player[board_name.get()]:pass
+            error_msg = ''
+            WindowControl.messagebox_open = True
+            messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
+            WindowControl.messagebox_open = False
+
+        board_name.set(board_name.get().lower())
+        player_name.set(player_name.get().lower())
+
+
+
+        print(current_leaderboard)
+        print(player_name.get() in current_leaderboard)
+
+
+
+        """
+        JSON Layout
+
+        Board names cannot duplicate within a player
+        Player names cannot repeat <-- same player
+        Names supplied must satisfy .isalpha() (or maybe .isalnum())
+
+        buffinc_jey = str(multimine_sq_inc)[1:] + str(multimine_mine_inc)[1:]
+
+        board_id = Run Length Encoding to compress board to ID
+
+        leaderboard.json
+        {
+            player_name: {
+                board_name: {
+                    board_id: id
+                    normal_times: [time1, time2, ...],
+                    multimine_times: {
+                        buffinc_key: [time1, time2, ...]
+                    }
+                }
+            }
+            player2: ...
+            player3: ...
+        }
+
+        """
 
 
 class BoardSquare(tk.Label):
@@ -1205,7 +1269,7 @@ class WindowControl:
         submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
 
     @staticmethod
-    def leaderboard_window(name_var: tk.StringVar, player_var: tk.StringVar, submit_flag: tk.StringVar) -> tuple[str, str]:
+    def leaderboard_window(name_var: tk.StringVar, player_var: tk.StringVar, submit_flag: tk.StringVar) -> None:
         """Create and display the leaderboard entry window"""
         WindowControl.settings_button.config(state='disabled')
         WindowControl.stop_button.config(state='disabled')
@@ -1226,9 +1290,7 @@ class WindowControl:
                 WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
                 WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
             except Exception:
-                pass
-            finally:
-                submit_flag.set('Failed')
+                submit_flag.set('Failed:Window Destroyed')
 
         save_time_root.bind('<Destroy>', lambda event: save_time_root_close())
 
@@ -1239,7 +1301,7 @@ class WindowControl:
 
         time_label = tk.Label(
             save_time_frame,
-            text=f'Your time was: {GameControl.seconds_elapsed} seconds.', font=Constants.FONT_BIG,
+            text=f'Your time was: {int(GameControl.seconds_elapsed)} seconds.', font=Constants.FONT_BIG,
             bg=Constants.BACKGROUND_COLOUR
         )
         name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
@@ -1248,9 +1310,12 @@ class WindowControl:
         player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var)
 
         def submit_name_player():
-            submit_flag.set('Success')
+            if not (name_var.get().isalpha() and player_var.get().isalpha()):
+                submit_flag.set('Failed:Names entered can only contain letters [a-z]')
+            else:
+                submit_flag.set('Success')
             save_time_root.destroy()
-            messagebox.showinfo(title='Save to Leaderboard', message='Time saved successfully!')
+
         save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
 
         if Options.multimines:
