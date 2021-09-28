@@ -5,6 +5,7 @@ FreeForm Minesweeper is the game of Minesweeper as you know and love, but now wi
   ### What you can expect
   * A score keeping system to keep track of all your best times!
   * Support for theming, with an included dark theme!
+  * Undoing and redoing when drawing boards!
   * A better (un)installation system!
   * Lots of bugfixes!
 
