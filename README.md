@@ -1,6 +1,13 @@
 # FreeForm Minesweeper
 FreeForm Minesweeper is the game of Minesweeper as you know and love, but now with the ability to play the classic game on any shape of board you can draw!
 
+## Version 2.0 is coming soon!
+  ### What you can expect
+  * A score keeping system to keep track of all your best times!
+  * Support for theming, with an included dark theme!
+  * A better (un)installation system!
+  * Lots of bugfixes!
+
 ## Running the game
 To play the game, you have two options. You can download the game on your computer using the Linux and Windows releases on the Release pages. This is the recommended option, and the Release pages have their own instructions for downloading and installing Freeform Minesweeper. Alternatively, you can download the source code directly on your machine with the `python freeform_minesweeper.py` command. The source code comes with the requirements of a Python version 3.9.0 or greater and Pillow version 8.3.2 or greater. Do *not* run the source code for the installers and uninstallers. They will not function properly. To install the game, see the first option.
 
