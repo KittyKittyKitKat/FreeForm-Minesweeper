@@ -8,6 +8,7 @@ import random
 import tkinter as tk
 import time
 
+from bisect import insort_left
 from enum import Enum, auto
 from itertools import chain, groupby
 from os.path import expanduser
@@ -659,9 +660,15 @@ class GameControl:
         submitted = tk.StringVar(value='None')
         WindowControl.leaderboard_window(board_name, player_name, submitted)
 
-        board= 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
+        board_name = board_name.get().lower()
+        player_name = player_name.get().lower()
+        try:
+            board= 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
+        except tk.TclError:
+            return
         board_id = ''.join(str(len(list(g)))+k for k, g in groupby(board))
-        with open(Constants.LEADERBOARD_FILENAME) as read_fp:
+
+        with open(filename) as read_fp:
             current_leaderboard = json.load(read_fp)
 
         if submitted.get().startswith('Failed:'):
@@ -673,56 +680,35 @@ class GameControl:
             WindowControl.messagebox_open = True
             messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
             WindowControl.messagebox_open = False
+            return
 
-        elif submitted.get() == 'Success':
-            WindowControl.messagebox_open = True
-            messagebox.showinfo(title='Save to Leaderboard', message='Time saved successfully!')
-            WindowControl.messagebox_open = False
-
-        elif player_name.get() in current_leaderboard and board_name.get() in (current_player := current_leaderboard[player_name.get()]):
-            if current_player[board_name.get()]:pass
-            error_msg = ''
-            WindowControl.messagebox_open = True
-            messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
-            WindowControl.messagebox_open = False
-
-        board_name.set(board_name.get().lower())
-        player_name.set(player_name.get().lower())
-
-
-
-        print(current_leaderboard)
-        print(player_name.get() in current_leaderboard)
-
-
-
-        """
-        JSON Layout
-
-        Board names cannot duplicate within a player
-        Player names cannot repeat <-- same player
-        Names supplied must satisfy .isalpha() (or maybe .isalnum())
-
-        buffinc_jey = str(multimine_sq_inc)[1:] + str(multimine_mine_inc)[1:]
-
-        board_id = Run Length Encoding to compress board to ID
-
-        leaderboard.json
-        {
+        new_player = {
             player_name: {
-                board_name: {
-                    board_id: id
-                    normal_times: [time1, time2, ...],
-                    multimine_times: {
-                        buffinc_key: [time1, time2, ...]
-                    }
-                }
+                'board_name': board_name,
+                'normal_times': [],
+                'multimine_times': {}
             }
-            player2: ...
-            player3: ...
         }
 
-        """
+        # Check against non matching board names
+
+        current_player = current_leaderboard.get(board_id, new_player)[player_name]
+        if Options.multimines:
+            buffinc_key = str(Options.multimine_sq_inc)[1:] + str(Options.multimine_mine_inc)[1:]
+            current_times = current_player.get(buffinc_key, [])
+            insort_left(current_times, int(GameControl.seconds_elapsed))
+            current_player['multimine_times'][buffinc_key] = current_times
+        else:
+            current_times = current_player['normal_times']
+            insort_left(current_times, int(GameControl.seconds_elapsed))
+            current_player['normal_times'] = current_times
+
+        if board_id not in current_leaderboard:
+            current_leaderboard[board_id] = {}
+        current_leaderboard[board_id][player_name] = current_player
+
+        with open(filename, 'w') as write_fp:
+            json.dump(current_leaderboard, write_fp)
 
 
 class BoardSquare(tk.Label):
@@ -1290,7 +1276,10 @@ class WindowControl:
                 WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
                 WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
             except Exception:
-                submit_flag.set('Failed:Window Destroyed')
+                submit_flag.set('Failed:Main window destroyed')
+            else:
+                if submit_flag.get() != 'Success':
+                    submit_flag.set('Failed:Window closed without saving')
 
         save_time_root.bind('<Destroy>', lambda event: save_time_root_close())
 
@@ -1316,6 +1305,7 @@ class WindowControl:
                 submit_flag.set('Success')
             save_time_root.destroy()
 
+        # Bind enter to button, protect against empty strings, and set focus on name_entry!
         save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
 
         if Options.multimines:
