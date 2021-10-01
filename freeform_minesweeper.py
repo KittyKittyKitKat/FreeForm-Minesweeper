@@ -689,10 +689,8 @@ class GameControl:
                 'multimine_times': {}
             }
         }
-
-        # Check against non matching board names
-
         current_player = current_leaderboard.get(board_id, new_player)[player_name]
+
         if Options.multimines:
             buffinc_key = str(Options.multimine_sq_inc)[1:] + str(Options.multimine_mine_inc)[1:]
             current_times = current_player.get(buffinc_key, [])
@@ -708,7 +706,7 @@ class GameControl:
         current_leaderboard[board_id][player_name] = current_player
 
         with open(filename, 'w') as write_fp:
-            json.dump(current_leaderboard, write_fp)
+            json.dump(current_leaderboard, write_fp, indent=2)
 
 
 class BoardSquare(tk.Label):
@@ -1293,19 +1291,26 @@ class WindowControl:
             text=f'Your time was: {int(GameControl.seconds_elapsed)} seconds.', font=Constants.FONT_BIG,
             bg=Constants.BACKGROUND_COLOUR
         )
-        name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name_var)
         player_label = tk.Label(save_time_frame, text='Player Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
         player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var)
+        name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name_var)
 
         def submit_name_player():
+            if not name_var.get() or not player_var.get():
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered cannot be blank')
+                WindowControl.messagebox_open = False
+                return
             if not (name_var.get().isalpha() and player_var.get().isalpha()):
-                submit_flag.set('Failed:Names entered can only contain letters [a-z]')
-            else:
-                submit_flag.set('Success')
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
+                WindowControl.messagebox_open = False
+                return
+            submit_flag.set('Success')
             save_time_root.destroy()
 
-        # Bind enter to button, protect against empty strings, and set focus on name_entry!
+        # protect against conflicting names
         save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
 
         if Options.multimines:
@@ -1323,13 +1328,17 @@ class WindowControl:
             multimine_mine_inc_label.grid(row=7, column=0)
 
         time_label.grid(row=0, column=0, pady=6)
-        name_label.grid(row=1, column=0)
-        name_entry.grid(row=2, column=0)
-        player_label.grid(row=3, column=0)
-        player_entry.grid(row=4, column=0)
+        player_label.grid(row=1, column=0)
+        player_entry.grid(row=2, column=0)
+        name_label.grid(row=3, column=0)
+        name_entry.grid(row=4, column=0)
         save_button.grid(row=8, column=0)
         save_time_frame.grid(row=0, column=0)
 
+        player_entry.focus()
+        player_entry.bind('<Control-KeyRelease-a>', lambda e: player_entry.select_range(0, tk.END))
+        name_entry.bind('<Control-KeyRelease-a>', lambda e: name_entry.select_range(0, tk.END))
+        save_time_root.bind('<Return>', lambda e: submit_name_player())
         save_button.wait_variable(submit_flag)
 
 
