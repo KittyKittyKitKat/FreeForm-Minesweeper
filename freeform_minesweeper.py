@@ -655,21 +655,23 @@ class GameControl:
         Args:
             filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
         """
-        board_name = tk.StringVar(value='')
-        player_name = tk.StringVar(value='')
-        submitted = tk.StringVar(value='None')
-        WindowControl.leaderboard_window(board_name, player_name, submitted)
-
-        board_name = board_name.get().lower()
-        player_name = player_name.get().lower()
+        with open(filename) as read_fp:
+            current_leaderboard = json.load(read_fp)
         try:
             board= 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
         except tk.TclError:
             return
         board_id = ''.join(str(len(list(g)))+k for k, g in groupby(board))
 
-        with open(filename) as read_fp:
-            current_leaderboard = json.load(read_fp)
+        board_name = tk.StringVar(value='')
+        player_name = tk.StringVar(value='')
+        submitted = tk.StringVar(value='None')
+        WindowControl.leaderboard_window(
+            board_name,
+            player_name,
+            submitted,
+            (current_leaderboard, board_id)
+        )
 
         if submitted.get().startswith('Failed:'):
             error_msg = submitted.get().split(':')[1]
@@ -682,6 +684,9 @@ class GameControl:
             WindowControl.messagebox_open = False
             return
 
+        player_name = player_name.get()
+        board_name = board_name.get()
+
         new_player = {
             player_name: {
                 'board_name': board_name,
@@ -689,7 +694,8 @@ class GameControl:
                 'multimine_times': {}
             }
         }
-        current_player = current_leaderboard.get(board_id, new_player)[player_name]
+        current_board = current_leaderboard.get(board_id, {})
+        current_player = current_board.get(player_name, new_player[player_name])
 
         if Options.multimines:
             buffinc_key = str(Options.multimine_sq_inc)[1:] + str(Options.multimine_mine_inc)[1:]
@@ -1253,8 +1259,9 @@ class WindowControl:
         submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
 
     @staticmethod
-    def leaderboard_window(name_var: tk.StringVar, player_var: tk.StringVar, submit_flag: tk.StringVar) -> None:
+    def leaderboard_window(name_var: tk.StringVar, player_var: tk.StringVar, submit_flag: tk.StringVar, leaderboard_info: tuple[dict, str]) -> None:
         """Create and display the leaderboard entry window"""
+        leaderboard, current_board = leaderboard_info
         WindowControl.settings_button.config(state='disabled')
         WindowControl.stop_button.config(state='disabled')
         WindowControl.reset_button.unbind('<ButtonPress-1>')
@@ -1297,6 +1304,8 @@ class WindowControl:
         name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name_var)
 
         def submit_name_player():
+            name_var.set(name_var.get().lower())
+            player_var.set(player_var.get().lower())
             if not name_var.get() or not player_var.get():
                 WindowControl.messagebox_open = True
                 messagebox.showerror(title='FFM Leaderboard Error', message='Names entered cannot be blank')
@@ -1307,6 +1316,8 @@ class WindowControl:
                 messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
                 WindowControl.messagebox_open = False
                 return
+            if current_board in leaderboard and player_var.get() in leaderboard[current_board]:
+                ...
             submit_flag.set('Success')
             save_time_root.destroy()
 
