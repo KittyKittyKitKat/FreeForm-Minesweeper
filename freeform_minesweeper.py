@@ -665,24 +665,23 @@ class GameControl:
 
         board_name = tk.StringVar(value='')
         player_name = tk.StringVar(value='')
-        submitted = tk.StringVar(value='None')
-        WindowControl.leaderboard_window(
+        status = tk.StringVar(value='None')
+        WindowControl.leaderboard_entry_window(
             board_name,
             player_name,
-            submitted,
+            status,
             (current_leaderboard, board_id)
         )
 
-        if submitted.get().startswith('Failed:'):
-            error_msg = submitted.get().split(':')[1]
+        if status.get().startswith('Failed:'):
+            error_msg = status.get().split(':')[1]
             try:
                 WindowControl.root.state()
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
+                WindowControl.messagebox_open = False
             except:
                 return
-            WindowControl.messagebox_open = True
-            messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
-            WindowControl.messagebox_open = False
-            return
 
         player_name = player_name.get()
         board_name = board_name.get()
@@ -1259,69 +1258,84 @@ class WindowControl:
         submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
 
     @staticmethod
-    def leaderboard_window(name_var: tk.StringVar, player_var: tk.StringVar, submit_flag: tk.StringVar, leaderboard_info: tuple[dict, str]) -> None:
-        """Create and display the leaderboard entry window"""
-        leaderboard, current_board = leaderboard_info
-        WindowControl.settings_button.config(state='disabled')
-        WindowControl.stop_button.config(state='disabled')
-        WindowControl.reset_button.unbind('<ButtonPress-1>')
-        WindowControl.reset_button.unbind('<ButtonRelease-1>')
-        save_time_root = tk.Toplevel(class_='FFM Leaderboard')
-        save_time_root.title('Save to Leaderboard')
-        save_time_root.resizable(0, 0)
-        if get_os() == 'Windows':
-            save_time_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
-        elif get_os() == 'Linux':
-            save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
+    def leaderboard_entry_window(player_var, board_var, status_flag, leaderboard_info):
+        """Create and display the leaderboard entry window to accept new times
+
+        Args:
+            player_var (tk.StringVar): String variable tracking the name of the player
+            board_var (tk.StringVar): String variable tracking the name of the board the player provides
+            status_flag (tk.StringVar): String variable tracking the status of submitting a leaderboard entry
+            leaderboard_info (tuple): Tuple containing the current leaderboard and the ID of the current board
+        """
+        leaderboard, board_id = leaderboard_info
+        board_in_leaderboard = board_id in leaderboard
+        current_board = leaderboard[board_id] if board_in_leaderboard else {}
 
         def save_time_root_close() -> None:
+            """Handler for leaderboard entry window closing"""
             try:
                 WindowControl.settings_button.config(state='normal')
                 WindowControl.stop_button.config(state='normal')
                 WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
                 WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
             except Exception:
-                submit_flag.set('Failed:Main window destroyed')
+                status_flag.set('Failed:Main window destroyed')
             else:
-                if submit_flag.get() != 'Success':
-                    submit_flag.set('Failed:Window closed without saving')
+                if status_flag.get() != 'Success':
+                    status_flag.set('Failed:Window closed without saving')
 
+        def submit_name_player():
+            """Validate user inputted names and close window if they satisfy requirements"""
+            # protect against conflicting names
+            board_var.set(board_var.get().lower())
+            player_var.set(player_var.get().lower())
+            if not board_var.get() or not player_var.get():
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered cannot be blank')
+                WindowControl.messagebox_open = False
+                return
+            if not (board_var.get().isalpha() and player_var.get().isalpha()):
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
+                WindowControl.messagebox_open = False
+                return
+            status_flag.set('Success')
+            save_time_root.destroy()
+
+        def autofill_board_name():
+            """Autofill the name in the board entry based on the current board and player"""
+            if (player := player_var.get().lower()) in current_board:
+                board_var.set(current_board[player]['board_name'])
+                name_entry.config(state='disabled')
+            else:
+                name_entry.config(state='normal')
+
+        player_var.trace_add("write", lambda *_: autofill_board_name())
+
+        WindowControl.settings_button.config(state='disabled')
+        WindowControl.stop_button.config(state='disabled')
+        WindowControl.reset_button.unbind('<ButtonPress-1>')
+        WindowControl.reset_button.unbind('<ButtonRelease-1>')
+
+        save_time_root = tk.Toplevel(class_='FFM Leaderboard')
+        save_time_root.title('Save to Leaderboard')
+        save_time_root.resizable(0, 0)
         save_time_root.bind('<Destroy>', lambda event: save_time_root_close())
+        if get_os() == 'Windows':
+            save_time_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
+        elif get_os() == 'Linux':
+            save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
 
         save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=400, height=200 if not Options.multimines else 250)
         save_time_frame.grid_propagate(False)
         save_time_frame.grid_columnconfigure(0, weight=1)
         save_time_frame.grid_rowconfigure(8, weight=1)
 
-        time_label = tk.Label(
-            save_time_frame,
-            text=f'Your time was: {int(GameControl.seconds_elapsed)} seconds.', font=Constants.FONT_BIG,
-            bg=Constants.BACKGROUND_COLOUR
-        )
+        time_label = tk.Label(save_time_frame, text=f'Your time was: {int(GameControl.seconds_elapsed)} seconds.', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
         player_label = tk.Label(save_time_frame, text='Player Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
         player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var)
         name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=name_var)
-
-        def submit_name_player():
-            name_var.set(name_var.get().lower())
-            player_var.set(player_var.get().lower())
-            if not name_var.get() or not player_var.get():
-                WindowControl.messagebox_open = True
-                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered cannot be blank')
-                WindowControl.messagebox_open = False
-                return
-            if not (name_var.get().isalpha() and player_var.get().isalpha()):
-                WindowControl.messagebox_open = True
-                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
-                WindowControl.messagebox_open = False
-                return
-            if current_board in leaderboard and player_var.get() in leaderboard[current_board]:
-                ...
-            submit_flag.set('Success')
-            save_time_root.destroy()
-
-        # protect against conflicting names
+        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=board_var)
         save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
 
         if Options.multimines:
@@ -1350,7 +1364,7 @@ class WindowControl:
         player_entry.bind('<Control-KeyRelease-a>', lambda e: player_entry.select_range(0, tk.END))
         name_entry.bind('<Control-KeyRelease-a>', lambda e: name_entry.select_range(0, tk.END))
         save_time_root.bind('<Return>', lambda e: submit_name_player())
-        save_button.wait_variable(submit_flag)
+        save_button.wait_variable(status_flag)
 
 
 def main() -> None:
