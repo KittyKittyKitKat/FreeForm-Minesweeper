@@ -226,10 +226,10 @@ class Constants:
         """
         MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
         SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
-        LEADERBOARD_ICON_PNG = ImageTk.PhotoImage(Image.open('assets/icon_leaderboard.png'))
+        LEADERBOARD_ICON = ImageTk.PhotoImage(Image.open('assets/icon_leaderboard.png'))
         setattr(Constants, 'MAIN_ICON_PNG', MAIN_ICON)
         setattr(Constants, 'SETTINGS_ICON_PNG', SETTINGS_ICON)
-        setattr(Constants, 'LEADERBOARD_ICON_PNG', LEADERBOARD_ICON_PNG)
+        setattr(Constants, 'LEADERBOARD_ICON_PNG', LEADERBOARD_ICON)
 
 
 class Options:
@@ -940,6 +940,7 @@ class WindowControl:
     timer_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     flags_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     controls_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
+    leaderboard_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
 
     reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
     mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
@@ -956,7 +957,7 @@ class WindowControl:
         WindowControl.main_frame.grid_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
         WindowControl.board_frame.grid_propagate(0)
-        for i in range(6):
+        for i in range(7):
             WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
         WindowControl.menu_frame.grid(row=0, column=0, sticky='nsew')
         WindowControl.board_frame.grid(row=1, column=0, sticky='nsew')
@@ -1055,11 +1056,19 @@ class WindowControl:
         clear_button = tk.Button(WindowControl.controls_frame, text='Clear', font=Constants.FONT, width=5, command=GameControl.clear_board)
         save_board_button = tk.Button(WindowControl.controls_frame, text='Save', font=Constants.FONT, width=5, command=lambda: GameControl.save_board())
         load_board_button = tk.Button(WindowControl.controls_frame, text='Load', font=Constants.FONT, width=5, command=lambda: GameControl.load_board())
-        fill_button.grid(row=0, column=0, sticky='nsew')
-        clear_button.grid(row=1, column=0, sticky='nsew')
-        save_board_button.grid(row=0, column=1, sticky='nsew')
-        load_board_button.grid(row=1, column=1, sticky='nsew')
-        WindowControl.controls_frame.grid(row=0, column=5)
+
+        leaderboard_button = tk.Button(
+            WindowControl.leaderboard_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
+            bd=0, im=Constants.LEADERBOARD_ICON_PNG, command=WindowControl.leaderboard_view_window
+        )
+        leaderboard_button.grid(row=0, column=0)
+        WindowControl.leaderboard_frame.grid(row=0, column=5)
+
+        fill_button.grid(row=0, column=1, sticky='nsew')
+        clear_button.grid(row=1, column=1, sticky='nsew')
+        save_board_button.grid(row=0, column=2, sticky='nsew')
+        load_board_button.grid(row=1, column=2, sticky='nsew')
+        WindowControl.controls_frame.grid(row=0, column=6)
 
     @staticmethod
     def update_timer() -> None:
@@ -1271,7 +1280,7 @@ class WindowControl:
         board_in_leaderboard = board_id in leaderboard
         current_board = leaderboard[board_id] if board_in_leaderboard else {}
 
-        def save_time_root_close() -> None:
+        def save_time_root_close():
             """Handler for leaderboard entry window closing"""
             try:
                 WindowControl.settings_button.config(state='normal')
@@ -1366,6 +1375,50 @@ class WindowControl:
         save_time_root.bind('<Return>', lambda e: submit_name_player())
         save_button.wait_variable(status_flag)
 
+    @staticmethod
+    def leaderboard_view_window(leaderboard_file=Constants.LEADERBOARD_FILENAME):
+        """Create and display window to view leaderboard in
+
+         Args:
+            leaderboard_info (str): The current leaderboard file path
+        """
+        player_var = tk.StringVar()
+        with open(leaderboard_file, 'r') as fp:
+            current_leaderboard = []#json.load(fp)
+
+        def leaderboard_view_root_close():
+            """Handler for leaderboard entry window closing"""
+            try:
+                WindowControl.settings_button.config(state='normal')
+                WindowControl.stop_button.config(state='normal')
+                WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
+                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
+            except Exception:
+                return
+
+        def get_boards_from_player():
+            ...
+        player_var.trace_add('write', lambda *_: None)
+
+        WindowControl.settings_button.config(state='disabled')
+        WindowControl.stop_button.config(state='disabled')
+        WindowControl.reset_button.unbind('<ButtonPress-1>')
+        WindowControl.reset_button.unbind('<ButtonRelease-1>')
+
+        leaderboard_view_root = tk.Toplevel(class_='FFM Leaderboard')
+        leaderboard_view_root.title('FreeForm Minesweeper Leaderboard')
+        leaderboard_view_root.resizable(0, 0)
+        leaderboard_view_root.bind('<Destroy>', lambda event: leaderboard_view_root_close())
+        if get_os() == 'Windows':
+            leaderboard_view_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
+        elif get_os() == 'Linux':
+            leaderboard_view_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
+
+        leaderboard_view_frame = tk.Frame(leaderboard_view_root, bg=Constants.BACKGROUND_COLOUR, width=400, height=200)
+        leaderboard_view_frame.grid_propagate(False)
+
+        leaderboard_view_frame.grid(row=0, column=0)
+
 
 def main() -> None:
     """Initialize all game components and run the mainloop."""
@@ -1385,7 +1438,10 @@ def main() -> None:
     if not MetaData.is_release_up_to_date():
         MetaData.outdated_notice()
     font.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT[0], size=Constants.FONT_BIG[1])
+    # Remember to remove
     WindowControl.root.bind('y', lambda e: GameControl.save_time_to_file())
+    WindowControl.root.bind('u', lambda e: WindowControl.leaderboard_view_window())
+
     while True:
         try:
             WindowControl.root.update_idletasks()
