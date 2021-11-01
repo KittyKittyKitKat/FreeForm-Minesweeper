@@ -3,12 +3,12 @@
 Play the game by executing the file as a program, and have fun!
 The only code intended to be executed is the main() function. Any other use may result in errors or other undefined behaviour.
 """
-import json
+import csv
 import random
 import tkinter as tk
 import time
 
-from bisect import insort_left
+from datetime import date
 from enum import Enum, auto
 from itertools import chain, groupby
 from os.path import expanduser
@@ -150,7 +150,7 @@ class Constants:
     UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     FILE_EXTENSION = '.ffmnswpr'
     FILE_TYPE = (('FreeForm Minesweeper Board', f'*{FILE_EXTENSION}'),)
-    LEADERBOARD_FILENAME = 'assets/leaderboard.json'
+    LEADERBOARD_FILENAME = 'assets/leaderboard.csv'
     SAVE_LOAD_DIR = expanduser("~/Desktop")
     MAIN_ICON_ICO = 'assets/icon_main.ico'
     SETTINGS_ICON_ICO = 'assets/icon_settings.ico'
@@ -655,8 +655,9 @@ class GameControl:
         Args:
             filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
         """
-        with open(filename) as read_fp:
-            current_leaderboard = json.load(read_fp)
+        with open(filename, newline='') as read_fp:
+            current_leaderboard = list(csv.reader(read_fp))
+
         try:
             board= 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
         except tk.TclError:
@@ -667,8 +668,8 @@ class GameControl:
         player_name = tk.StringVar(value='')
         status = tk.StringVar(value='None')
         WindowControl.leaderboard_entry_window(
-            board_name,
             player_name,
+            board_name,
             status,
             (current_leaderboard, board_id)
         )
@@ -681,37 +682,26 @@ class GameControl:
                 messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
                 WindowControl.messagebox_open = False
             except:
-                return
+                pass
+            return
 
         player_name = player_name.get()
         board_name = board_name.get()
 
-        new_player = {
-            player_name: {
-                'board_name': board_name,
-                'normal_times': [],
-                'multimine_times': {}
-            }
-        }
-        current_board = current_leaderboard.get(board_id, {})
-        current_player = current_board.get(player_name, new_player[player_name])
+        new_entry = [
+            board_id,
+            player_name,
+            board_name,
+            f'{int(GameControl.seconds_elapsed)}',
+            f'{int(Options.multimines)}',
+            f'{Options.multimine_sq_inc if Options.multimines else -1}',
+            f'{Options.multimine_mine_inc if Options.multimines else -1}',
+            date.today().strftime('%m/%d/%y')
+        ]
 
-        if Options.multimines:
-            buffinc_key = str(Options.multimine_sq_inc)[1:] + str(Options.multimine_mine_inc)[1:]
-            current_times = current_player.get(buffinc_key, [])
-            insort_left(current_times, int(GameControl.seconds_elapsed))
-            current_player['multimine_times'][buffinc_key] = current_times
-        else:
-            current_times = current_player['normal_times']
-            insort_left(current_times, int(GameControl.seconds_elapsed))
-            current_player['normal_times'] = current_times
-
-        if board_id not in current_leaderboard:
-            current_leaderboard[board_id] = {}
-        current_leaderboard[board_id][player_name] = current_player
-
-        with open(filename, 'w') as write_fp:
-            json.dump(current_leaderboard, write_fp, indent=2)
+        current_leaderboard.append(new_entry)
+        with open(filename, 'w', newline='') as write_fp:
+            csv.writer(write_fp).writerows(current_leaderboard)
 
 
 class BoardSquare(tk.Label):
