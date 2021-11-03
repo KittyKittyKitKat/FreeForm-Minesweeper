@@ -16,6 +16,7 @@ from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import font
+from tkinter import ttk
 from typing import Optional
 
 import requests
@@ -586,6 +587,24 @@ class GameControl:
         return board_bits
 
     @staticmethod
+    def compress_board_textually():
+        board = 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
+        return ''.join(str(len(list(g)))+k for k, g in groupby(board))
+
+    @staticmethod
+    def decompress_board_textually(txt_compressed_board):
+        decompressed_board = ''
+        current_num = ''
+        for char in txt_compressed_board:
+            if char.isalpha():
+                decompressed_board += char * int(current_num)
+                current_num = ''
+            else:
+                current_num += char
+        decompressed_board = decompressed_board.replace('E', '1').replace('D', '0').split('N')
+        return decompressed_board
+
+    @staticmethod
     def save_board() -> None:
         """Save the current board to a file."""
         compressed_board = GameControl.compress_board()
@@ -659,10 +678,9 @@ class GameControl:
             current_leaderboard = list(csv.reader(read_fp))
 
         try:
-            board= 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
+            board_id = GameControl.compress_board_textually()
         except tk.TclError:
             return
-        board_id = ''.join(str(len(list(g)))+k for k, g in groupby(board))
 
         board_name = tk.StringVar(value='')
         player_name = tk.StringVar(value='')
@@ -688,6 +706,8 @@ class GameControl:
         player_name = player_name.get()
         board_name = board_name.get()
 
+        # Layout of CSV for storing records
+        # ID, player name, board name, time, multimines, sq inc, mine inc, date
         new_entry = [
             board_id,
             player_name,
@@ -1373,8 +1393,8 @@ class WindowControl:
             leaderboard_info (str): The current leaderboard file path
         """
         player_var = tk.StringVar()
-        with open(leaderboard_file, 'r') as fp:
-            current_leaderboard = []#json.load(fp)
+        with open(leaderboard_file, 'r', newline='') as fp:
+            current_leaderboard = list(csv.reader(fp))
 
         def leaderboard_view_root_close():
             """Handler for leaderboard entry window closing"""
@@ -1386,9 +1406,20 @@ class WindowControl:
             except Exception:
                 return
 
-        def get_boards_from_player():
-            ...
-        player_var.trace_add('write', lambda *_: None)
+        def display_boards_from_player(notebook):
+            """Display the boards from a player in a notebook"""
+            boards = [entry for entry in current_leaderboard if entry[1] == player_var.get()]
+            for child in notebook.winfo_children():
+                child.destroy()
+            for i, board in enumerate(boards):
+                entry_frame = tk.Frame(notebook, height=200, width=200)
+                thumbnail = WindowControl.generate_board_thumbnail(board[0])
+                thumbnail_tk = ImageTk.PhotoImage(image=thumbnail)
+                entry_label = tk.Label(entry_frame, height=128, width=128, im=thumbnail_tk)
+                entry_label.image = thumbnail_tk
+                entry_label.grid(row=0, column=0)
+                entry_frame.grid(row=i, column=0)
+                notebook.add(entry_frame, text=board[2])
 
         WindowControl.settings_button.config(state='disabled')
         WindowControl.stop_button.config(state='disabled')
@@ -1407,7 +1438,39 @@ class WindowControl:
         leaderboard_view_frame = tk.Frame(leaderboard_view_root, bg=Constants.BACKGROUND_COLOUR, width=400, height=200)
         leaderboard_view_frame.grid_propagate(False)
 
+        player_entry = tk.Entry(leaderboard_view_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var)
+        s = ttk.Style()
+        s.configure('TNotebook.Tab', font=Constants.FONT_BIG)
+        leaderboard_notebook = ttk.Notebook(leaderboard_view_frame)
+
+        leaderboard_notebook.grid(row=1, column=0)
+        player_entry.grid(row=0, column=0)
         leaderboard_view_frame.grid(row=0, column=0)
+        player_entry.focus()
+        player_var.trace_add('write', lambda *_: display_boards_from_player(leaderboard_notebook))
+
+    @staticmethod
+    def generate_board_thumbnail(compressed_board_id):
+        board_bits = GameControl.decompress_board_textually(compressed_board_id)
+        max_dim_y = len(max(board_bits, key=len))
+        max_dim_x = len(board_bits)
+        overall_max_dim = max(max_dim_y, max_dim_x)
+        if overall_max_dim <= 16:
+            size = 16
+        elif overall_max_dim <= 32:
+            size = 32
+        else:
+            size = 64
+        padding_y = (size - max_dim_y) // 2
+        padding_x = (size - max_dim_x) // 2
+        thumbnail = Image.new(mode='RGBA', size=(size, size), color=(0, 0, 0))
+        for x, bit_row in enumerate(board_bits):
+            for y, bit in enumerate(bit_row):
+                if int(bit):
+                    thumbnail.putpixel((y + padding_y, x + padding_x), (255, 255, 255))
+        thumbnail = thumbnail.resize((128, 128), resample=Image.NEAREST)
+        # thumbnail.show()
+        return thumbnail
 
 
 def main() -> None:
