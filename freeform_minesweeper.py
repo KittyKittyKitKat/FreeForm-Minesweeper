@@ -675,7 +675,9 @@ class GameControl:
             filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
         """
         with open(filename, newline='') as read_fp:
-            current_leaderboard = list(csv.reader(read_fp))
+            reader = csv.DictReader(read_fp)
+            current_leaderboard = list(reader)
+            fieldnames = reader.fieldnames
 
         try:
             board_id = GameControl.compress_board_textually()
@@ -708,7 +710,7 @@ class GameControl:
 
         # Layout of CSV for storing records
         # ID, player name, board name, time, multimines, sq inc, mine inc, date
-        new_entry = [
+        new_entry = dict(zip(fieldnames, [
             board_id,
             player_name,
             board_name,
@@ -717,11 +719,13 @@ class GameControl:
             f'{Options.multimine_sq_inc if Options.multimines else -1}',
             f'{Options.multimine_mine_inc if Options.multimines else -1}',
             date.today().strftime('%m/%d/%y')
-        ]
+        ]))
 
         current_leaderboard.append(new_entry)
         with open(filename, 'w', newline='') as write_fp:
-            csv.writer(write_fp).writerows(current_leaderboard)
+            writer = csv.DictWriter(write_fp, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(current_leaderboard)
 
 
 class BoardSquare(tk.Label):
@@ -1394,7 +1398,8 @@ class WindowControl:
         """
         player_var = tk.StringVar()
         with open(leaderboard_file, 'r', newline='') as fp:
-            current_leaderboard = list(csv.reader(fp))
+            reader = csv.DictReader(fp)
+            current_leaderboard = list(reader)
 
         def leaderboard_view_root_close():
             """Handler for leaderboard entry window closing"""
@@ -1408,18 +1413,17 @@ class WindowControl:
 
         def display_boards_from_player(notebook):
             """Display the boards from a player in a notebook"""
-            boards = [entry for entry in current_leaderboard if entry[1] == player_var.get()]
+            boards = [entry for entry in current_leaderboard if entry['Player'] == player_var.get()]
             for child in notebook.winfo_children():
                 child.destroy()
             for i, board in enumerate(boards):
                 entry_frame = tk.Frame(notebook, height=200, width=200)
-                thumbnail = WindowControl.generate_board_thumbnail(board[0])
-                thumbnail_tk = ImageTk.PhotoImage(image=thumbnail)
+                thumbnail_tk = ImageTk.PhotoImage(image=WindowControl.generate_board_thumbnail(board['BoardID']))
                 entry_label = tk.Label(entry_frame, height=128, width=128, im=thumbnail_tk)
                 entry_label.image = thumbnail_tk
                 entry_label.grid(row=0, column=0)
                 entry_frame.grid(row=i, column=0)
-                notebook.add(entry_frame, text=board[2])
+                notebook.add(entry_frame, text=board['Board'])
 
         WindowControl.settings_button.config(state='disabled')
         WindowControl.stop_button.config(state='disabled')
@@ -1469,7 +1473,6 @@ class WindowControl:
                 if int(bit):
                     thumbnail.putpixel((y + padding_y, x + padding_x), (255, 255, 255))
         thumbnail = thumbnail.resize((128, 128), resample=Image.NEAREST)
-        # thumbnail.show()
         return thumbnail
 
 
