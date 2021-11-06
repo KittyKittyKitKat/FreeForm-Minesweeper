@@ -15,7 +15,7 @@ from os.path import expanduser
 from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
-from tkinter import font
+from tkinter import font as tkFont
 from tkinter import ttk
 from typing import Optional
 
@@ -144,8 +144,6 @@ class Constants:
     PADDING_DIST = 5
     BACKGROUND_COLOUR = '#c0c0c0'
     DEFAULT_COLOUR = '#d9d9d9'
-    FONT = ('MINE-SWEEPER', 7, 'normal')
-    FONT_BIG = ('MINE-SWEEPER', 9, 'normal')
     MAINLOOP_TIME = 0.01
     LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
@@ -232,6 +230,16 @@ class Constants:
         setattr(Constants, 'SETTINGS_ICON_PNG', SETTINGS_ICON)
         setattr(Constants, 'LEADERBOARD_ICON_PNG', LEADERBOARD_ICON)
 
+    @staticmethod
+    def init_fonts():
+        if 'MINE-SWEEPER' in tkFont.families():
+            FONT = tkFont.Font(family='MINE-SWEEPER', size=7, weight='normal')
+            FONT_BIG = tkFont.Font(family='MINE-SWEEPER', size=9, weight='normal')
+        else:
+            FONT = tkFont.Font(family='Courier', size=9, weight='bold')
+            FONT_BIG = tkFont.Font(family='Courier', size=15, weight='bold')
+        setattr(Constants, 'FONT', FONT)
+        setattr(Constants, 'FONT_BIG', FONT_BIG)
 
 class Options:
     """Container for utilites to customize the game
@@ -1418,11 +1426,14 @@ class WindowControl:
                 child.destroy()
             for i, board in enumerate(boards):
                 entry_frame = tk.Frame(notebook, height=200, width=200)
+
                 thumbnail_tk = ImageTk.PhotoImage(image=WindowControl.generate_board_thumbnail(board['BoardID']))
-                entry_label = tk.Label(entry_frame, height=128, width=128, im=thumbnail_tk)
-                entry_label.image = thumbnail_tk
-                entry_label.grid(row=0, column=0)
+                entry_thumbnail_label = tk.Label(entry_frame, height=128, width=128, im=thumbnail_tk)
+                entry_thumbnail_label.image = thumbnail_tk
+
+                entry_thumbnail_label.grid(row=0, column=0)
                 entry_frame.grid(row=i, column=0)
+
                 notebook.add(entry_frame, text=board['Board'])
 
         WindowControl.settings_button.config(state='disabled')
@@ -1483,6 +1494,7 @@ def main() -> None:
     Constants.init_sevseg_images()
     Constants.init_extended_board_images()
     Constants.init_window_icons()
+    Constants.init_fonts()
     Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
     if get_os() == 'Windows':
         WindowControl.root.iconbitmap(Constants.MAIN_ICON_ICO)
@@ -1493,7 +1505,7 @@ def main() -> None:
     WindowControl.init_board()
     if not MetaData.is_release_up_to_date():
         MetaData.outdated_notice()
-    font.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT[0], size=Constants.FONT_BIG[1])
+    tkFont.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT[0], size=Constants.FONT_BIG[1])
     # Remember to remove
     WindowControl.root.bind('y', lambda e: GameControl.save_time_to_file())
     WindowControl.root.bind('u', lambda e: WindowControl.leaderboard_view_window())
