@@ -1467,13 +1467,22 @@ class WindowControl:
             else:
                 notebook_pages.append(tk.Label(leaderboard_view_root, text='No boards for this player', font=Constants.FONT_BIG))
             notebook_pages[0].grid(row=2, column=0, columnspan=2, pady=(10, 0))
+            change_notebook_page(0)
 
         def change_notebook_page(step):
             nonlocal selected_page_index
             if (selected_page_index + step) in range(len(notebook_pages)):
                 notebook_pages[selected_page_index].grid_remove()
                 selected_page_index += step
-                notebook_pages[selected_page_index].grid(row=2, column=0, columnspan=2)
+                notebook_pages[selected_page_index].grid(row=2, column=0, columnspan=2, pady=(10, 0))
+            if selected_page_index == 0:
+                page_left_btn.config(state=tk.DISABLED)
+            else:
+                page_left_btn.config(state=tk.NORMAL)
+            if selected_page_index == len(notebook_pages) - 1:
+                page_right_btn.config(state=tk.DISABLED)
+            else:
+                page_right_btn.config(state=tk.NORMAL)
 
         WindowControl.settings_button.config(state='disabled')
         WindowControl.stop_button.config(state='disabled')
@@ -1514,6 +1523,7 @@ class WindowControl:
         leaderboard_view_frame.grid(row=0, column=0, columnspan=2)
         player_entry.focus()
         display_boards_from_player()
+        change_notebook_page(0)
         player_var.trace_add('write', lambda *_: display_boards_from_player())
 
     @staticmethod
