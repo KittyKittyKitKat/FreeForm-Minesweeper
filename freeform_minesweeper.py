@@ -1409,7 +1409,7 @@ class WindowControl:
             leaderboard_info (str): The current leaderboard file path
         """
         MAX_WIDTH = 400
-        NOTEBOOK_HEIGHT = 200
+        NOTEBOOK_HEIGHT = 128
         player_var = tk.StringVar()
         notebook_pages = []
         selected_page_index = 0
@@ -1442,28 +1442,50 @@ class WindowControl:
             current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
             notebook_pages.clear()
 
+            ids_covered = []
             for board in boards:
+                current_board_id = board['BoardID']
+                if current_board_id in ids_covered:
+                    continue
                 tab_text = board['Board']
-                current_width += max(Constants.FONT_BIG.measure(tab_text) + 4, 23)
+                current_width += max(Constants.FONT_BIG.measure(tab_text) + 8, 23)
                 if current_width >= MAX_WIDTH:
                     notebook_pages.append(current_notebook_page)
                     current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
                     current_width = 0
 
                 entry_frame = tk.Frame(current_notebook_page, height=NOTEBOOK_HEIGHT, width=MAX_WIDTH)
-
-                thumbnail_tk = ImageTk.PhotoImage(image=WindowControl.generate_board_thumbnail(board['BoardID']))
+                thumbnail_tk = ImageTk.PhotoImage(image=WindowControl.generate_board_thumbnail(current_board_id))
                 entry_thumbnail_label = tk.Label(entry_frame, height=128, width=128, im=thumbnail_tk)
                 entry_thumbnail_label.image = thumbnail_tk
 
+                times_canvas = tk.Canvas(entry_frame, width=MAX_WIDTH - 128 - 20, height=128)
+                times_scrollbar = tk.Scrollbar(entry_frame, orient=tk.VERTICAL, width=16, command=times_canvas.yview)
+
+                times = [board for board in boards if board['BoardID'] == current_board_id]
+
+                TEXT_HEIGHT = Constants.FONT_BIG.cget('size') + 10
+                for i, time in enumerate(sorted(times, key=lambda time: int(time['Time']))):
+                    time_text = f"{time['Time']:>3} seconds"
+                    date_text = f"{time['Date']}"
+                    times_canvas.create_text(0, TEXT_HEIGHT * i, text=time_text, font=Constants.FONT_BIG)
+                    times_canvas.create_text(130, TEXT_HEIGHT * i, text=date_text, font=Constants.FONT_BIG)
+
+                times_canvas.config(yscrollcommand=times_scrollbar.set, scrollregion=times_canvas.bbox('all'))
+                if TEXT_HEIGHT * len(times) > NOTEBOOK_HEIGHT:
+                    times_scrollbar.grid(row=0, column=2, sticky=tk.N+tk.S)
+
+                times_canvas.grid(row=0, column=1)
                 entry_thumbnail_label.grid(row=0, column=0)
                 current_notebook_page.add(entry_frame, text=tab_text)
-
+                ids_covered.append(current_board_id)
             if boards:
                 notebook_pages.append(current_notebook_page)
             if notebook_pages:
                 page_left_btn.grid(row=3, column=0, sticky=tk.E)
                 page_right_btn.grid(row=3, column=1, sticky=tk.W)
+                for page in notebook_pages:
+                    page.enable_traversal()
             else:
                 notebook_pages.append(tk.Label(leaderboard_view_root, text='No boards for this player', font=Constants.FONT_BIG))
             notebook_pages[0].grid(row=2, column=0, columnspan=2, pady=(10, 0))
@@ -1493,7 +1515,6 @@ class WindowControl:
         leaderboard_view_root.title('FreeForm Minesweeper Leaderboard')
         leaderboard_view_root.resizable(0, 0)
         leaderboard_view_root.bind('<Destroy>', lambda event: leaderboard_view_root_close())
-        leaderboard_view_root.minsize(width=MAX_WIDTH, height=300)
         if get_os() == 'Windows':
             leaderboard_view_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
         elif get_os() == 'Linux':
@@ -1516,14 +1537,16 @@ class WindowControl:
 
         s = ttk.Style()
         s.configure('TNotebook.Tab', font=Constants.FONT_BIG, padding=[0,0])
-        s.configure('TNotebook', tabmargins=[0,0,0,0])
-
-        player_label.grid(row=0, column=0, columnspan=2)
-        player_entry.grid(row=1, column=0, columnspan=2, padx=(MAX_WIDTH - player_entry.winfo_reqwidth())//2)
-        leaderboard_view_frame.grid(row=0, column=0, columnspan=2)
-        player_entry.focus()
+        s.configure('TNotebook', tabmargins=[2,2,2,2])
         display_boards_from_player()
         change_notebook_page(0)
+        total_height = sum(widget.winfo_reqheight() for widget in leaderboard_view_frame.winfo_children())
+        leaderboard_view_root.minsize(width=MAX_WIDTH + 2, height=total_height)
+        player_label.grid(row=0, column=0, columnspan=2)
+        player_entry.grid(row=1, column=0, columnspan=2, padx=(MAX_WIDTH + 2 - player_entry.winfo_reqwidth())//2)
+        leaderboard_view_frame.grid(row=0, column=0, columnspan=2)
+        player_entry.focus()
+        player_entry.bind('<Control-KeyRelease-a>', lambda e: player_entry.select_range(0, tk.END))
         player_var.trace_add('write', lambda *_: display_boards_from_player())
 
     @staticmethod
