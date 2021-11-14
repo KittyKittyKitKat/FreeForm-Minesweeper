@@ -1303,8 +1303,7 @@ class WindowControl:
             leaderboard_info (tuple): Tuple containing the current leaderboard and the ID of the current board
         """
         leaderboard, board_id = leaderboard_info
-        board_in_leaderboard = board_id in leaderboard
-        current_board = leaderboard[board_id] if board_in_leaderboard else {}
+        boards_with_id = [board for board in leaderboard if board['BoardID'] == board_id]
 
         def save_time_root_close():
             """Handler for leaderboard entry window closing"""
@@ -1339,8 +1338,16 @@ class WindowControl:
 
         def autofill_board_name():
             """Autofill the name in the board entry based on the current board and player"""
-            if (player := player_var.get().lower()) in current_board:
-                board_var.set(current_board[player]['board_name'])
+            board_for_player = [
+                    board['Board']
+                    for board in boards_with_id
+                    if board['Player'] == player_var.get().lower() and
+                    int(board['MultiMode']) == Options.multimines and
+                    float(board['MultiSqInc']) == Options.multimine_sq_inc and
+                    float(board['MutliMineInc']) == Options.multimine_mine_inc
+            ]
+            if board_for_player:
+                board_var.set(board_for_player[0])
                 name_entry.config(state='disabled')
             else:
                 name_entry.config(state='normal')
