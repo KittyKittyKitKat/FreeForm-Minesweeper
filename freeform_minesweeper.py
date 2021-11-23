@@ -725,8 +725,6 @@ class GameControl:
             board_name,
             f'{int(GameControl.seconds_elapsed)}',
             f'{int(Options.multimines)}',
-            f'{Options.multimine_sq_inc if Options.multimines else -1}',
-            f'{Options.multimine_mine_inc if Options.multimines else -1}',
             date.today().strftime('%m/%d/%y')
         ]))
 
@@ -1320,7 +1318,6 @@ class WindowControl:
 
         def submit_name_player():
             """Validate user inputted names and close window if they satisfy requirements"""
-            # protect against conflicting names
             board_var.set(board_var.get().lower())
             player_var.set(player_var.get().lower())
             if not board_var.get() or not player_var.get():
@@ -1339,12 +1336,10 @@ class WindowControl:
         def autofill_board_name():
             """Autofill the name in the board entry based on the current board and player"""
             board_for_player = [
-                    board['Board']
-                    for board in boards_with_id
-                    if board['Player'] == player_var.get().lower() and
-                    int(board['MultiMode']) == Options.multimines and
-                    float(board['MultiSqInc']) == Options.multimine_sq_inc and
-                    float(board['MutliMineInc']) == Options.multimine_mine_inc
+                board['Board']
+                for board in boards_with_id
+                if board['Player'] == player_var.get().lower() and
+                int(board['MultiMode']) == Options.multimines
             ]
             if board_for_player:
                 board_var.set(board_for_player[0])
@@ -1381,18 +1376,8 @@ class WindowControl:
         save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
 
         if Options.multimines:
-            mutlimine_label = tk.Label(save_time_frame, text='You played on multimine mode:', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-            multimine_sq_inc_label = tk.Label(
-                save_time_frame, text=f'Multimines Proabability: {int(Options.multimine_sq_inc * 100)}%',
-                font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR
-            )
-            multimine_mine_inc_label = tk.Label(
-                save_time_frame, text=f'Mine Increase: {int(Options.multimine_mine_inc * 100)}%',
-                font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR
-            )
+            mutlimine_label = tk.Label(save_time_frame, text='You played on multimine mode', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
             mutlimine_label.grid(row=5, column=0, pady=6)
-            multimine_sq_inc_label.grid(row=6, column=0)
-            multimine_mine_inc_label.grid(row=7, column=0)
 
         time_label.grid(row=0, column=0, pady=6)
         player_label.grid(row=1, column=0)
@@ -1416,7 +1401,7 @@ class WindowControl:
             leaderboard_info (str): The current leaderboard file path
         """
         MAX_WIDTH = 400
-        NOTEBOOK_HEIGHT = 128
+        NOTEBOOK_HEIGHT = 132 + Constants.FONT_BIG.metrics('linespace')
         player_var = tk.StringVar()
         notebook_pages = []
         selected_page_index = 0
@@ -1449,10 +1434,11 @@ class WindowControl:
             current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
             notebook_pages.clear()
 
-            ids_covered = []
+            ids_covered = {}
             for board in boards:
                 current_board_id = board['BoardID']
-                if current_board_id in ids_covered:
+                current_multimode = board['MultiMode']
+                if current_board_id in ids_covered and ids_covered[current_board_id] == current_multimode:
                     continue
                 tab_text = board['Board']
                 current_width += max(Constants.FONT_BIG.measure(tab_text) + 8, 23)
@@ -1466,10 +1452,17 @@ class WindowControl:
                 entry_thumbnail_label = tk.Label(entry_frame, height=128, width=128, im=thumbnail_tk)
                 entry_thumbnail_label.image = thumbnail_tk
 
+                multimode_label = tk.Label(entry_frame, font=Constants.FONT_BIG, text='Normal Mode')
+                if current_multimode == '1':
+                    multimode_label.config(text='MultiMine Mode')
                 times_canvas = tk.Canvas(entry_frame, width=MAX_WIDTH - 128 - 20, height=128)
                 times_scrollbar = tk.Scrollbar(entry_frame, orient=tk.VERTICAL, width=16, command=times_canvas.yview)
 
-                times = [board for board in boards if board['BoardID'] == current_board_id]
+                times = [
+                    board for board in boards
+                    if board['BoardID'] == current_board_id and
+                    board['MultiMode'] == current_multimode
+                ]
 
                 TEXT_HEIGHT = Constants.FONT_BIG.cget('size') + 10
                 for i, time in enumerate(sorted(times, key=lambda time: int(time['Time']))):
@@ -1480,12 +1473,14 @@ class WindowControl:
 
                 times_canvas.config(yscrollcommand=times_scrollbar.set, scrollregion=times_canvas.bbox('all'))
                 if TEXT_HEIGHT * len(times) > NOTEBOOK_HEIGHT:
-                    times_scrollbar.grid(row=0, column=2, sticky=tk.N+tk.S)
+                    times_scrollbar.grid(row=1, column=2, sticky=tk.N+tk.S)
+                    times_canvas.yview_moveto('0.0')
 
-                times_canvas.grid(row=0, column=1)
-                entry_thumbnail_label.grid(row=0, column=0)
+                multimode_label.grid(row=0, column=1)
+                times_canvas.grid(row=1, column=1)
+                entry_thumbnail_label.grid(row=0, column=0, rowspan=2, sticky=tk.N)
                 current_notebook_page.add(entry_frame, text=tab_text)
-                ids_covered.append(current_board_id)
+                ids_covered[current_board_id] = current_multimode
             if boards:
                 notebook_pages.append(current_notebook_page)
             if notebook_pages:
