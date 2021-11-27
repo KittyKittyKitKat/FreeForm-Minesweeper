@@ -1434,6 +1434,12 @@ class WindowControl:
             current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
             notebook_pages.clear()
 
+            popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
+            popup_menu.add_command(label="Rename")
+            popup_menu.add_command(label="Delete")
+            popup_menu.add_separator()
+            popup_menu.add_command(label="Close")
+
             ids_covered = {}
             for board in boards:
                 current_board_id = board['BoardID']
@@ -1481,6 +1487,11 @@ class WindowControl:
                 entry_thumbnail_label.grid(row=0, column=0, rowspan=2, sticky=tk.N)
                 current_notebook_page.add(entry_frame, text=tab_text)
                 ids_covered[current_board_id] = current_multimode
+                current_notebook_page.bind(
+                    '<Button-3>',
+                    lambda event: WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, popup_menu)
+                )
+
             if boards:
                 notebook_pages.append(current_notebook_page)
             if notebook_pages:
@@ -1573,6 +1584,19 @@ class WindowControl:
         thumbnail = thumbnail.resize((128, 128), resample=Image.NEAREST)
         return thumbnail
 
+    @staticmethod
+    def make_popup_menu(event, menu):
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    @staticmethod
+    def menu_on_notebook_tab_click(event, notebook, menu):
+        clicked_tab = notebook.tk.call(notebook._w, "identify", "tab", event.x, event.y)
+        active_tab = notebook.index(notebook.select())
+        if clicked_tab == active_tab:
+            WindowControl.make_popup_menu(event, menu)
 
 def main() -> None:
     """Initialize all game components and run the mainloop."""
