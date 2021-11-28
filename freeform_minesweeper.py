@@ -1318,8 +1318,8 @@ class WindowControl:
 
         def submit_name_player():
             """Validate user inputted names and close window if they satisfy requirements"""
-            board_var.set(board_var.get().lower())
-            player_var.set(player_var.get().lower())
+            board_var.set(board_var.get().upper())
+            player_var.set(player_var.get().upper())
             if not board_var.get() or not player_var.get():
                 WindowControl.messagebox_open = True
                 messagebox.showerror(title='FFM Leaderboard Error', message='Names entered cannot be blank')
@@ -1338,7 +1338,7 @@ class WindowControl:
             board_for_player = [
                 board['Board']
                 for board in boards_with_id
-                if board['Player'] == player_var.get().lower() and
+                if board['Player'] == player_var.get().upper() and
                 int(board['MultiMode']) == Options.multimines
             ]
             if board_for_player:
@@ -1422,7 +1422,7 @@ class WindowControl:
 
         def display_boards_from_player():
             """Display the boards from a player in a paginated notebook"""
-            boards = [entry for entry in current_leaderboard if entry['Player'] == player_var.get()]
+            boards = [entry for entry in current_leaderboard if entry['Player'] == player_var.get().upper()]
             page_left_btn.grid_remove()
             page_right_btn.grid_remove()
             if not boards and notebook_pages and isinstance(notebook_pages[0], tk.Label):
@@ -1597,6 +1597,7 @@ class WindowControl:
         active_tab = notebook.index(notebook.select())
         if clicked_tab == active_tab:
             WindowControl.make_popup_menu(event, menu)
+
 
 def main() -> None:
     """Initialize all game components and run the mainloop."""
