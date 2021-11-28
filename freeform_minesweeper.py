@@ -16,6 +16,7 @@ from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import font as tkFont
+from tkinter import simpledialog
 from tkinter import ttk
 from typing import Optional
 
@@ -110,6 +111,14 @@ class Difficulty(Enum):
     MEDIUM = 0.16
     HARD = 0.207
     EXPERT = 0.25
+
+
+class DialogueStyle(Enum):
+    """Enum representing the styles of dialogue boxes"""
+    WARNING = auto()
+    ERROR = auto()
+    YESNO = auto()
+    ASKSTRING = auto()
 
 
 class Constants:
@@ -939,6 +948,7 @@ class WindowControl:
         settings_button: Settings button.
         play_button: Play game button.
         stop_button: Stop game button.
+        FFMSDialogue: Dialogue box creation.
     """
     messagebox_open = False
     root = tk.Tk()
@@ -1597,6 +1607,128 @@ class WindowControl:
         active_tab = notebook.index(notebook.select())
         if clicked_tab == active_tab:
             WindowControl.make_popup_menu(event, menu)
+
+    class FFMSDialogue(simpledialog.Dialog):
+        """A custom dialogue box to display messages and/or accept basic user input.
+
+        Attributes:
+            master (tk.Widget): Parent widget.
+            dialogue_style (DialogueStyle): DialogueStyle object to determine the type of dialogue box.
+            title_bar (str): Title of the dialogue box window.
+            message (str): Text to display in the body of the dialogue box.
+            message_font (tkFont): Font object used to render the body text.
+            button_font (tkFont): Font object used to render the button text.
+            validation_fn (function, optional): Function to validation any user input recieved.
+                                                Needs to accept a single argument that represents the user input.
+                                                Needs to return a tuple of (bool: success, str: fail_message).
+                                                Defaults to None.
+
+        """
+        def __init__(self, master, dialogue_style, title_bar, message, message_font, button_font, validation_fn=None):
+            if dialogue_style not in (member for member in DialogueStyle):
+                raise ValueError(f'Invalid style given: {dialogue_style}')
+            self.dialogue_style = dialogue_style
+            self.title_bar = title_bar
+            self.message = message
+            self.message_font = message_font
+            self.button_font = button_font
+            self.validation_fn = validation_fn
+            super().__init__(parent=master, title=title_bar)
+
+        def body(self, master):
+            """Display the body of the dialogue box.
+
+            Args:
+                master (tk.Widget): Parent widget.
+
+            Returns:
+                tk.Widget: Widget to give focus to.
+
+            """
+            box = tk.Frame(master)
+            box.pack()
+            message_label = tk.Label(box, text=self.message, font=self.message_font)
+            message_label.grid(row=0, column=1)
+            if self.dialogue_style in (DialogueStyle.ASKSTRING,):
+                self.entry = tk.Entry(box, exportselection=False, font=self.message_font)
+                self.entry.grid(row=1, column=1)
+                return self.entry
+            if self.dialogue_style is DialogueStyle.WARNING:
+                warning_label = tk.Label(box, bitmap='warning')
+                warning_label.grid(row=0, column=0, padx=(0, 5))
+            if self.dialogue_style is DialogueStyle.ERROR:
+                error_label = tk.Label(box, bitmap='error')
+                error_label.grid(row=0, column=0, padx=(0, 5))
+            return box
+
+        def buttonbox(self):
+            """Dispatcher to display the correct button set based on dialogue box style."""
+            if self.dialogue_style in (DialogueStyle.WARNING, DialogueStyle.ERROR):
+                self.ok_box()
+            elif self.dialogue_style in (DialogueStyle.YESNO,):
+                self.yes_no_box()
+            elif self.dialogue_style in (DialogueStyle.ASKSTRING,):
+                self.ok_cancel_box()
+
+        def ok_box(self):
+            """Construct an OK buttonbox with bindings."""
+            box = tk.Frame(self)
+            ok_btn = tk.Button(
+                box, text="OK", width=5,
+                command=self.ok, default=tk.ACTIVE,
+                font=self.button_font
+            )
+            ok_btn.grid(row=0, column=0)
+            box.pack()
+
+        def yes_no_box(self):
+            """Construct a Yes and No buttonbox with bindings."""
+            box = tk.Frame(self)
+            yes_btn = tk.Button(
+                box, text="Yes", width=5,
+                command=self.ok, default=tk.ACTIVE,
+                font=self.button_font
+            )
+            no_btn = tk.Button(
+                box, text="No", width=5,
+                command=self.cancel,
+                font=self.button_font
+            )
+            yes_btn.grid(row=0, column=0)
+            no_btn.grid(row=0, column=1)
+            box.pack()
+
+        def ok_cancel_box(self):
+            """Construct an OK and Cancel buttonbox with bindings."""
+            box = tk.Frame(self)
+            ok_btn = tk.Button(
+                box, text="OK", width=5, command=self.ok,
+                default=tk.ACTIVE, font=self.button_font
+            )
+            cancel_btn = tk.Button(
+                box, text="Cancel", width=5, command=self.cancel,
+                font=self.button_font
+            )
+            ok_btn.grid(row=0, column=0)
+            cancel_btn.grid(row=0, column=1)
+            box.pack()
+
+        def validate(self):
+            """Dispatch to validate any user input, if necessary.
+
+            Returns:
+                bool: Validation was successful.
+            """
+            if self.validation_fn is not None and self.dialogue_style in (DialogueStyle.ASKSTRING,):
+                valid, fail_message = self.validation_fn(self.entry.get())
+                if not valid:
+                    WindowControl.FFMSDialogue(self.master, DialogueStyle.ERROR, self.title_bar, fail_message, self.message_font, self.button_font)
+                    try:
+                        self.lift()
+                    except tk.TclError:
+                        pass
+                return valid
+            return True
 
 
 def main() -> None:
