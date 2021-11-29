@@ -1622,18 +1622,26 @@ class WindowControl:
                                                 Needs to accept a single argument that represents the user input.
                                                 Needs to return a tuple of (bool: success, str: fail_message).
                                                 Defaults to None.
+            user_input (any): Variable that stores the user input after dialogue is used.
+            INVALID_INPUT (object): Object sentinel to flag invalid user input
 
         """
+        INVALID_INPUT = object()
+
         def __init__(self, master, dialogue_style, title_bar, message, message_font, button_font, validation_fn=None):
             if dialogue_style not in (member for member in DialogueStyle):
                 raise ValueError(f'Invalid style given: {dialogue_style}')
+            self.master = master
             self.dialogue_style = dialogue_style
             self.title_bar = title_bar
             self.message = message
             self.message_font = message_font
             self.button_font = button_font
             self.validation_fn = validation_fn
-            super().__init__(parent=master, title=title_bar)
+            self.user_input = None
+
+        def __call__(self):
+            super().__init__(parent=self.master, title=self.title_bar)
 
         def body(self, master):
             """Display the body of the dialogue box.
@@ -1649,7 +1657,7 @@ class WindowControl:
             box.pack()
             message_label = tk.Label(box, text=self.message, font=self.message_font)
             message_label.grid(row=0, column=1)
-            if self.dialogue_style in (DialogueStyle.ASKSTRING,):
+            if self.dialogue_style in (DialogueStyle.ASKSTRING, DialogueStyle.ASKNUMBER):
                 self.entry = tk.Entry(box, exportselection=False, font=self.message_font)
                 self.entry.grid(row=1, column=1)
                 return self.entry
@@ -1665,9 +1673,9 @@ class WindowControl:
             """Dispatcher to display the correct button set based on dialogue box style."""
             if self.dialogue_style in (DialogueStyle.WARNING, DialogueStyle.ERROR):
                 self.ok_box()
-            elif self.dialogue_style in (DialogueStyle.YESNO,):
+            elif self.dialogue_style is DialogueStyle.YESNO:
                 self.yes_no_box()
-            elif self.dialogue_style in (DialogueStyle.ASKSTRING,):
+            elif self.dialogue_style in (DialogueStyle.ASKSTRING, DialogueStyle.ASKNUMBER):
                 self.ok_cancel_box()
 
         def ok_box(self):
@@ -1714,21 +1722,67 @@ class WindowControl:
             box.pack()
 
         def validate(self):
-            """Dispatch to validate any user input, if necessary.
+            """Dispatch to validate and save any user input, if necessary.
 
             Returns:
                 bool: Validation was successful.
             """
-            if self.validation_fn is not None and self.dialogue_style in (DialogueStyle.ASKSTRING,):
-                valid, fail_message = self.validation_fn(self.entry.get())
+            if self.validation_fn is not None and self.dialogue_style in (DialogueStyle.ASKSTRING, DialogueStyle.ASKNUMBER):
+                user_input = self.entry.get()
+                valid, fail_message = self.validation_fn(user_input)
                 if not valid:
+                    self.user_input = WindowControl.FFMSDialogue.INVALID_INPUT
                     WindowControl.FFMSDialogue(self.master, DialogueStyle.ERROR, self.title_bar, fail_message, self.message_font, self.button_font)
                     try:
                         self.lift()
                     except tk.TclError:
                         pass
+                else:
+                    self.user_input = user_input
                 return valid
             return True
+
+        def retrieve_user_input(self, tk_var):
+            """Retrieve the user input and save it to external variable
+
+            Args:
+                tk_var (tk.StringVar, tk.BooleanVar, tk.DoubleVar): Tk variable to save user input to
+            """
+            if self.user_input is not WindowControl.FFMSDialogue.INVALID_INPUT:
+                if self.dialogue_style is DialogueStyle.ASKNUMBER:
+                    tk_var.set(float(self.user_input))
+                else:
+                    tk_var.set(self.user_input)
+
+        def ok(self, event=None):
+            """Callback for OK button
+
+            Args:
+                event (tk.Event): Event that generated the callback.
+            """
+            self.user_input = True
+            if not self.validate():
+                self.initial_focus.focus_set()
+                return
+            self.withdraw()
+            self.update_idletasks()
+            try:
+                self.apply()
+            finally:
+                if self.parent is not None:
+                    self.parent.focus_set()
+                self.destroy()
+
+        def cancel(self, event=None):
+            """Callback for Cancel button
+
+            Args:
+                event (tk.Event): Event that generated the callback.
+            """
+            self.user_input = False
+            if self.parent is not None:
+                self.parent.focus_set()
+            self.destroy()
 
 
 def main() -> None:
