@@ -1098,6 +1098,7 @@ class WindowControl:
 
     @staticmethod
     def init_dialogue_customization():
+        """Customize existing dialogue boxes."""
         def body(self, master):
 
             w = tk.Label(master, text=self.prompt, justify=tk.LEFT, font=Constants.FONT_BIG)
