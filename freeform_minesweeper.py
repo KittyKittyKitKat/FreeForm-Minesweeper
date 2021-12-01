@@ -113,14 +113,6 @@ class Difficulty(Enum):
     EXPERT = 0.25
 
 
-class DialogueStyle(Enum):
-    """Enum representing the styles of dialogue boxes"""
-    WARNING = auto()
-    ERROR = auto()
-    YESNO = auto()
-    ASKSTRING = auto()
-
-
 class Constants:
     """Container for various game constants.
 
@@ -1105,6 +1097,38 @@ class WindowControl:
         WindowControl.controls_frame.grid(row=0, column=6)
 
     @staticmethod
+    def init_dialogue_customization():
+        def body(self, master):
+
+            w = tk.Label(master, text=self.prompt, justify=tk.LEFT, font=Constants.FONT_BIG)
+            w.grid(row=0, padx=5, sticky=tk.W)
+
+            self.entry = tk.Entry(master, name="entry", font=Constants.FONT_BIG)
+            self.entry.grid(row=1, padx=5, sticky=tk.W+tk.E)
+
+            if self.initialvalue is not None:
+                self.entry.insert(0, self.initialvalue)
+                self.entry.select_range(0, tk.END)
+
+            return self.entry
+
+        def buttonbox(self):
+            box = tk.Frame(self)
+
+            w = tk.Button(box, text="OK", width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
+            w.grid(column=0, row=0)
+            w = tk.Button(box, text="Cancel", width=5, command=self.cancel, font=Constants.FONT)
+            w.grid(column=1, row=0)
+
+            self.bind("<Return>", self.ok)
+            self.bind("<Escape>", self.cancel)
+
+            box.pack()
+
+        simpledialog._QueryDialog.body = body
+        simpledialog._QueryDialog.buttonbox = buttonbox
+
+    @staticmethod
     def update_timer() -> None:
         """Update timer widgets."""
         if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
@@ -1430,6 +1454,14 @@ class WindowControl:
             except Exception:
                 return
 
+        def rename_board(new_board_name):
+            """Rename a board in the leaderboard
+
+            Args:
+                new_board_namae (str): New name to change name to
+            """
+            print(new_board_name.upper())
+
         def display_boards_from_player():
             """Display the boards from a player in a paginated notebook"""
             boards = [entry for entry in current_leaderboard if entry['Player'] == player_var.get().upper()]
@@ -1445,7 +1477,10 @@ class WindowControl:
             notebook_pages.clear()
 
             popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
-            popup_menu.add_command(label="Rename")
+            popup_menu.add_command(
+                label="Rename",
+                command=lambda: rename_board(simpledialog.askstring('FFMS Board Name Change', 'Enter New Name [A-Z]'))
+            )
             popup_menu.add_command(label="Delete")
             popup_menu.add_separator()
             popup_menu.add_command(label="Close")
@@ -1608,182 +1643,6 @@ class WindowControl:
         if clicked_tab == active_tab:
             WindowControl.make_popup_menu(event, menu)
 
-    class FFMSDialogue(simpledialog.Dialog):
-        """A custom dialogue box to display messages and/or accept basic user input.
-
-        Attributes:
-            master (tk.Widget): Parent widget.
-            dialogue_style (DialogueStyle): DialogueStyle object to determine the type of dialogue box.
-            title_bar (str): Title of the dialogue box window.
-            message (str): Text to display in the body of the dialogue box.
-            message_font (tkFont): Font object used to render the body text.
-            button_font (tkFont): Font object used to render the button text.
-            validation_fn (function, optional): Function to validation any user input recieved.
-                                                Needs to accept a single argument that represents the user input.
-                                                Needs to return a tuple of (bool: success, str: fail_message).
-                                                Defaults to None.
-            user_input (any): Variable that stores the user input after dialogue is used.
-            INVALID_INPUT (object): Object sentinel to flag invalid user input
-
-        """
-        INVALID_INPUT = object()
-
-        def __init__(self, master, dialogue_style, title_bar, message, message_font, button_font, validation_fn=None):
-            if dialogue_style not in (member for member in DialogueStyle):
-                raise ValueError(f'Invalid style given: {dialogue_style}')
-            self.master = master
-            self.dialogue_style = dialogue_style
-            self.title_bar = title_bar
-            self.message = message
-            self.message_font = message_font
-            self.button_font = button_font
-            self.validation_fn = validation_fn
-            self.user_input = None
-
-        def __call__(self):
-            super().__init__(parent=self.master, title=self.title_bar)
-
-        def body(self, master):
-            """Display the body of the dialogue box.
-
-            Args:
-                master (tk.Widget): Parent widget.
-
-            Returns:
-                tk.Widget: Widget to give focus to.
-
-            """
-            box = tk.Frame(master)
-            box.pack()
-            message_label = tk.Label(box, text=self.message, font=self.message_font)
-            message_label.grid(row=0, column=1)
-            if self.dialogue_style in (DialogueStyle.ASKSTRING, DialogueStyle.ASKNUMBER):
-                self.entry = tk.Entry(box, exportselection=False, font=self.message_font)
-                self.entry.grid(row=1, column=1)
-                return self.entry
-            if self.dialogue_style is DialogueStyle.WARNING:
-                warning_label = tk.Label(box, bitmap='warning')
-                warning_label.grid(row=0, column=0, padx=(0, 5))
-            if self.dialogue_style is DialogueStyle.ERROR:
-                error_label = tk.Label(box, bitmap='error')
-                error_label.grid(row=0, column=0, padx=(0, 5))
-            return box
-
-        def buttonbox(self):
-            """Dispatcher to display the correct button set based on dialogue box style."""
-            if self.dialogue_style in (DialogueStyle.WARNING, DialogueStyle.ERROR):
-                self.ok_box()
-            elif self.dialogue_style is DialogueStyle.YESNO:
-                self.yes_no_box()
-            elif self.dialogue_style in (DialogueStyle.ASKSTRING, DialogueStyle.ASKNUMBER):
-                self.ok_cancel_box()
-
-        def ok_box(self):
-            """Construct an OK buttonbox with bindings."""
-            box = tk.Frame(self)
-            ok_btn = tk.Button(
-                box, text="OK", width=5,
-                command=self.ok, default=tk.ACTIVE,
-                font=self.button_font
-            )
-            ok_btn.grid(row=0, column=0)
-            box.pack()
-
-        def yes_no_box(self):
-            """Construct a Yes and No buttonbox with bindings."""
-            box = tk.Frame(self)
-            yes_btn = tk.Button(
-                box, text="Yes", width=5,
-                command=self.ok, default=tk.ACTIVE,
-                font=self.button_font
-            )
-            no_btn = tk.Button(
-                box, text="No", width=5,
-                command=self.cancel,
-                font=self.button_font
-            )
-            yes_btn.grid(row=0, column=0)
-            no_btn.grid(row=0, column=1)
-            box.pack()
-
-        def ok_cancel_box(self):
-            """Construct an OK and Cancel buttonbox with bindings."""
-            box = tk.Frame(self)
-            ok_btn = tk.Button(
-                box, text="OK", width=5, command=self.ok,
-                default=tk.ACTIVE, font=self.button_font
-            )
-            cancel_btn = tk.Button(
-                box, text="Cancel", width=5, command=self.cancel,
-                font=self.button_font
-            )
-            ok_btn.grid(row=0, column=0)
-            cancel_btn.grid(row=0, column=1)
-            box.pack()
-
-        def validate(self):
-            """Dispatch to validate and save any user input, if necessary.
-
-            Returns:
-                bool: Validation was successful.
-            """
-            if self.validation_fn is not None and self.dialogue_style in (DialogueStyle.ASKSTRING, DialogueStyle.ASKNUMBER):
-                user_input = self.entry.get()
-                valid, fail_message = self.validation_fn(user_input)
-                if not valid:
-                    self.user_input = WindowControl.FFMSDialogue.INVALID_INPUT
-                    WindowControl.FFMSDialogue(self.master, DialogueStyle.ERROR, self.title_bar, fail_message, self.message_font, self.button_font)
-                    try:
-                        self.lift()
-                    except tk.TclError:
-                        pass
-                else:
-                    self.user_input = user_input
-                return valid
-            return True
-
-        def retrieve_user_input(self, tk_var):
-            """Retrieve the user input and save it to external variable
-
-            Args:
-                tk_var (tk.StringVar, tk.BooleanVar, tk.DoubleVar): Tk variable to save user input to
-            """
-            if self.user_input is not WindowControl.FFMSDialogue.INVALID_INPUT:
-                if self.dialogue_style is DialogueStyle.ASKNUMBER:
-                    tk_var.set(float(self.user_input))
-                else:
-                    tk_var.set(self.user_input)
-
-        def ok(self, event=None):
-            """Callback for OK button
-
-            Args:
-                event (tk.Event): Event that generated the callback.
-            """
-            self.user_input = True
-            if not self.validate():
-                self.initial_focus.focus_set()
-                return
-            self.withdraw()
-            self.update_idletasks()
-            try:
-                self.apply()
-            finally:
-                if self.parent is not None:
-                    self.parent.focus_set()
-                self.destroy()
-
-        def cancel(self, event=None):
-            """Callback for Cancel button
-
-            Args:
-                event (tk.Event): Event that generated the callback.
-            """
-            self.user_input = False
-            if self.parent is not None:
-                self.parent.focus_set()
-            self.destroy()
-
 
 def main() -> None:
     """Initialize all game components and run the mainloop."""
@@ -1793,6 +1652,7 @@ def main() -> None:
     Constants.init_extended_board_images()
     Constants.init_window_icons()
     Constants.init_fonts()
+    WindowControl.init_dialogue_customization()
     Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
     if get_os() == 'Windows':
         WindowControl.root.iconbitmap(Constants.MAIN_ICON_ICO)
