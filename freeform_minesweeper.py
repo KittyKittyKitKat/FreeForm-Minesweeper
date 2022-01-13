@@ -1099,14 +1099,28 @@ class WindowControl:
     @staticmethod
     def init_dialogue_customization():
         """Customize existing dialogue boxes."""
+        def __init__(self, title, prompt,
+                    initialvalue=None,
+                    minvalue = None, maxvalue = None,
+                    parent = None, have_entry=True):
+            self.prompt   = prompt
+            self.minvalue = minvalue
+            self.maxvalue = maxvalue
+            self.initialvalue = initialvalue
+            self.have_entry = have_entry
+            simpledialog.Dialog.__init__(self, parent, title)
+
         def body(self, master):
 
             w = tk.Label(master, text=self.prompt, justify=tk.LEFT, font=Constants.FONT_BIG)
             w.grid(row=0, padx=5, sticky=tk.W)
 
-            self.entry = tk.Entry(master, name="entry", font=Constants.FONT_BIG)
-            self.entry.grid(row=1, padx=5, sticky=tk.W+tk.E)
 
+            self.entry = tk.Entry(master, name="entry", font=Constants.FONT_BIG)
+            if not self.have_entry:
+                return w
+
+            self.entry.grid(row=1, padx=5, sticky=tk.W+tk.E)
             if self.initialvalue is not None:
                 self.entry.insert(0, self.initialvalue)
                 self.entry.select_range(0, tk.END)
@@ -1116,9 +1130,9 @@ class WindowControl:
         def buttonbox(self):
             box = tk.Frame(self)
 
-            w = tk.Button(box, text="OK", width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
+            w = tk.Button(box, text="OK" if self.have_entry else "Yes", width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
             w.grid(column=0, row=0)
-            w = tk.Button(box, text="Cancel", width=5, command=self.cancel, font=Constants.FONT)
+            w = tk.Button(box, text="Cancel" if self.have_entry else "No", width=5, command=self.cancel, font=Constants.FONT)
             w.grid(column=1, row=0)
 
             self.bind("<Return>", self.ok)
@@ -1126,8 +1140,10 @@ class WindowControl:
 
             box.pack()
 
+        simpledialog._QueryDialog.__init__ = __init__
         simpledialog._QueryDialog.body = body
         simpledialog._QueryDialog.buttonbox = buttonbox
+        simpledialog.ask = lambda title, prompt, **kw: simpledialog._QueryString(title, prompt, have_entry=False, **kw)
 
     @staticmethod
     def update_timer() -> None:
@@ -1455,13 +1471,30 @@ class WindowControl:
             except Exception:
                 return
 
-        def rename_board(new_board_name):
+        def rename_board():
             """Rename a board in the leaderboard
 
             Args:
                 new_board_namae (str): New name to change name to
             """
-            print(new_board_name.upper())
+            new_board_name = simpledialog.askstring(
+                'FFMS Board Name Change',
+                'Enter New Name [A-Z]',
+                parent=leaderboard_view_root
+            )
+            if new_board_name:
+                print(new_board_name.upper())
+
+        def delete_board(tab_index):
+            simpledialog.ask(
+                'FFMS Leaderboard Deletion',
+                'Are you sure you wish to delete\nthis all this player\'s entires?',
+                parent=leaderboard_view_root
+            )
+            print(tab_index)
+
+        def delete_time():
+            ...
 
         def display_boards_from_player():
             """Display the boards from a player in a paginated notebook"""
@@ -1477,12 +1510,16 @@ class WindowControl:
             current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
             notebook_pages.clear()
 
+            selected_notebook_tab = tk.IntVar()
             popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
             popup_menu.add_command(
                 label="Rename",
-                command=lambda: rename_board(simpledialog.askstring('FFMS Board Name Change', 'Enter New Name [A-Z]'))
+                command=lambda: rename_board()
             )
-            popup_menu.add_command(label="Delete")
+            popup_menu.add_command(
+                label="Delete",
+                command=lambda: delete_board(selected_notebook_tab.get())
+            )
             popup_menu.add_separator()
             popup_menu.add_command(label="Close")
 
@@ -1535,7 +1572,7 @@ class WindowControl:
                 ids_covered[current_board_id] = current_multimode
                 current_notebook_page.bind(
                     '<Button-3>',
-                    lambda event: WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, popup_menu)
+                    lambda event: selected_notebook_tab.set(WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, popup_menu))
                 )
 
             if boards:
@@ -1643,6 +1680,8 @@ class WindowControl:
         active_tab = notebook.index(notebook.select())
         if clicked_tab == active_tab:
             WindowControl.make_popup_menu(event, menu)
+            return active_tab
+        return -1
 
 
 def main() -> None:
