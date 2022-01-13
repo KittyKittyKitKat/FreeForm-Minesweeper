@@ -65,5 +65,5 @@ In addition to the regular Minesweeper experience, FreeForm Minesweeper also has
 
 ### Library Requirements
  * TKinter, verison >= 8.6
- * Pillow, version >= 8.3.2
+ * Pillow, version >= 9.0.0
  * requests, verison >= 2.25.1
