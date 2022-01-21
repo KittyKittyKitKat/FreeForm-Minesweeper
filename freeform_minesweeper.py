@@ -233,9 +233,9 @@ class Constants:
 
     @staticmethod
     def init_fonts():
-        if 'MINE-SWEEPER' in tkFont.families():
-            FONT = tkFont.Font(family='MINE-SWEEPER', size=7, weight='normal')
-            FONT_BIG = tkFont.Font(family='MINE-SWEEPER', size=9, weight='normal')
+        if 'Minesweeper' in tkFont.families():
+            FONT = tkFont.Font(family='Minesweeper', size=7, weight='normal')
+            FONT_BIG = tkFont.Font(family='Minesweeper', size=9, weight='normal')
         else:
             FONT = tkFont.Font(family='Courier', size=9, weight='bold')
             FONT_BIG = tkFont.Font(family='Courier', size=15, weight='bold')
@@ -1472,11 +1472,7 @@ class WindowControl:
                 return
 
         def rename_board():
-            """Rename a board in the leaderboard
-
-            Args:
-                new_board_namae (str): New name to change name to
-            """
+            """Rename a board in the leaderboard"""
             new_board_name = simpledialog.askstring(
                 'FFMS Board Name Change',
                 'Enter New Name [A-Z]',
@@ -1486,12 +1482,15 @@ class WindowControl:
                 print(new_board_name.upper())
 
         def delete_board(tab_index):
+            """Delete all a boards times from a player"""
             simpledialog.ask(
                 'FFMS Leaderboard Deletion',
-                'Are you sure you wish to delete\nthis all this player\'s entires?',
+                'Are you sure you wish to delete\n all of this board\'s entires?',
                 parent=leaderboard_view_root
             )
-            print(tab_index)
+            tab_text = notebook_pages[selected_page_index].tab(tab_index, 'text').upper()
+            entries_to_remove = [entry for entry in current_leaderboard if entry['Player'] == player_var.get().upper() and entry['Board'] == tab_text]
+            #remove from current_leaderboard and write new board to disk
 
         def delete_time():
             ...
@@ -1555,10 +1554,8 @@ class WindowControl:
 
                 TEXT_HEIGHT = Constants.FONT_BIG.cget('size') + 10
                 for i, time in enumerate(sorted(times, key=lambda time: int(time['Time']))):
-                    time_text = f"{time['Time']:>3} seconds"
-                    date_text = f"{time['Date']}"
-                    times_canvas.create_text(0, TEXT_HEIGHT * i, text=time_text, font=Constants.FONT_BIG)
-                    times_canvas.create_text(130, TEXT_HEIGHT * i, text=date_text, font=Constants.FONT_BIG)
+                    time_text = f"{time['Time']:0>3} seconds   {time['Date']}"
+                    times_canvas.create_text(0, TEXT_HEIGHT * i, text=time_text, font=Constants.FONT_BIG, tags='entry_text')
 
                 times_canvas.config(yscrollcommand=times_scrollbar.set, scrollregion=times_canvas.bbox('all'))
                 if TEXT_HEIGHT * len(times) > NOTEBOOK_HEIGHT:
@@ -1574,6 +1571,7 @@ class WindowControl:
                     '<Button-3>',
                     lambda event: selected_notebook_tab.set(WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, popup_menu))
                 )
+                times_canvas.tag_bind('entry_text', '<Motion>', lambda event: print(event.x, event.y))
 
             if boards:
                 notebook_pages.append(current_notebook_page)
