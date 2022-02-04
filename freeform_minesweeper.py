@@ -1456,6 +1456,7 @@ class WindowControl:
         player_var = tk.StringVar()
         notebook_pages = []
         selected_page_index = 0
+        canvas_right_clicked_time_id = None
 
         with open(leaderboard_file, 'r', newline='') as fp:
             reader = csv.DictReader(fp)
@@ -1495,6 +1496,18 @@ class WindowControl:
         def delete_time():
             ...
 
+        def canvas_item_popup(event, canvas, popup):
+            nonlocal canvas_right_clicked_time_id
+            try:
+                canvas_item_id = event.widget.find_withtag('current')[0]
+            except IndexError:
+                return
+            canvas_right_clicked_time_id = canvas_item_id
+            print('Item', canvas_item_id, 'Clicked!')
+            print(canvas.itemcget(canvas_item_id, 'text'))
+            WindowControl.make_popup_menu(event, popup)
+
+
         def display_boards_from_player():
             """Display the boards from a player in a paginated notebook"""
             boards = [entry for entry in current_leaderboard if entry['Player'] == player_var.get().upper()]
@@ -1510,17 +1523,22 @@ class WindowControl:
             notebook_pages.clear()
 
             selected_notebook_tab = tk.IntVar()
-            popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
-            popup_menu.add_command(
+            notebook_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
+            notebook_popup_menu.add_command(
                 label="Rename",
                 command=lambda: rename_board()
             )
-            popup_menu.add_command(
+            notebook_popup_menu.add_command(
                 label="Delete",
                 command=lambda: delete_board(selected_notebook_tab.get())
             )
-            popup_menu.add_separator()
-            popup_menu.add_command(label="Close")
+            notebook_popup_menu.add_separator()
+            notebook_popup_menu.add_command(label="Close")
+
+            time_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
+            time_popup_menu.add_command(label="Delete", command=lambda: delete_time())
+            time_popup_menu.add_separator()
+            time_popup_menu.add_command(label="Close")
 
             ids_covered = {}
             for board in boards:
@@ -1554,8 +1572,13 @@ class WindowControl:
 
                 TEXT_HEIGHT = Constants.FONT_BIG.cget('size') + 10
                 for i, time in enumerate(sorted(times, key=lambda time: int(time['Time']))):
-                    time_text = f"{time['Time']:0>3} seconds   {time['Date']}"
-                    times_canvas.create_text(0, TEXT_HEIGHT * i, text=time_text, font=Constants.FONT_BIG, tags='entry_text')
+                    time_text = f"{time['Time']:0>3} seconds  {time['Date']}"
+                    time_text_id = times_canvas.create_text(
+                        0, TEXT_HEIGHT * i,
+                        text=time_text, font=Constants.FONT_BIG,
+                        tags='entry_text',
+                        activefill='#444444'
+                    )
 
                 times_canvas.config(yscrollcommand=times_scrollbar.set, scrollregion=times_canvas.bbox('all'))
                 if TEXT_HEIGHT * len(times) > NOTEBOOK_HEIGHT:
@@ -1569,9 +1592,9 @@ class WindowControl:
                 ids_covered[current_board_id] = current_multimode
                 current_notebook_page.bind(
                     '<Button-3>',
-                    lambda event: selected_notebook_tab.set(WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, popup_menu))
+                    lambda event: selected_notebook_tab.set(WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, notebook_popup_menu))
                 )
-                times_canvas.tag_bind('entry_text', '<Motion>', lambda event: print(event.x, event.y))
+                times_canvas.bind('<Button-3>', lambda event, canvas=times_canvas: canvas_item_popup(event, canvas, time_popup_menu))
 
             if boards:
                 notebook_pages.append(current_notebook_page)
