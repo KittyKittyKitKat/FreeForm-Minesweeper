@@ -1143,7 +1143,7 @@ class WindowControl:
         simpledialog._QueryDialog.__init__ = __init__
         simpledialog._QueryDialog.body = body
         simpledialog._QueryDialog.buttonbox = buttonbox
-        simpledialog.ask = lambda title, prompt, **kw: simpledialog._QueryString(title, prompt, have_entry=False, **kw)
+        simpledialog.ask = lambda title, prompt, **kw: simpledialog._QueryString(title, prompt, have_entry=False, **kw).result
 
     @staticmethod
     def update_timer() -> None:
@@ -1381,6 +1381,12 @@ class WindowControl:
                 messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
                 WindowControl.messagebox_open = False
                 return
+            for entry in leaderboard:
+                if entry['Player'] == player_var.get() and entry['Board'] == board_var.get():
+                    WindowControl.messagebox_open = True
+                    messagebox.showerror(title='FFM Leaderboard Error', message='Board names must be unique for a player')
+                    WindowControl.messagebox_open = False
+                    return
             status_flag.set('Success')
             save_time_root.destroy()
 
@@ -1456,11 +1462,15 @@ class WindowControl:
         player_var = tk.StringVar()
         notebook_pages = []
         selected_page_index = 0
+        canvas_right_clicked = None
         canvas_right_clicked_time_id = None
 
         with open(leaderboard_file, 'r', newline='') as fp:
             reader = csv.DictReader(fp)
             current_leaderboard = list(reader)
+
+        def update_leaderboard():
+            ...
 
         def leaderboard_view_root_close():
             """Handler for leaderboard entry window closing"""
@@ -1472,6 +1482,9 @@ class WindowControl:
             except Exception:
                 return
 
+        def rename_player():
+            ...
+
         def rename_board():
             """Rename a board in the leaderboard"""
             new_board_name = simpledialog.askstring(
@@ -1479,34 +1492,79 @@ class WindowControl:
                 'Enter New Name [A-Z]',
                 parent=leaderboard_view_root
             )
+            if new_board_name is None:
+                return
+            new_board_name = new_board_name.upper()
             if new_board_name:
-                print(new_board_name.upper())
+                player = player_var.get().upper()
+                for entry in current_leaderboard:
+                    if entry['Player'] == player and entry['Board'] == new_board_name:
+                        WindowControl.messagebox_open = True
+                        messagebox.showerror(title='FFM Leaderboard Error', message='Board names must be unique for a player')
+                        WindowControl.messagebox_open = False
+                        return
+                nb = notebook_pages[selected_page_index]
+                old_board_name = nb.tab(nb.select(), 'text').upper()
+                for entry in current_leaderboard:
+                    if entry['Board'] == old_board_name and entry['Player'] == player:
+                        entry['Board'] = new_board_name
+                display_boards_from_player()
 
-        def delete_board(tab_index):
-            """Delete all a boards times from a player"""
-            simpledialog.ask(
+        def delete_board():
+            """Delete all a boards times from a player
+
+            Args:
+                tab_index (int): The index of the current leaderboard tab
+            """
+            nonlocal current_leaderboard, selected_page_index
+            sure = simpledialog.ask(
                 'FFMS Leaderboard Deletion',
-                'Are you sure you wish to delete\n all of this board\'s entires?',
+                'Are you sure you wish to delete\n all of this board\'s entries?',
                 parent=leaderboard_view_root
             )
-            tab_text = notebook_pages[selected_page_index].tab(tab_index, 'text').upper()
-            entries_to_remove = [entry for entry in current_leaderboard if entry['Player'] == player_var.get().upper() and entry['Board'] == tab_text]
-            #remove from current_leaderboard and write new board to disk
+            if sure is None:
+                return
+            nb = notebook_pages[selected_page_index]
+            tab_text = nb.tab(nb.select(), 'text').upper()
+            current_leaderboard = [
+                entry for entry in current_leaderboard
+                if entry['Player'] != player_var.get().upper() or entry['Board'] != tab_text
+            ]
+            selected_page_index = 0
+            display_boards_from_player()
 
         def delete_time():
-            ...
+            """Delete a single time from a player"""
+            sure = simpledialog.ask(
+                'FFMS Leaderboard Deletion',
+                'Are you sure you wish to delete this entry?',
+                parent=leaderboard_view_root
+            )
+            if sure is None:
+                return
+            nb = notebook_pages[selected_page_index]
+            selected_entry_text = canvas_right_clicked.itemcget(canvas_right_clicked_time_id, 'text').split()
+            time = int(selected_entry_text[0])
+            date = selected_entry_text[-1]
+            board = nb.tab(nb.select(), 'text').upper()
+            player = player_var.get().upper()
+            entry_to_remove = None
+            for entry in current_leaderboard:
+                if entry['Player'] == player and entry['Board'] == board and entry['Date'] == date and int(entry['Time']) == time:
+                    entry_to_remove = entry
+                    break
+            current_leaderboard.remove(entry_to_remove)
+            display_boards_from_player()
 
         def canvas_item_popup(event, canvas, popup):
-            nonlocal canvas_right_clicked_time_id
+            nonlocal canvas_right_clicked, canvas_right_clicked_time_id
             try:
                 canvas_item_id = event.widget.find_withtag('current')[0]
             except IndexError:
                 return
+            canvas_right_clicked = canvas
             canvas_right_clicked_time_id = canvas_item_id
-            print('Item', canvas_item_id, 'Clicked!')
-            print(canvas.itemcget(canvas_item_id, 'text'))
             WindowControl.make_popup_menu(event, popup)
-
 
         def display_boards_from_player():
             """Display the boards from a player in a paginated notebook"""
@@ -1521,24 +1579,6 @@ class WindowControl:
             current_width = 0
             current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
             notebook_pages.clear()
-
-            selected_notebook_tab = tk.IntVar()
-            notebook_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
-            notebook_popup_menu.add_command(
-                label="Rename",
-                command=lambda: rename_board()
-            )
-            notebook_popup_menu.add_command(
-                label="Delete",
-                command=lambda: delete_board(selected_notebook_tab.get())
-            )
-            notebook_popup_menu.add_separator()
-            notebook_popup_menu.add_command(label="Close")
-
-            time_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
-            time_popup_menu.add_command(label="Delete", command=lambda: delete_time())
-            time_popup_menu.add_separator()
-            time_popup_menu.add_command(label="Close")
 
             ids_covered = {}
             for board in boards:
@@ -1573,7 +1613,7 @@ class WindowControl:
                 TEXT_HEIGHT = Constants.FONT_BIG.cget('size') + 10
                 for i, time in enumerate(sorted(times, key=lambda time: int(time['Time']))):
                     time_text = f"{time['Time']:0>3} seconds  {time['Date']}"
-                    time_text_id = times_canvas.create_text(
+                    times_canvas.create_text(
                         0, TEXT_HEIGHT * i,
                         text=time_text, font=Constants.FONT_BIG,
                         tags='entry_text',
@@ -1592,7 +1632,7 @@ class WindowControl:
                 ids_covered[current_board_id] = current_multimode
                 current_notebook_page.bind(
                     '<Button-3>',
-                    lambda event: selected_notebook_tab.set(WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, notebook_popup_menu))
+                    lambda event, current_notebook_page=current_notebook_page: WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, notebook_popup_menu)
                 )
                 times_canvas.bind('<Button-3>', lambda event, canvas=times_canvas: canvas_item_popup(event, canvas, time_popup_menu))
 
@@ -1649,6 +1689,23 @@ class WindowControl:
             command=lambda: change_notebook_page(1)
         )
 
+        notebook_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
+        notebook_popup_menu.add_command(label='Rename', command=lambda: rename_board())
+        notebook_popup_menu.add_command(label='Delete', command=lambda: delete_board())
+        notebook_popup_menu.add_separator()
+        notebook_popup_menu.add_command(label='Close')
+
+        time_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
+        time_popup_menu.add_command(label='Delete', command=lambda: delete_time())
+        time_popup_menu.add_separator()
+        time_popup_menu.add_command(label='Close')
+
+        player_entry_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
+        player_entry_popup_menu.add_command(label='Rename')
+        # notebook_popup_menu.add_command(label='Delete')
+        player_entry_popup_menu.add_separator()
+        player_entry_popup_menu.add_command(label='Close')
+
         player_label = tk.Label(leaderboard_view_frame, text='Player Name', font=Constants.FONT_BIG)
         player_entry = tk.Entry(leaderboard_view_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var, width=20)
 
@@ -1662,8 +1719,9 @@ class WindowControl:
         player_label.grid(row=0, column=0, columnspan=2)
         player_entry.grid(row=1, column=0, columnspan=2, padx=(MAX_WIDTH + 2 - player_entry.winfo_reqwidth())//2)
         leaderboard_view_frame.grid(row=0, column=0, columnspan=2)
-        player_entry.focus()
+        player_entry.focus_set()
         player_entry.bind('<Control-KeyRelease-a>', lambda e: player_entry.select_range(0, tk.END))
+        player_entry.bind('<Button-3>', lambda event: WindowControl.make_popup_menu(event, player_entry_popup_menu))
         player_var.trace_add('write', lambda *_: display_boards_from_player())
 
     @staticmethod
@@ -1689,20 +1747,29 @@ class WindowControl:
         return thumbnail
 
     @staticmethod
-    def make_popup_menu(event, menu):
+    def make_popup_menu(event, menu: tk.Menu):
         try:
-            menu.tk_popup(event.x_root, event.y_root)
+            root = event.widget.winfo_toplevel()
+            is_over_menu = tk.BooleanVar(master=root, value=True)
+            def close_on_click():
+                if not is_over_menu.get():
+                    menu.unpost()
+                    root.unbind('<Button>', bind_id_button)
+                    root.unbind('<FocusOut>', bind_id_focus)
+            menu.post(event.x_root, event.y_root)
+            menu.bind('<Enter>', lambda event: is_over_menu.set(True))
+            menu.bind('<Leave>', lambda event: is_over_menu.set(False))
+            bind_id_button = root.bind('<Button>', lambda event:close_on_click(), '+')
+            bind_id_focus = root.bind('<FocusOut>', lambda event:close_on_click(), '+')
         finally:
             menu.grab_release()
 
     @staticmethod
     def menu_on_notebook_tab_click(event, notebook, menu):
-        clicked_tab = notebook.tk.call(notebook._w, "identify", "tab", event.x, event.y)
+        clicked_tab = notebook.tk.call(notebook._w, 'identify', 'tab', event.x, event.y)
         active_tab = notebook.index(notebook.select())
         if clicked_tab == active_tab:
             WindowControl.make_popup_menu(event, menu)
-            return active_tab
-        return -1
 
 
 def main() -> None:
