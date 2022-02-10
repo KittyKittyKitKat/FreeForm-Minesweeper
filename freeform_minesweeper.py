@@ -130,7 +130,7 @@ class Constants:
         FONT_BIG: Larger font used for in game text.
         MAINLOOP_TIME: Time spent sleeping in mainloop of game.
         LOCKED_BLACK_SQUARE: Sprite for a locked disabled square.
-        UNLOCKED_BLACK_SQUARE: Sprint for an unlocked disabled square.
+        UNLOCKED_BLACK_SQUARE: Sprite for an unlocked disabled square.
         FILE_EXTENSION: File extension used for saving and loading board files.
         FILE_TYPE: File type and extension, for file dialogues.
         LEADERBOARD_FILENAME: Path to the leaderboard JSON used to save times.
@@ -318,7 +318,7 @@ class GameControl:
 
     @staticmethod
     def has_lost() -> None:
-        """Execute lsoing sequence."""
+        """Execute losing sequence."""
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[15])
         GameControl.game_state = GameState.DONE
         for square in WindowControl.board_frame.grid_slaves():
