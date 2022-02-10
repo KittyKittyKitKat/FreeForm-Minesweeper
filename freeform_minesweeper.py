@@ -687,11 +687,15 @@ class GameControl:
         Args:
             filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
         """
-        with open(filename, newline='') as read_fp:
-            reader = csv.DictReader(read_fp)
-            current_leaderboard = list(reader)
-            fieldnames = reader.fieldnames
-
+        try:
+            with open(filename, newline='') as read_fp:
+                reader = csv.DictReader(read_fp)
+                current_leaderboard = list(reader)
+                fieldnames = reader.fieldnames
+        except FileNotFoundError:
+            with open(filename, newline='', mode='w') as create_fp:
+                current_leaderboard = []
+                fieldnames = ['BoardID', 'Player', 'Board', 'Time', 'MultiMode', 'Date']
         try:
             board_id = GameControl.compress_board_textually()
         except tk.TclError:
