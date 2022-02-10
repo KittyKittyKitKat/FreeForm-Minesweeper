@@ -153,7 +153,7 @@ class Constants:
     FILE_EXTENSION = '.ffmnswpr'
     FILE_TYPE = (('FreeForm Minesweeper Board', f'*{FILE_EXTENSION}'),)
     LEADERBOARD_FILENAME = 'assets/leaderboard.csv'
-    SAVE_LOAD_DIR = expanduser("~/Desktop")
+    SAVE_LOAD_DIR = expanduser('~/Desktop')
     MAIN_ICON_ICO = 'assets/icon_main.ico'
     SETTINGS_ICON_ICO = 'assets/icon_settings.ico'
     LEADERBOARD_ICON_ICO = 'assets/icon_leaderboard.ico'
@@ -989,7 +989,7 @@ class WindowControl:
         WindowControl.hidden_root.withdraw()
         WindowControl.game_root.resizable(0, 0)
         WindowControl.game_root.title('FreeForm Minesweeper')
-        WindowControl.game_root.protocol("WM_DELETE_WINDOW", WindowControl.hidden_root.destroy)
+        WindowControl.game_root.protocol('WM_DELETE_WINDOW', WindowControl.hidden_root.destroy)
         WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.main_frame.grid_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
@@ -1130,7 +1130,7 @@ class WindowControl:
             w.grid(row=0, padx=5, sticky=tk.W)
 
 
-            self.entry = tk.Entry(master, name="entry", font=Constants.FONT_BIG)
+            self.entry = tk.Entry(master, name='entry', font=Constants.FONT_BIG)
             if not self.have_entry:
                 return w
 
@@ -1144,13 +1144,13 @@ class WindowControl:
         def buttonbox(self):
             box = tk.Frame(self)
 
-            w = tk.Button(box, text="OK" if self.have_entry else "Yes", width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
+            w = tk.Button(box, text='OK' if self.have_entry else 'Yes', width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
             w.grid(column=0, row=0)
-            w = tk.Button(box, text="Cancel" if self.have_entry else "No", width=5, command=self.cancel, font=Constants.FONT)
+            w = tk.Button(box, text='Cancel' if self.have_entry else 'No', width=5, command=self.cancel, font=Constants.FONT)
             w.grid(column=1, row=0)
 
-            self.bind("<Return>", self.ok)
-            self.bind("<Escape>", self.cancel)
+            self.bind('<Return>', self.ok)
+            self.bind('<Escape>', self.cancel)
 
             box.pack()
 
@@ -1418,7 +1418,7 @@ class WindowControl:
             else:
                 name_entry.config(state='normal')
 
-        player_var.trace_add("write", lambda *_: autofill_board_name())
+        player_var.trace_add('write', lambda *_: autofill_board_name())
 
         WindowControl.settings_button.config(state='disabled')
         WindowControl.stop_button.config(state='disabled')
@@ -1674,7 +1674,7 @@ class WindowControl:
 
                 TEXT_HEIGHT = Constants.FONT_BIG.cget('size') + 10
                 for i, time in enumerate(sorted(times, key=lambda time: int(time['Time']))):
-                    time_text = f"{time['Time']:0>3} seconds  {time['Date']}"
+                    time_text = f'{time["Time"]:0>3} seconds  {time["Date"]}'
                     times_canvas.create_text(
                         0, TEXT_HEIGHT * i,
                         text=time_text, font=Constants.FONT_BIG,
