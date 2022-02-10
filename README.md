@@ -24,6 +24,9 @@ Once you've started playing the game, you play it how normal Minesweeper works! 
 ## How to play: MultiMine mode
 In addition to the regular Minesweeper experience, FreeForm Minesweeper also has a MultiMine mode! In MultiMine mode, it's possible for any square on the board to have up to 5 mines inside of it! To follow this, you can flag a square up to 5 times to keep track of all the mines across the board. Because flagging and unflagging is a bit more complicated now, MultiMine mode has some different controls. When in revealing mode, you can only uncover and chord squares with left click and double left click, respectively. Right click does nnothing. When in flagging mode, a left click will place a flag on a square and a right click will remove a flag. You can still chord in flagging mode too.
 
+## The Leaderboard
+When you beat a game of FreeForm Minesweeper, in either Normal or MultiMine mode, you can save your time to the leaderboard! This allows you to keep track of all your best times as you play, as well as other players tha want to go up against you! You ccan view the leaderboard at any time using the trophy button. You can also do some management with saved players and times, such as deleting and renaming.
+
 
 ## Features List
  * Default 30 by 28 game space to make boards in
@@ -65,6 +68,16 @@ In addition to the regular Minesweeper experience, FreeForm Minesweeper also has
    * Change the number of rows in the game space (1 to 60)
    * Change the number of columns in the game space (25 to 60)
  * Automatically detect if an update is available
+ ## Upcoming Features
+ * A leaderboard to keep track of times
+   * Times are grouped by boards under a player
+   * Times are saved with time in seconds (up to 999) and the date
+   * Times keep track if game was played in normal or mutlimine mode
+   * Times and whole boards can be deleted from the leaderboard
+   * Boards and players can be renamed in the leaderboard
+   * All players and boards must only contain letters (A-Z)
+   * All player names must be unique
+   * All board names under a player must be unique
 
 ## Requirements (When running source)
 

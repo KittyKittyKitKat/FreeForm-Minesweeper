@@ -3,16 +3,22 @@
 Play the game by executing the file as a program, and have fun!
 The only code intended to be executed is the main() function. Any other use may result in errors or other undefined behaviour.
 """
+import csv
 import random
 import tkinter as tk
 import time
 
+from datetime import date
 from enum import Enum, auto
 from itertools import chain, groupby
 from os.path import expanduser
 from platform import system as get_os
 from tkinter import filedialog
 from tkinter import messagebox
+from tkinter import font as tkFont
+from tkinter import simpledialog
+from tkinter import ttk
+from typing import Optional
 
 import requests
 
@@ -111,6 +117,9 @@ class Constants:
     """Container for various game constants.
 
     Attributes:
+        BOARD_IMAGES: Sprites used for the base Minesweeper game.
+        SEVSEG_IMAGES: Sprites used for seven segment displays.
+        EXTENDED_BOARD_IMAGES: Sprites used for multimine mode.
         BOARD_SQUARE_SIZE: Size of a square on the board, in pixels.
         SEGMENT_HEIGHT: Height of a seven segment number, in pixels.
         SEGMENT_WIDTH: Width of a seven segment number, in pixels.
@@ -124,9 +133,11 @@ class Constants:
         UNLOCKED_BLACK_SQUARE: Sprint for an unlocked disabled square.
         FILE_EXTENSION: File extension used for saving and loading board files.
         FILE_TYPE: File type and extension, for file dialogues.
+        LEADERBOARD_FILENAME: Path to the leaderboard JSON used to save times.
         SAVE_LOAD_DIR: Default directory for saving and loading board files.
         MAIN_ICON_ICO: Path to main window icon, relatively.
         SETTINGS_ICON_ICO: Path to settings window icon, relatively.
+        LEADERBOARD_ICON_ICO: Path to leaderboard window icon, relatively.
         MAIN_ICON_PNG: PNG image for main window icon.
         SETTINGS_ICON_PNG: PNG image for settings window icon.
     """
@@ -136,16 +147,16 @@ class Constants:
     PADDING_DIST = 5
     BACKGROUND_COLOUR = '#c0c0c0'
     DEFAULT_COLOUR = '#d9d9d9'
-    FONT = ('MINE-SWEEPER', 7, 'normal')
-    FONT_BIG = ('MINE-SWEEPER', 9, 'normal')
     MAINLOOP_TIME = 0.01
     LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
     FILE_EXTENSION = '.ffmnswpr'
     FILE_TYPE = (('FreeForm Minesweeper Board', f'*{FILE_EXTENSION}'),)
+    LEADERBOARD_FILENAME = 'assets/leaderboard.csv'
     SAVE_LOAD_DIR = expanduser("~/Desktop")
     MAIN_ICON_ICO = 'assets/icon_main.ico'
     SETTINGS_ICON_ICO = 'assets/icon_settings.ico'
+    LEADERBOARD_ICON_ICO = 'assets/icon_leaderboard.ico'
 
     @staticmethod
     def init_board_images() -> None:
@@ -217,8 +228,21 @@ class Constants:
         """
         MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
         SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
+        LEADERBOARD_ICON = ImageTk.PhotoImage(Image.open('assets/icon_leaderboard.png'))
         setattr(Constants, 'MAIN_ICON_PNG', MAIN_ICON)
         setattr(Constants, 'SETTINGS_ICON_PNG', SETTINGS_ICON)
+        setattr(Constants, 'LEADERBOARD_ICON_PNG', LEADERBOARD_ICON)
+
+    @staticmethod
+    def init_fonts():
+        if 'Minesweeper' in tkFont.families():
+            FONT = tkFont.Font(family='Minesweeper', size=7, weight='normal')
+            FONT_BIG = tkFont.Font(family='Minesweeper', size=9, weight='normal')
+        else:
+            FONT = tkFont.Font(family='Courier', size=9, weight='bold')
+            FONT_BIG = tkFont.Font(family='Courier', size=15, weight='bold')
+        setattr(Constants, 'FONT', FONT)
+        setattr(Constants, 'FONT_BIG', FONT_BIG)
 
 
 class Options:
@@ -258,7 +282,7 @@ class GameControl:
         squares_to_win: Number of squares to uncover needed to win.
         squares_uncovered: Number of squares that have been uncovered.
         flags_placed: Number of flags placed on the board.
-        seconds_elpased: Time elapsed playing the game, in seconds.
+        seconds_elapsed: Time elapsed playing the game, in seconds.
         on_hold: Flag controlling if the game is on hold, ie, creating a board.
         drag_mode: Flag controlling if clicking dragging adds or remove squares in board creation.
 
@@ -266,18 +290,18 @@ class GameControl:
     click_mode = ClickMode.UNCOVER
     game_state = GameState.PLAYING
     difficulty = Difficulty.EASY
-    num_mines = None
-    squares_to_win = None
+    num_mines = 0
+    squares_to_win = 0
     squares_uncovered = 0
     flags_placed = 0
-    seconds_elpased = 0
+    seconds_elapsed = 0
     on_hold = True
     drag_mode = True
 
     @staticmethod
     def check_win() -> None:
         """Check if the game has been won, and executes winning sequence if so."""
-        if GameControl.squares_uncovered == GameControl.squares_to_win:
+        if GameControl.squares_uncovered == GameControl.squares_to_win and GameControl.game_state is GameState.PLAYING:
             WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[16])
             GameControl.game_state = GameState.DONE
             GameControl.flags_placed = GameControl.num_mines
@@ -288,10 +312,13 @@ class GameControl:
                         square.config(im=Constants.BOARD_IMAGES[11])
                     else:
                         square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 38])
+            save_time = messagebox.askyesno(title='FreeForm Minesweeper', message='You Win!\nSave your time to the leaderboard?')
+            if save_time:
+                GameControl.save_time_to_file()
 
     @staticmethod
     def has_lost() -> None:
-        """Check if the game has been lost, and executes losing sequence if so."""
+        """Execute lsoing sequence."""
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[15])
         GameControl.game_state = GameState.DONE
         for square in WindowControl.board_frame.grid_slaves():
@@ -326,7 +353,7 @@ class GameControl:
 
         GameControl.squares_uncovered = 0
         GameControl.flags_placed = 0
-        GameControl.seconds_elpased = 0
+        GameControl.seconds_elapsed = 0
         if GameControl.click_mode is ClickMode.FLAG:
             GameControl.switch_mode()
         GameControl.on_hold = False
@@ -408,6 +435,7 @@ class GameControl:
                 return
             else:
                 WindowControl.messagebox_open = False
+        GameControl.game_state = GameState.DONE
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
@@ -422,17 +450,19 @@ class GameControl:
     @staticmethod
     def stop_game() -> None:
         """Display dialouge prompt to stop the current game, and place game on hold if confirmed."""
-        WindowControl.messagebox_open = True
-        stop = messagebox.askyesno(
-            title='Stop Playing?',
-            message='Are you sure you want to stop playing?',
-            default=messagebox.NO
-        )
-        if not stop:
-            WindowControl.messagebox_open = False
-            return
-        else:
-            WindowControl.messagebox_open = False
+        if GameControl.game_state is GameState.PLAYING:
+            WindowControl.messagebox_open = True
+            stop = messagebox.askyesno(
+                title='Stop Playing?',
+                message='Are you sure you want to stop playing?',
+                default=messagebox.NO
+            )
+            if not stop:
+                WindowControl.messagebox_open = False
+                return
+            else:
+                WindowControl.messagebox_open = False
+        GameControl.game_state = GameState.DONE
         GameControl.on_hold = True
         WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.game_root.unbind('<Control-f>')
@@ -516,8 +546,8 @@ class GameControl:
                     sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
     @staticmethod
-    def save_board() -> None:
-        """Save the current board in its smallest possible form."""
+    def compress_board() -> list[str]:
+        """Compress the current board to its smallest possible form."""
         # Keep track of the leftmost enabled square. Set to the right side of the field
         leftmost = Options.cols - 1
         # Will be the final bit mapping of the board
@@ -567,7 +597,30 @@ class GameControl:
                 # Trim the bigging of the row from the index of the leftmost enabled square
                 board_bits[i] = row[leftmost:]
         # At this point the board is saved as rows of bits that has been trimmed down to the smallest possible dimensions of the board
-        # Save to a file
+        return board_bits
+
+    @staticmethod
+    def compress_board_textually():
+        board = 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
+        return ''.join(str(len(list(g)))+k for k, g in groupby(board))
+
+    @staticmethod
+    def decompress_board_textually(txt_compressed_board):
+        decompressed_board = ''
+        current_num = ''
+        for char in txt_compressed_board:
+            if char.isalpha():
+                decompressed_board += char * int(current_num)
+                current_num = ''
+            else:
+                current_num += char
+        decompressed_board = decompressed_board.replace('E', '1').replace('D', '0').split('N')
+        return decompressed_board
+
+    @staticmethod
+    def save_board() -> None:
+        """Save the current board to a file."""
+        compressed_board = GameControl.compress_board()
         board_file = filedialog.asksaveasfilename(
             initialdir=Constants.SAVE_LOAD_DIR, title='Save Board',
             filetypes=Constants.FILE_TYPE, defaultextension=Constants.FILE_EXTENSION
@@ -584,7 +637,7 @@ class GameControl:
             return
         try:
             with open(board_file, 'w') as board_save_file:
-                board_save_file.write('\n'.join(board_bits))
+                board_save_file.write('\n'.join(compressed_board))
                 board_save_file.write('\n')
         except Exception:
             WindowControl.messagebox_open = True
@@ -626,6 +679,64 @@ class GameControl:
         """Toggle all the squares on the board betwixt enabled and disabled."""
         for sq in WindowControl.board_frame.grid_slaves():
             sq.toggle_enable()
+
+    @staticmethod
+    def save_time_to_file(filename: str = Constants.LEADERBOARD_FILENAME) -> None:
+        """Save the completion time for the current board to the leaderboard file.
+
+        Args:
+            filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
+        """
+        with open(filename, newline='') as read_fp:
+            reader = csv.DictReader(read_fp)
+            current_leaderboard = list(reader)
+            fieldnames = reader.fieldnames
+
+        try:
+            board_id = GameControl.compress_board_textually()
+        except tk.TclError:
+            return
+
+        board_name = tk.StringVar(value='')
+        player_name = tk.StringVar(value='')
+        status = tk.StringVar(value='None')
+        WindowControl.leaderboard_entry_window(
+            player_name,
+            board_name,
+            status,
+            (current_leaderboard, board_id)
+        )
+
+        if status.get().startswith('Failed:'):
+            error_msg = status.get().split(':')[1]
+            try:
+                WindowControl.root.state()
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
+                WindowControl.messagebox_open = False
+            except:
+                pass
+            return
+
+        player_name = player_name.get()
+        board_name = board_name.get()
+
+        # Layout of CSV for storing records
+        # ID, player name, board name, time, multimines, sq inc, mine inc, date
+        new_entry = dict(zip(fieldnames, [
+            board_id,
+            player_name,
+            board_name,
+            f'{int(GameControl.seconds_elapsed)}',
+            f'{int(Options.multimines)}',
+            date.today().strftime('%m/%d/%y')
+        ]))
+
+        current_leaderboard.append(new_entry)
+        with open(filename, 'w', newline='') as write_fp:
+            writer = csv.DictWriter(write_fp, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(current_leaderboard)
 
 
 class BoardSquare(tk.Label):
@@ -856,7 +967,7 @@ class WindowControl:
     timer_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     flags_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     controls_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-
+    leaderboard_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0, bg=Constants.BACKGROUND_COLOUR)
     mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0, bg=Constants.BACKGROUND_COLOUR)
     settings_button = tk.Button(
@@ -879,7 +990,7 @@ class WindowControl:
         WindowControl.main_frame.grid_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
         WindowControl.board_frame.grid_propagate(0)
-        for i in range(6):
+        for i in range(7):
             WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
         WindowControl.menu_frame.grid(row=0, column=0, sticky='nsew')
         WindowControl.board_frame.grid(row=1, column=0, sticky='nsew')
@@ -933,6 +1044,9 @@ class WindowControl:
         flag_right.grid(row=0, column=2, sticky='nsew')
         WindowControl.flags_frame.grid(row=0, column=1)
 
+        WindowControl.play_button['font'] = Constants.FONT
+        WindowControl.stop_button['font'] = Constants.FONT
+
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
         WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19], command=WindowControl.settings_window)
@@ -978,17 +1092,74 @@ class WindowControl:
         clear_button = tk.Button(WindowControl.controls_frame, text='Clear', font=Constants.FONT, width=5, command=GameControl.clear_board)
         save_board_button = tk.Button(WindowControl.controls_frame, text='Save', font=Constants.FONT, width=5, command=lambda: GameControl.save_board())
         load_board_button = tk.Button(WindowControl.controls_frame, text='Load', font=Constants.FONT, width=5, command=lambda: GameControl.load_board())
-        fill_button.grid(row=0, column=0, sticky='nsew')
-        clear_button.grid(row=1, column=0, sticky='nsew')
-        save_board_button.grid(row=0, column=1, sticky='nsew')
-        load_board_button.grid(row=1, column=1, sticky='nsew')
-        WindowControl.controls_frame.grid(row=0, column=5)
+
+        leaderboard_button = tk.Button(
+            WindowControl.leaderboard_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
+            bd=0, im=Constants.LEADERBOARD_ICON_PNG, command=WindowControl.leaderboard_view_window
+        )
+        leaderboard_button.grid(row=0, column=0)
+        WindowControl.leaderboard_frame.grid(row=0, column=5)
+
+        fill_button.grid(row=0, column=1, sticky='nsew')
+        clear_button.grid(row=1, column=1, sticky='nsew')
+        save_board_button.grid(row=0, column=2, sticky='nsew')
+        load_board_button.grid(row=1, column=2, sticky='nsew')
+        WindowControl.controls_frame.grid(row=0, column=6)
+
+    @staticmethod
+    def init_dialogue_customization():
+        """Customize existing dialogue boxes."""
+        def __init__(self, title, prompt,
+                    initialvalue=None,
+                    minvalue = None, maxvalue = None,
+                    parent = None, have_entry=True):
+            self.prompt   = prompt
+            self.minvalue = minvalue
+            self.maxvalue = maxvalue
+            self.initialvalue = initialvalue
+            self.have_entry = have_entry
+            simpledialog.Dialog.__init__(self, parent, title)
+
+        def body(self, master):
+
+            w = tk.Label(master, text=self.prompt, justify=tk.LEFT, font=Constants.FONT_BIG)
+            w.grid(row=0, padx=5, sticky=tk.W)
+
+
+            self.entry = tk.Entry(master, name="entry", font=Constants.FONT_BIG)
+            if not self.have_entry:
+                return w
+
+            self.entry.grid(row=1, padx=5, sticky=tk.W+tk.E)
+            if self.initialvalue is not None:
+                self.entry.insert(0, self.initialvalue)
+                self.entry.select_range(0, tk.END)
+
+            return self.entry
+
+        def buttonbox(self):
+            box = tk.Frame(self)
+
+            w = tk.Button(box, text="OK" if self.have_entry else "Yes", width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
+            w.grid(column=0, row=0)
+            w = tk.Button(box, text="Cancel" if self.have_entry else "No", width=5, command=self.cancel, font=Constants.FONT)
+            w.grid(column=1, row=0)
+
+            self.bind("<Return>", self.ok)
+            self.bind("<Escape>", self.cancel)
+
+            box.pack()
+
+        simpledialog._QueryDialog.__init__ = __init__
+        simpledialog._QueryDialog.body = body
+        simpledialog._QueryDialog.buttonbox = buttonbox
+        simpledialog.ask = lambda title, prompt, **kw: simpledialog._QueryString(title, prompt, have_entry=False, **kw).result
 
     @staticmethod
     def update_timer() -> None:
         """Update timer widgets."""
         if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
-            seconds = list(str(int(GameControl.seconds_elpased)).zfill(3))
+            seconds = list(str(int(GameControl.seconds_elapsed)).zfill(3))
             for number in WindowControl.timer_frame.grid_slaves():
                 number.config(im=Constants.SEVSEG_IMAGES[int(seconds.pop())])
 
@@ -1014,7 +1185,7 @@ class WindowControl:
 
     @staticmethod
     def drag_enable_toggle(event: tk.EventType.Motion, initial_square: BoardSquare) -> None:
-        """Turn all squares under the mouse to a sate based on an inital square while dragging.
+        """Turn all squares under the mouse to a state based on an inital square while dragging.
 
         Args:
             event: Mouse motion event.
@@ -1180,6 +1351,484 @@ class WindowControl:
         submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
         submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
 
+    @staticmethod
+    def leaderboard_entry_window(player_var, board_var, status_flag, leaderboard_info):
+        """Create and display the leaderboard entry window to accept new times
+
+        Args:
+            player_var (tk.StringVar): String variable tracking the name of the player
+            board_var (tk.StringVar): String variable tracking the name of the board the player provides
+            status_flag (tk.StringVar): String variable tracking the status of submitting a leaderboard entry
+            leaderboard_info (tuple): Tuple containing the current leaderboard and the ID of the current board
+        """
+        leaderboard, board_id = leaderboard_info
+        boards_with_id = [board for board in leaderboard if board['BoardID'] == board_id]
+
+        def save_time_root_close():
+            """Handler for leaderboard entry window closing"""
+            try:
+                WindowControl.settings_button.config(state='normal')
+                WindowControl.stop_button.config(state='normal')
+                WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
+                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
+            except Exception:
+                status_flag.set('Failed:Main window destroyed')
+            else:
+                if status_flag.get() != 'Success':
+                    status_flag.set('Failed:Window closed without saving')
+
+        def submit_name_player():
+            """Validate user inputted names and close window if they satisfy requirements"""
+            board_var.set(board_var.get().upper())
+            player_var.set(player_var.get().upper())
+            if not board_var.get() or not player_var.get():
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered cannot be blank')
+                WindowControl.messagebox_open = False
+                return
+            if not (board_var.get().isalpha() and player_var.get().isalpha()):
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
+                WindowControl.messagebox_open = False
+                return
+            for entry in leaderboard:
+                if entry['Player'] == player_var.get() and entry['Board'] == board_var.get():
+                    WindowControl.messagebox_open = True
+                    messagebox.showerror(title='FFM Leaderboard Error', message='Board names must be unique for a player')
+                    WindowControl.messagebox_open = False
+                    return
+            status_flag.set('Success')
+            save_time_root.destroy()
+
+        def autofill_board_name():
+            """Autofill the name in the board entry based on the current board and player"""
+            board_for_player = [
+                board['Board']
+                for board in boards_with_id
+                if board['Player'] == player_var.get().upper() and
+                int(board['MultiMode']) == Options.multimines
+            ]
+            if board_for_player:
+                board_var.set(board_for_player[0])
+                name_entry.config(state='disabled')
+            else:
+                name_entry.config(state='normal')
+
+        player_var.trace_add("write", lambda *_: autofill_board_name())
+
+        WindowControl.settings_button.config(state='disabled')
+        WindowControl.stop_button.config(state='disabled')
+        WindowControl.reset_button.unbind('<ButtonPress-1>')
+        WindowControl.reset_button.unbind('<ButtonRelease-1>')
+
+        save_time_root = tk.Toplevel(class_='FFM Leaderboard')
+        save_time_root.title('Save to Leaderboard')
+        save_time_root.resizable(0, 0)
+        save_time_root.bind('<Destroy>', lambda event: save_time_root_close())
+        if get_os() == 'Windows':
+            save_time_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
+        elif get_os() == 'Linux':
+            save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
+
+        save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=400, height=200 if not Options.multimines else 250)
+        save_time_frame.grid_propagate(False)
+        save_time_frame.grid_columnconfigure(0, weight=1)
+        save_time_frame.grid_rowconfigure(8, weight=1)
+
+        time_label = tk.Label(save_time_frame, text=f'Your time was: {int(GameControl.seconds_elapsed)} seconds.', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        player_label = tk.Label(save_time_frame, text='Player Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var)
+        name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=board_var)
+        save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
+
+        if Options.multimines:
+            mutlimine_label = tk.Label(save_time_frame, text='You played on multimine mode', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+            mutlimine_label.grid(row=5, column=0, pady=6)
+
+        time_label.grid(row=0, column=0, pady=6)
+        player_label.grid(row=1, column=0)
+        player_entry.grid(row=2, column=0)
+        name_label.grid(row=3, column=0)
+        name_entry.grid(row=4, column=0)
+        save_button.grid(row=8, column=0)
+        save_time_frame.grid(row=0, column=0)
+
+        player_entry.focus()
+        player_entry.bind('<Control-KeyRelease-a>', lambda e: player_entry.select_range(0, tk.END))
+        name_entry.bind('<Control-KeyRelease-a>', lambda e: name_entry.select_range(0, tk.END))
+        save_time_root.bind('<Return>', lambda e: submit_name_player())
+        save_button.wait_variable(status_flag)
+
+    @staticmethod
+    def leaderboard_view_window(leaderboard_file=Constants.LEADERBOARD_FILENAME):
+        """Create and display window to view leaderboard in
+
+         Args:
+            leaderboard_info (str): The current leaderboard file path
+        """
+        MAX_WIDTH = 400
+        NOTEBOOK_HEIGHT = 132 + Constants.FONT_BIG.metrics('linespace')
+        player_var = tk.StringVar()
+        notebook_pages = []
+        selected_page_index = 0
+        canvas_right_clicked = None
+        canvas_right_clicked_time_id = None
+
+        with open(leaderboard_file, 'r', newline='') as fp:
+            reader = csv.DictReader(fp)
+            current_leaderboard = list(reader)
+            fieldnames = reader.fieldnames
+
+        def update_leaderboard():
+            with open(leaderboard_file, 'w', newline='') as write_fp:
+                writer = csv.DictWriter(write_fp, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(current_leaderboard)
+
+        def leaderboard_view_root_close():
+            """Handler for leaderboard entry window closing"""
+            try:
+                WindowControl.settings_button.config(state='normal')
+                WindowControl.stop_button.config(state='normal')
+                WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
+                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
+            except Exception:
+                return
+
+        def rename_player():
+            """Rename a player in the leaderboard"""
+            new_player_name = simpledialog.askstring(
+                'FFMS Player Name Change',
+                'Enter New Name [A-Z]',
+                parent=leaderboard_view_root
+            )
+            if new_player_name is None:
+                return
+            if not new_player_name.isalpha():
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
+                WindowControl.messagebox_open = False
+                return
+            new_player_name = new_player_name.upper()
+            if new_player_name:
+                old_player_name = player_var.get().upper()
+                for entry in current_leaderboard:
+                    if entry['Player'] == new_player_name:
+                        WindowControl.messagebox_open = True
+                        messagebox.showerror(title='FFM Leaderboard Error', message='Player names already exists')
+                        WindowControl.messagebox_open = False
+                        return
+                for entry in current_leaderboard:
+                    if entry['Player'] == old_player_name:
+                        break
+                else:
+                    WindowControl.messagebox_open = True
+                    messagebox.showerror(title='FFM Leaderboard Error', message='Player cannot be renamed.\nPlayer does not exist')
+                    WindowControl.messagebox_open = False
+                    return
+                for entry in current_leaderboard:
+                    if entry['Player'] == old_player_name:
+                        entry['Player'] = new_player_name
+                player_var.set(new_player_name)
+                update_leaderboard()
+
+        def rename_board():
+            """Rename a board in the leaderboard"""
+            new_board_name = simpledialog.askstring(
+                'FFMS Board Name Change',
+                'Enter New Name [A-Z]',
+                parent=leaderboard_view_root
+            )
+            if new_board_name is None:
+                return
+            if not new_board_name.isalpha():
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
+                WindowControl.messagebox_open = False
+                return
+            new_board_name = new_board_name.upper()
+            if new_board_name:
+                nb = notebook_pages[selected_page_index]
+                old_board_name = nb.tab(nb.select(), 'text').upper()
+                player = player_var.get().upper()
+                for entry in current_leaderboard:
+                    if entry['Player'] == player and entry['Board'] == new_board_name and entry['Board'] != old_board_name:
+                        WindowControl.messagebox_open = True
+                        messagebox.showerror(title='FFM Leaderboard Error', message='Board names must be unique for a player')
+                        WindowControl.messagebox_open = False
+                        return
+                for entry in current_leaderboard:
+                    if entry['Board'] == old_board_name and entry['Player'] == player:
+                        entry['Board'] = new_board_name
+                display_boards_from_player()
+                update_leaderboard()
+
+        def delete_board():
+            """Delete all a boards times from a player
+
+            Args:
+                tab_index (int): The index of the current leaderboard tab
+            """
+            nonlocal current_leaderboard, selected_page_index
+            sure = simpledialog.ask(
+                'FFMS Leaderboard Deletion',
+                'Are you sure you wish to delete\n all of this board\'s entries?',
+                parent=leaderboard_view_root
+            )
+            if sure is None:
+                return
+            nb = notebook_pages[selected_page_index]
+            tab_text = nb.tab(nb.select(), 'text').upper()
+            current_leaderboard = [
+                entry for entry in current_leaderboard
+                if entry['Player'] != player_var.get().upper() or entry['Board'] != tab_text
+            ]
+            selected_page_index = 0
+            display_boards_from_player()
+            update_leaderboard()
+
+        def delete_time():
+            """Delete a single time from a player"""
+            sure = simpledialog.ask(
+                'FFMS Leaderboard Deletion',
+                'Are you sure you wish to delete this entry?',
+                parent=leaderboard_view_root
+            )
+            if sure is None:
+                return
+            nb = notebook_pages[selected_page_index]
+            selected_entry_text = canvas_right_clicked.itemcget(canvas_right_clicked_time_id, 'text').split()
+            time = int(selected_entry_text[0])
+            date = selected_entry_text[-1]
+            board = nb.tab(nb.select(), 'text').upper()
+            player = player_var.get().upper()
+            entry_to_remove = None
+            for entry in current_leaderboard:
+                if entry['Player'] == player and entry['Board'] == board and entry['Date'] == date and int(entry['Time']) == time:
+                    entry_to_remove = entry
+                    break
+            current_leaderboard.remove(entry_to_remove)
+            display_boards_from_player()
+            update_leaderboard()
+
+        def canvas_item_popup(event, canvas, popup):
+            nonlocal canvas_right_clicked, canvas_right_clicked_time_id
+            try:
+                canvas_item_id = event.widget.find_withtag('current')[0]
+            except IndexError:
+                return
+            canvas_right_clicked = canvas
+            canvas_right_clicked_time_id = canvas_item_id
+            WindowControl.make_popup_menu(event, popup)
+
+        def display_boards_from_player():
+            """Display the boards from a player in a paginated notebook"""
+            nonlocal selected_page_index
+            boards = [entry for entry in current_leaderboard if entry['Player'] == player_var.get().upper()]
+            page_left_btn.grid_remove()
+            page_right_btn.grid_remove()
+            if not boards and notebook_pages and isinstance(notebook_pages[0], tk.Label):
+                return
+            for page in notebook_pages:
+                page.destroy()
+
+            current_width = 0
+            selected_page_index = 0
+            current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
+            notebook_pages.clear()
+
+            ids_covered = {}
+            for board in boards:
+                current_board_id = board['BoardID']
+                current_multimode = board['MultiMode']
+                if current_board_id in ids_covered and ids_covered[current_board_id] == current_multimode:
+                    continue
+                tab_text = board['Board']
+                current_width += max(Constants.FONT_BIG.measure(tab_text) + 8, 23)
+                if current_width >= MAX_WIDTH:
+                    notebook_pages.append(current_notebook_page)
+                    current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
+                    current_width = 0
+
+                entry_frame = tk.Frame(current_notebook_page, height=NOTEBOOK_HEIGHT, width=MAX_WIDTH)
+                thumbnail_tk = ImageTk.PhotoImage(image=WindowControl.generate_board_thumbnail(current_board_id))
+                entry_thumbnail_label = tk.Label(entry_frame, height=128, width=128, im=thumbnail_tk)
+                entry_thumbnail_label.image = thumbnail_tk
+
+                multimode_label = tk.Label(entry_frame, font=Constants.FONT_BIG, text='Normal Mode')
+                if current_multimode == '1':
+                    multimode_label.config(text='MultiMine Mode')
+                times_canvas = tk.Canvas(entry_frame, width=MAX_WIDTH - 128 - 20, height=128)
+                times_scrollbar = tk.Scrollbar(entry_frame, orient=tk.VERTICAL, width=16, command=times_canvas.yview)
+
+                times = [
+                    board for board in boards
+                    if board['BoardID'] == current_board_id and
+                    board['MultiMode'] == current_multimode
+                ]
+
+                TEXT_HEIGHT = Constants.FONT_BIG.cget('size') + 10
+                for i, time in enumerate(sorted(times, key=lambda time: int(time['Time']))):
+                    time_text = f"{time['Time']:0>3} seconds  {time['Date']}"
+                    times_canvas.create_text(
+                        0, TEXT_HEIGHT * i,
+                        text=time_text, font=Constants.FONT_BIG,
+                        tags='entry_text',
+                        activefill='#444444'
+                    )
+
+                times_canvas.config(yscrollcommand=times_scrollbar.set, scrollregion=times_canvas.bbox('all'))
+                if TEXT_HEIGHT * len(times) > NOTEBOOK_HEIGHT:
+                    times_scrollbar.grid(row=1, column=2, sticky=tk.N+tk.S)
+                    times_canvas.yview_moveto('0.0')
+
+                multimode_label.grid(row=0, column=1)
+                times_canvas.grid(row=1, column=1)
+                entry_thumbnail_label.grid(row=0, column=0, rowspan=2, sticky=tk.N)
+                current_notebook_page.add(entry_frame, text=tab_text)
+                ids_covered[current_board_id] = current_multimode
+                current_notebook_page.bind(
+                    '<Button-3>',
+                    lambda event, current_notebook_page=current_notebook_page: WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, notebook_popup_menu)
+                )
+                times_canvas.bind('<Button-3>', lambda event, canvas=times_canvas: canvas_item_popup(event, canvas, time_popup_menu))
+
+            if boards:
+                notebook_pages.append(current_notebook_page)
+            if notebook_pages:
+                page_left_btn.grid(row=3, column=0, sticky=tk.E)
+                page_right_btn.grid(row=3, column=1, sticky=tk.W)
+                for page in notebook_pages:
+                    page.enable_traversal()
+            else:
+                notebook_pages.append(tk.Label(leaderboard_view_root, text='No boards for this player', font=Constants.FONT_BIG))
+            notebook_pages[0].grid(row=2, column=0, columnspan=2, pady=(10, 0))
+            change_notebook_page(0)
+
+        def change_notebook_page(step):
+            nonlocal selected_page_index
+            if (selected_page_index + step) in range(len(notebook_pages)):
+                notebook_pages[selected_page_index].grid_remove()
+                selected_page_index += step
+                notebook_pages[selected_page_index].grid(row=2, column=0, columnspan=2, pady=(10, 0))
+            if selected_page_index == 0:
+                page_left_btn.config(state=tk.DISABLED)
+            else:
+                page_left_btn.config(state=tk.NORMAL)
+            if selected_page_index == len(notebook_pages) - 1:
+                page_right_btn.config(state=tk.DISABLED)
+            else:
+                page_right_btn.config(state=tk.NORMAL)
+
+        WindowControl.settings_button.config(state='disabled')
+        WindowControl.stop_button.config(state='disabled')
+        WindowControl.reset_button.unbind('<ButtonPress-1>')
+        WindowControl.reset_button.unbind('<ButtonRelease-1>')
+
+        leaderboard_view_root = tk.Toplevel(class_='FFM Leaderboard')
+        leaderboard_view_root.title('FreeForm Minesweeper Leaderboard')
+        leaderboard_view_root.resizable(0, 0)
+        leaderboard_view_root.bind('<Destroy>', lambda event: leaderboard_view_root_close())
+        if get_os() == 'Windows':
+            leaderboard_view_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
+        elif get_os() == 'Linux':
+            leaderboard_view_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
+
+        leaderboard_view_frame = tk.Frame(leaderboard_view_root, width=MAX_WIDTH)
+        page_left_btn = tk.Button(
+            leaderboard_view_frame, height=1,
+            text='<<', font=Constants.FONT,
+            command=lambda: change_notebook_page(-1)
+        )
+        page_right_btn = tk.Button(
+            leaderboard_view_frame, height=1,
+            text='>>', font=Constants.FONT,
+            command=lambda: change_notebook_page(1)
+        )
+
+        notebook_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
+        notebook_popup_menu.add_command(label='Rename', command=lambda: rename_board())
+        notebook_popup_menu.add_command(label='Delete', command=lambda: delete_board())
+        notebook_popup_menu.add_separator()
+        notebook_popup_menu.add_command(label='Close')
+
+        time_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
+        time_popup_menu.add_command(label='Delete', command=lambda: delete_time())
+        time_popup_menu.add_separator()
+        time_popup_menu.add_command(label='Close')
+
+        player_entry_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
+        player_entry_popup_menu.add_command(label='Rename', command=lambda: rename_player())
+        player_entry_popup_menu.add_separator()
+        player_entry_popup_menu.add_command(label='Close')
+
+        player_label = tk.Label(leaderboard_view_frame, text='Player Name', font=Constants.FONT_BIG)
+        player_entry = tk.Entry(leaderboard_view_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var, width=20)
+
+        s = ttk.Style()
+        s.configure('TNotebook.Tab', font=Constants.FONT_BIG, padding=[0,0])
+        s.configure('TNotebook', tabmargins=[2,2,2,2])
+        display_boards_from_player()
+        change_notebook_page(0)
+        total_height = sum(widget.winfo_reqheight() for widget in leaderboard_view_frame.winfo_children())
+        leaderboard_view_root.minsize(width=MAX_WIDTH + 2, height=total_height)
+        player_label.grid(row=0, column=0, columnspan=2)
+        player_entry.grid(row=1, column=0, columnspan=2, padx=(MAX_WIDTH + 2 - player_entry.winfo_reqwidth())//2)
+        leaderboard_view_frame.grid(row=0, column=0, columnspan=2)
+        player_entry.focus_set()
+        player_entry.bind('<Control-KeyRelease-a>', lambda e: player_entry.select_range(0, tk.END))
+        player_entry.bind('<Button-3>', lambda event: WindowControl.make_popup_menu(event, player_entry_popup_menu))
+        player_var.trace_add('write', lambda *_: display_boards_from_player())
+        player_var.trace_add('write', lambda *_: player_var.set(player_var.get().upper()) if not player_var.get().isupper() else None)
+
+    @staticmethod
+    def generate_board_thumbnail(compressed_board_id):
+        board_bits = GameControl.decompress_board_textually(compressed_board_id)
+        max_dim_y = len(max(board_bits, key=len))
+        max_dim_x = len(board_bits)
+        overall_max_dim = max(max_dim_y, max_dim_x)
+        if overall_max_dim <= 16:
+            size = 16
+        elif overall_max_dim <= 32:
+            size = 32
+        else:
+            size = 64
+        padding_y = (size - max_dim_y) // 2
+        padding_x = (size - max_dim_x) // 2
+        thumbnail = Image.new(mode='RGBA', size=(size, size), color=(0, 0, 0))
+        for x, bit_row in enumerate(board_bits):
+            for y, bit in enumerate(bit_row):
+                if int(bit):
+                    thumbnail.putpixel((y + padding_y, x + padding_x), (255, 255, 255))
+        thumbnail = thumbnail.resize((128, 128), resample=Image.NEAREST)
+        return thumbnail
+
+    @staticmethod
+    def make_popup_menu(event, menu: tk.Menu):
+        try:
+            root = event.widget.winfo_toplevel()
+            is_over_menu = tk.BooleanVar(master=root, value=True)
+            def close_on_click():
+                if not is_over_menu.get():
+                    menu.unpost()
+                    root.unbind('<Button>', bind_id_button)
+                    root.unbind('<FocusOut>', bind_id_focus)
+            menu.post(event.x_root, event.y_root)
+            menu.bind('<Enter>', lambda event: is_over_menu.set(True))
+            menu.bind('<Leave>', lambda event: is_over_menu.set(False))
+            bind_id_button = root.bind('<Button>', lambda event:close_on_click(), '+')
+            bind_id_focus = root.bind('<FocusOut>', lambda event:close_on_click(), '+')
+        finally:
+            menu.grab_release()
+
+    @staticmethod
+    def menu_on_notebook_tab_click(event, notebook, menu):
+        clicked_tab = notebook.tk.call(notebook._w, 'identify', 'tab', event.x, event.y)
+        active_tab = notebook.index(notebook.select())
+        if clicked_tab == active_tab:
+            WindowControl.make_popup_menu(event, menu)
+
 
 def main() -> None:
     """Initialize all game components and run the mainloop."""
@@ -1188,6 +1837,8 @@ def main() -> None:
     Constants.init_sevseg_images()
     Constants.init_extended_board_images()
     Constants.init_window_icons()
+    Constants.init_fonts()
+    WindowControl.init_dialogue_customization()
     Constants.DEFAULT_COLOUR = WindowControl.game_root.cget('bg')
     if get_os() == 'Windows':
         WindowControl.game_root.iconbitmap(Constants.MAIN_ICON_ICO)
@@ -1198,6 +1849,8 @@ def main() -> None:
     WindowControl.init_board()
     if not MetaData.is_release_up_to_date():
         MetaData.outdated_notice()
+    tkFont.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT.cget('family'), size=Constants.FONT_BIG.cget('size'))
+
     while True:
         try:
             WindowControl.game_root.update_idletasks()
@@ -1207,8 +1860,8 @@ def main() -> None:
         else:
             time.sleep(Constants.MAINLOOP_TIME)
             if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING:
-                GameControl.seconds_elpased = min(round(GameControl.seconds_elpased + Constants.MAINLOOP_TIME, 2), 999)
-                if int(GameControl.seconds_elpased) == GameControl.seconds_elpased:
+                GameControl.seconds_elapsed = min(round(GameControl.seconds_elapsed + Constants.MAINLOOP_TIME, 2), 999)
+                if int(GameControl.seconds_elapsed) == GameControl.seconds_elapsed:
                     WindowControl.update_timer()
 
 
