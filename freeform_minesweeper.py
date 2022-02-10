@@ -12,7 +12,7 @@ from datetime import date
 from enum import Enum, auto
 from itertools import chain, groupby
 from os.path import expanduser
-from platform import system as get_os
+from platform import system
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import font as tkFont
@@ -37,7 +37,7 @@ class MetaData:
     """
     github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
     github_releases_url = 'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
-    platform = get_os()
+    platform = system()
     # This is a dummy variable for the purpose of source code.
     # The releases will have the proper information contained within
     # This information will directly correlate to the release info on GitHub
@@ -1215,9 +1215,9 @@ class WindowControl:
         settings_root = tk.Toplevel(class_='FFM Options')
         settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
-        if get_os() == 'Windows':
+        if MetaData.platform == 'Windows':
             settings_root.iconbitmap(Constants.SETTINGS_ICON_ICO)
-        elif get_os() == 'Linux':
+        elif MetaData.platform == 'Linux':
             settings_root.iconphoto(False, Constants.SETTINGS_ICON_PNG)
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
 
@@ -1374,7 +1374,7 @@ class WindowControl:
                 WindowControl.settings_button.config(state='normal')
                 WindowControl.stop_button.config(state='normal')
                 WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
-                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
+                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
             except Exception:
                 status_flag.set('Failed:Main window destroyed')
             else:
@@ -1429,9 +1429,9 @@ class WindowControl:
         save_time_root.title('Save to Leaderboard')
         save_time_root.resizable(0, 0)
         save_time_root.bind('<Destroy>', lambda event: save_time_root_close())
-        if get_os() == 'Windows':
+        if MetaData.platform == 'Windows':
             save_time_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
-        elif get_os() == 'Linux':
+        elif MetaData.platform == 'Linux':
             save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
 
         save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=400, height=200 if not Options.multimines else 250)
@@ -1496,7 +1496,7 @@ class WindowControl:
                 WindowControl.settings_button.config(state='normal')
                 WindowControl.stop_button.config(state='normal')
                 WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
-                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
+                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
             except Exception:
                 return
 
@@ -1734,9 +1734,9 @@ class WindowControl:
         leaderboard_view_root.title('FreeForm Minesweeper Leaderboard')
         leaderboard_view_root.resizable(0, 0)
         leaderboard_view_root.bind('<Destroy>', lambda event: leaderboard_view_root_close())
-        if get_os() == 'Windows':
+        if MetaData.platform == 'Windows':
             leaderboard_view_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
-        elif get_os() == 'Linux':
+        elif MetaData.platform == 'Linux':
             leaderboard_view_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
 
         leaderboard_view_frame = tk.Frame(leaderboard_view_root, width=MAX_WIDTH)
@@ -1844,9 +1844,9 @@ def main() -> None:
     Constants.init_window_icons()
     WindowControl.init_dialogue_customization()
     Constants.DEFAULT_COLOUR = WindowControl.game_root.cget('bg')
-    if get_os() == 'Windows':
+    if MetaData.platform == 'Windows':
         WindowControl.game_root.iconbitmap(Constants.MAIN_ICON_ICO)
-    elif get_os() == 'Linux':
+    elif MetaData.platform == 'Linux':
         WindowControl.game_root.iconphoto(False, Constants.MAIN_ICON_PNG)
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
