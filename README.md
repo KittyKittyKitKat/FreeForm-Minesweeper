@@ -78,6 +78,7 @@ When you beat a game of FreeForm Minesweeper, in either Normal or MultiMine mode
    * All players and boards must only contain letters (A-Z)
    * All player names must be unique
    * All board names under a player must be unique
+ * A new sample board: a trophy
 
 ## Requirements (When running source)
 
