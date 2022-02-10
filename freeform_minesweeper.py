@@ -710,7 +710,7 @@ class GameControl:
         if status.get().startswith('Failed:'):
             error_msg = status.get().split(':')[1]
             try:
-                WindowControl.root.state()
+                WindowControl.game_root.state()
                 WindowControl.messagebox_open = True
                 messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
                 WindowControl.messagebox_open = False
@@ -976,8 +976,8 @@ class WindowControl:
         bd=0, highlightthickness=0,
         bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
     )
-    play_button = tk.Button(mswpr_frame, text='Play', font=Constants.FONT, width=5, command=GameControl.play_game)
-    stop_button = tk.Button(mswpr_frame, text='Stop', font=Constants.FONT, width=5, command=GameControl.stop_game)
+    play_button = tk.Button(mswpr_frame, text='Play', width=5, command=GameControl.play_game)
+    stop_button = tk.Button(mswpr_frame, text='Stop', width=5, command=GameControl.stop_game)
 
     @staticmethod
     def init_window() -> None:
@@ -1833,11 +1833,11 @@ class WindowControl:
 def main() -> None:
     """Initialize all game components and run the mainloop."""
     WindowControl.init_window()
+    Constants.init_fonts()
     Constants.init_board_images()
     Constants.init_sevseg_images()
     Constants.init_extended_board_images()
     Constants.init_window_icons()
-    Constants.init_fonts()
     WindowControl.init_dialogue_customization()
     Constants.DEFAULT_COLOUR = WindowControl.game_root.cget('bg')
     if get_os() == 'Windows':
