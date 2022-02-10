@@ -138,6 +138,8 @@ class Constants:
         MAIN_ICON_ICO: Path to main window icon, relatively.
         SETTINGS_ICON_ICO: Path to settings window icon, relatively.
         LEADERBOARD_ICON_ICO: Path to leaderboard window icon, relatively.
+        MAIN_ICON_PNG: PNG image for main window icon.
+        SETTINGS_ICON_PNG: PNG image for settings window icon.
     """
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
@@ -339,11 +341,11 @@ class GameControl:
     @staticmethod
     def play_game() -> None:
         """Core gameplay loop when it is being played as Minesweeper, or a variant."""
-        WindowControl.root.unbind('<Control-i>')
+        WindowControl.game_root.unbind('<Control-i>')
         if Options.flagless:
             WindowControl.mode_switch_button.config(state='disabled')
         else:
-            WindowControl.root.bind('<Control-f>', lambda event: GameControl.switch_mode())
+            WindowControl.game_root.bind('<Control-f>', lambda event: GameControl.switch_mode())
             WindowControl.mode_switch_button.bind('<ButtonPress-1>', lambda event: GameControl.switch_mode())
 
         local_diff = GameControl.difficulty.value + Options.multimine_mine_inc if Options.multimines else GameControl.difficulty.value
@@ -398,7 +400,7 @@ class GameControl:
             sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
         WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
-        WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.reset_game())
+        WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
         options = WindowControl.play_button.grid_info()
         WindowControl.play_button.grid_remove()
         WindowControl.stop_button.grid(**options)
@@ -418,16 +420,17 @@ class GameControl:
         GameControl.game_state = GameState.PLAYING
 
     @staticmethod
-    def reset_game() -> None:
+    def new_game() -> None:
         """Display dialouge prompt to start a new game, and reset if confirmed."""
-        if GameControl.game_state is GameState.PLAYING:
+        if GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
             WindowControl.messagebox_open = True
             reset = messagebox.askyesno(
                 title='Reset Game?',
                 message='Are you sure you want to start a new game?',
                 default=messagebox.NO
             )
-            if not reset:
+            if reset:
+                WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
                 WindowControl.messagebox_open = False
                 return
             else:
@@ -436,8 +439,8 @@ class GameControl:
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
-        WindowControl.reset_timer()
         WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
+        WindowControl.reset_timer()
         for square in WindowControl.board_frame.grid_slaves():
             if square.enabled:
                 square.reset()
@@ -461,13 +464,13 @@ class GameControl:
                 WindowControl.messagebox_open = False
         GameControl.game_state = GameState.DONE
         GameControl.on_hold = True
-        WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
-        WindowControl.root.unbind('<Control-f>')
+        WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
+        WindowControl.game_root.unbind('<Control-f>')
         WindowControl.reset_button.unbind('<ButtonPress-1>')
         WindowControl.reset_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
-        GameControl.reset_game()
+        GameControl.new_game()
         WindowControl.reset_timer()
         WindowControl.reset_flag_counter()
         options = WindowControl.stop_button.grid_info()
@@ -642,7 +645,7 @@ class GameControl:
             WindowControl.messagebox_open = False
 
     @staticmethod
-    def load_board(filename: Optional[str] = None) -> None:
+    def load_board(filename: str = None) -> None:
         """Load an external board into the game.
 
         Args:
@@ -814,7 +817,7 @@ class BoardSquare(tk.Label):
             else:
                 if Options.grace_rule and GameControl.squares_uncovered == 0:
                     GameControl.game_state = GameState.DONE
-                    GameControl.reset_game()
+                    GameControl.new_game()
                     self.uncover()
                     return
                 if GameControl.game_state is GameState.PLAYING:
@@ -925,7 +928,8 @@ class WindowControl:
 
     Attributes:
         messagebox_open: Flag if a messagebo is open so multiple are not created and stacked.
-        root: Main window of the program.
+        hidden_root: Absolute parent of the program. Only used for handling game close.
+        game_root: Main window of the program.
         main_frame: Primary frame all other widgets reside in.
         menu_frame: Frame all control widgets reside in.
         board_frame: Frame all squares of the board reside in.
@@ -940,12 +944,12 @@ class WindowControl:
         settings_button: Settings button.
         play_button: Play game button.
         stop_button: Stop game button.
-        FFMSDialogue: Dialogue box creation.
     """
     messagebox_open = False
-    root = tk.Tk()
+    hidden_root = tk.Tk()
+    game_root = tk.Toplevel(class_='FreeForm Minesweeper')
     main_frame = tk.Frame(
-        root, width=Options.window_width,
+        game_root, width=Options.window_width,
         height=Options.board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST, bg='black'
     )
     menu_frame = tk.Frame(
@@ -964,19 +968,25 @@ class WindowControl:
     flags_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     controls_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     leaderboard_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-
-    reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
-    mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
-    settings_button = tk.Button(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0)
-    play_button = tk.Button(mswpr_frame, text='Play', width=5, command=GameControl.play_game)
-    stop_button = tk.Button(mswpr_frame, text='Stop', width=5, command=GameControl.stop_game)
+    reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0, bg=Constants.BACKGROUND_COLOUR)
+    mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0, bg=Constants.BACKGROUND_COLOUR)
+    settings_button = tk.Button(
+        mswpr_frame,
+        width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
+        bd=0, highlightthickness=0,
+        bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
+    )
+    play_button = tk.Button(mswpr_frame, text='Play', font=Constants.FONT, width=5, command=GameControl.play_game)
+    stop_button = tk.Button(mswpr_frame, text='Stop', font=Constants.FONT, width=5, command=GameControl.stop_game)
 
     @staticmethod
     def init_window() -> None:
         """Initialize window widgets."""
-        WindowControl.root.resizable(0, 0)
-        WindowControl.root.title('FreeForm Minesweeper')
-        WindowControl.root.bind('<Control-i>', lambda event: GameControl.invert_board())
+        WindowControl.hidden_root.withdraw()
+        WindowControl.game_root.resizable(0, 0)
+        WindowControl.game_root.title('FreeForm Minesweeper')
+        WindowControl.game_root.protocol("WM_DELETE_WINDOW", WindowControl.hidden_root.destroy)
+        WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.main_frame.grid_propagate(0)
         WindowControl.menu_frame.grid_propagate(0)
         WindowControl.board_frame.grid_propagate(0)
@@ -1198,7 +1208,7 @@ class WindowControl:
         """Create and display the settings window."""
         WindowControl.settings_button.config(state='disabled')
         WindowControl.play_button.config(state='disabled')
-        settings_root = tk.Toplevel()
+        settings_root = tk.Toplevel(class_='FFM Options')
         settings_root.title('FreeForm Minesweeper Options')
         settings_root.resizable(0, 0)
         if get_os() == 'Windows':
@@ -1829,11 +1839,11 @@ def main() -> None:
     Constants.init_window_icons()
     Constants.init_fonts()
     WindowControl.init_dialogue_customization()
-    Constants.DEFAULT_COLOUR = WindowControl.root.cget('bg')
+    Constants.DEFAULT_COLOUR = WindowControl.game_root.cget('bg')
     if get_os() == 'Windows':
-        WindowControl.root.iconbitmap(Constants.MAIN_ICON_ICO)
+        WindowControl.game_root.iconbitmap(Constants.MAIN_ICON_ICO)
     elif get_os() == 'Linux':
-        WindowControl.root.iconphoto(False, Constants.MAIN_ICON_PNG)
+        WindowControl.game_root.iconphoto(False, Constants.MAIN_ICON_PNG)
     WindowControl.init_menu()
     WindowControl.diff_frame.grid_slaves()[-2].invoke()
     WindowControl.init_board()
@@ -1843,8 +1853,8 @@ def main() -> None:
 
     while True:
         try:
-            WindowControl.root.update_idletasks()
-            WindowControl.root.update()
+            WindowControl.game_root.update_idletasks()
+            WindowControl.game_root.update()
         except tk.TclError:
             break
         else:
