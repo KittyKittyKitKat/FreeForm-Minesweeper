@@ -1840,8 +1840,6 @@ def main() -> None:
     if not MetaData.is_release_up_to_date():
         MetaData.outdated_notice()
     tkFont.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT.cget('family'), size=Constants.FONT_BIG.cget('size'))
-    # Remember to remove
-    WindowControl.root.bind('y', lambda e: GameControl.save_time_to_file())
 
     while True:
         try:
