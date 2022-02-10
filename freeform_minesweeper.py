@@ -1468,9 +1468,13 @@ class WindowControl:
         with open(leaderboard_file, 'r', newline='') as fp:
             reader = csv.DictReader(fp)
             current_leaderboard = list(reader)
+            fieldnames = reader.fieldnames
 
         def update_leaderboard():
-            ...
+            with open(leaderboard_file, 'w', newline='') as write_fp:
+                writer = csv.DictWriter(write_fp, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(current_leaderboard)
 
         def leaderboard_view_root_close():
             """Handler for leaderboard entry window closing"""
@@ -1483,7 +1487,41 @@ class WindowControl:
                 return
 
         def rename_player():
-            ...
+            """Rename a player in the leaderboard"""
+            new_player_name = simpledialog.askstring(
+                'FFMS Player Name Change',
+                'Enter New Name [A-Z]',
+                parent=leaderboard_view_root
+            )
+            if new_player_name is None:
+                return
+            if not new_player_name.isalpha():
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
+                WindowControl.messagebox_open = False
+                return
+            new_player_name = new_player_name.upper()
+            if new_player_name:
+                old_player_name = player_var.get().upper()
+                for entry in current_leaderboard:
+                    if entry['Player'] == new_player_name:
+                        WindowControl.messagebox_open = True
+                        messagebox.showerror(title='FFM Leaderboard Error', message='Player names already exists')
+                        WindowControl.messagebox_open = False
+                        return
+                for entry in current_leaderboard:
+                    if entry['Player'] == old_player_name:
+                        break
+                else:
+                    WindowControl.messagebox_open = True
+                    messagebox.showerror(title='FFM Leaderboard Error', message='Player cannot be renamed.\nPlayer does not exist')
+                    WindowControl.messagebox_open = False
+                    return
+                for entry in current_leaderboard:
+                    if entry['Player'] == old_player_name:
+                        entry['Player'] = new_player_name
+                player_var.set(new_player_name)
+                update_leaderboard()
 
         def rename_board():
             """Rename a board in the leaderboard"""
@@ -1494,21 +1532,27 @@ class WindowControl:
             )
             if new_board_name is None:
                 return
+            if not new_board_name.isalpha():
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
+                WindowControl.messagebox_open = False
+                return
             new_board_name = new_board_name.upper()
             if new_board_name:
+                nb = notebook_pages[selected_page_index]
+                old_board_name = nb.tab(nb.select(), 'text').upper()
                 player = player_var.get().upper()
                 for entry in current_leaderboard:
-                    if entry['Player'] == player and entry['Board'] == new_board_name:
+                    if entry['Player'] == player and entry['Board'] == new_board_name and entry['Board'] != old_board_name:
                         WindowControl.messagebox_open = True
                         messagebox.showerror(title='FFM Leaderboard Error', message='Board names must be unique for a player')
                         WindowControl.messagebox_open = False
                         return
-                nb = notebook_pages[selected_page_index]
-                old_board_name = nb.tab(nb.select(), 'text').upper()
                 for entry in current_leaderboard:
                     if entry['Board'] == old_board_name and entry['Player'] == player:
                         entry['Board'] = new_board_name
                 display_boards_from_player()
+                update_leaderboard()
 
         def delete_board():
             """Delete all a boards times from a player
@@ -1532,6 +1576,7 @@ class WindowControl:
             ]
             selected_page_index = 0
             display_boards_from_player()
+            update_leaderboard()
 
         def delete_time():
             """Delete a single time from a player"""
@@ -1555,6 +1600,7 @@ class WindowControl:
                     break
             current_leaderboard.remove(entry_to_remove)
             display_boards_from_player()
+            update_leaderboard()
 
         def canvas_item_popup(event, canvas, popup):
             nonlocal canvas_right_clicked, canvas_right_clicked_time_id
@@ -1568,6 +1614,7 @@ class WindowControl:
 
         def display_boards_from_player():
             """Display the boards from a player in a paginated notebook"""
+            nonlocal selected_page_index
             boards = [entry for entry in current_leaderboard if entry['Player'] == player_var.get().upper()]
             page_left_btn.grid_remove()
             page_right_btn.grid_remove()
@@ -1577,6 +1624,7 @@ class WindowControl:
                 page.destroy()
 
             current_width = 0
+            selected_page_index = 0
             current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
             notebook_pages.clear()
 
@@ -1701,8 +1749,7 @@ class WindowControl:
         time_popup_menu.add_command(label='Close')
 
         player_entry_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
-        player_entry_popup_menu.add_command(label='Rename')
-        # notebook_popup_menu.add_command(label='Delete')
+        player_entry_popup_menu.add_command(label='Rename', command=lambda: rename_player())
         player_entry_popup_menu.add_separator()
         player_entry_popup_menu.add_command(label='Close')
 
@@ -1723,6 +1770,7 @@ class WindowControl:
         player_entry.bind('<Control-KeyRelease-a>', lambda e: player_entry.select_range(0, tk.END))
         player_entry.bind('<Button-3>', lambda event: WindowControl.make_popup_menu(event, player_entry_popup_menu))
         player_var.trace_add('write', lambda *_: display_boards_from_player())
+        player_var.trace_add('write', lambda *_: player_var.set(player_var.get().upper()) if not player_var.get().isupper() else None)
 
     @staticmethod
     def generate_board_thumbnail(compressed_board_id):
