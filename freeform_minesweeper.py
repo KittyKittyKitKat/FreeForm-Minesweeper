@@ -306,7 +306,7 @@ class GameControl:
     def check_win() -> None:
         """Check if the game has been won, and executes winning sequence if so."""
         if GameControl.squares_uncovered == GameControl.squares_to_win and GameControl.game_state is GameState.PLAYING:
-            WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[16])
+            WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[16])
             GameControl.game_state = GameState.DONE
             GameControl.flags_placed = GameControl.num_mines
             WindowControl.update_flag_counter()
@@ -323,7 +323,7 @@ class GameControl:
     @staticmethod
     def has_lost() -> None:
         """Execute losing sequence."""
-        WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[15])
+        WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[15])
         GameControl.game_state = GameState.DONE
         for square in WindowControl.board_frame.grid_slaves():
             if square.enabled and not square.uncovered and not square.flagged and square.value == -1:
@@ -403,8 +403,8 @@ class GameControl:
                 sq.bind('<Button-3>', lambda event, square=sq: square.flag())
             sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
-        WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
-        WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
+        WindowControl.new_game_button.bind('<ButtonPress-1>', lambda event: WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[14]))
+        WindowControl.new_game_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
         options = WindowControl.play_button.grid_info()
         WindowControl.play_button.grid_remove()
         WindowControl.stop_button.grid(**options)
@@ -434,16 +434,16 @@ class GameControl:
                 default=messagebox.NO
             )
             if reset:
-                WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
+                WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
                 WindowControl.messagebox_open = False
                 return
             else:
                 WindowControl.messagebox_open = False
         GameControl.game_state = GameState.DONE
-        WindowControl.reset_button.unbind('<ButtonPress-1>')
-        WindowControl.reset_button.unbind('<ButtonRelease-1>')
+        WindowControl.new_game_button.unbind('<ButtonPress-1>')
+        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
-        WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
+        WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
         WindowControl.reset_timer()
         for square in WindowControl.board_frame.grid_slaves():
             if square.enabled:
@@ -470,8 +470,8 @@ class GameControl:
         GameControl.on_hold = True
         WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
         WindowControl.game_root.unbind('<Control-f>')
-        WindowControl.reset_button.unbind('<ButtonPress-1>')
-        WindowControl.reset_button.unbind('<ButtonRelease-1>')
+        WindowControl.new_game_button.unbind('<ButtonPress-1>')
+        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
         WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
         GameControl.new_game()
@@ -947,7 +947,7 @@ class WindowControl:
         timer_frame: Frame to group timer widgets.
         flags_frame: Frame to group flag widgets.
         controls_frame: Frame to group control widgets.
-        reset_button: Game reset button.
+        new_game_button: Game reset button.
         mode_switch_button: Click mode switch button.
         settings_button: Settings button.
         play_button: Play game button.
@@ -976,8 +976,18 @@ class WindowControl:
     flags_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     controls_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     leaderboard_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-    reset_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0, bg=Constants.BACKGROUND_COLOUR)
-    mode_switch_button = tk.Label(mswpr_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE, bd=0, bg=Constants.BACKGROUND_COLOUR)
+    new_game_button = tk.Label(
+        mswpr_frame,
+        width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
+        bd=0, highlightthickness=0,
+        bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
+    )
+    mode_switch_button = tk.Label(
+        mswpr_frame,
+        width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
+        bd=0, highlightthickness=0,
+        bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
+    )
     settings_button = tk.Button(
         mswpr_frame,
         width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
@@ -1056,10 +1066,10 @@ class WindowControl:
         WindowControl.stop_button['font'] = Constants.FONT
 
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
-        WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[13])
+        WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
         WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19], command=WindowControl.settings_window)
         WindowControl.mode_switch_button.grid(row=0, column=0, sticky='nsew')
-        WindowControl.reset_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3, sticky='nsew')
+        WindowControl.new_game_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3, sticky='nsew')
         WindowControl.settings_button.grid(row=0, column=2, sticky='nsew')
         WindowControl.play_button.grid(row=1, column=0, columnspan=3, sticky='nsew')
         WindowControl.mswpr_frame.grid(row=0, column=2)
@@ -1103,7 +1113,8 @@ class WindowControl:
 
         leaderboard_button = tk.Button(
             WindowControl.leaderboard_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
-            bd=0, im=Constants.LEADERBOARD_ICON_PNG, command=WindowControl.leaderboard_view_window
+            bd=0, highlightthickness=0, bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR,
+            im=Constants.LEADERBOARD_ICON_PNG, command=WindowControl.leaderboard_view_window
         )
         leaderboard_button.grid(row=0, column=0)
         WindowControl.leaderboard_frame.grid(row=0, column=5)
@@ -1377,8 +1388,8 @@ class WindowControl:
             try:
                 WindowControl.settings_button.config(state='normal')
                 WindowControl.stop_button.config(state='normal')
-                WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
-                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
+                WindowControl.new_game_button.bind('<ButtonPress-1>', lambda event: WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[14]))
+                WindowControl.new_game_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
             except Exception:
                 status_flag.set('Failed:Main window destroyed')
             else:
@@ -1426,8 +1437,8 @@ class WindowControl:
 
         WindowControl.settings_button.config(state='disabled')
         WindowControl.stop_button.config(state='disabled')
-        WindowControl.reset_button.unbind('<ButtonPress-1>')
-        WindowControl.reset_button.unbind('<ButtonRelease-1>')
+        WindowControl.new_game_button.unbind('<ButtonPress-1>')
+        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
 
         save_time_root = tk.Toplevel(class_='FFM Leaderboard')
         save_time_root.title('Save to Leaderboard')
@@ -1499,8 +1510,8 @@ class WindowControl:
             try:
                 WindowControl.settings_button.config(state='normal')
                 WindowControl.stop_button.config(state='normal')
-                WindowControl.reset_button.bind('<ButtonPress-1>', lambda event: WindowControl.reset_button.config(im=Constants.BOARD_IMAGES[14]))
-                WindowControl.reset_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
+                WindowControl.new_game_button.bind('<ButtonPress-1>', lambda event: WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[14]))
+                WindowControl.new_game_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
             except Exception:
                 return
 
@@ -1731,8 +1742,8 @@ class WindowControl:
 
         WindowControl.settings_button.config(state='disabled')
         WindowControl.stop_button.config(state='disabled')
-        WindowControl.reset_button.unbind('<ButtonPress-1>')
-        WindowControl.reset_button.unbind('<ButtonRelease-1>')
+        WindowControl.new_game_button.unbind('<ButtonPress-1>')
+        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
 
         leaderboard_view_root = tk.Toplevel(class_='FFM Leaderboard')
         leaderboard_view_root.title('FreeForm Minesweeper Leaderboard')
