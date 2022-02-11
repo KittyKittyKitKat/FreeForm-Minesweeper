@@ -145,6 +145,10 @@ class Constants:
     SEGMENT_HEIGHT = 46
     SEGMENT_WIDTH = 26
     PADDING_DIST = 5
+    MIN_ROWS = 1
+    MIN_COLUMNS = 25
+    MAX_ROWS = 60
+    MAX_COLUMNS = 60
     BACKGROUND_COLOUR = '#c0c0c0'
     DEFAULT_COLOUR = '#d9d9d9'
     MAINLOOP_TIME = 0.01
@@ -1309,7 +1313,7 @@ class WindowControl:
         rows_label = tk.Label(rows_frame, text='Rows', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         rows_slider = tk.Scale(
             rows_frame, variable=rows, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
-            resolution=1, from_=1, to=60, length=300, bd=0
+            resolution=1, from_=Constants.MIN_ROWS, to=Constants.MAX_ROWS, length=300, bd=0
         )
         rows_label.pack(anchor='w')
         rows_slider.pack()
@@ -1320,7 +1324,7 @@ class WindowControl:
         columns_label = tk.Label(rows_frame, text='Columns', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         columns_slider = tk.Scale(
             rows_frame, variable=columns, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
-            resolution=1, from_=25, to=60, length=300, bd=0
+            resolution=1, from_=Constants.MIN_COLUMNS, to=Constants.MAX_COLUMNS, length=300, bd=0
         )
         columns_label.pack(anchor='w')
         columns_slider.pack()
