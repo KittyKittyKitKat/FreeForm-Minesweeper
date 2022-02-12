@@ -2,6 +2,7 @@
 
 Play the game by executing the file as a program, and have fun!
 The only code intended to be executed is the main() function. Any other use may result in errors or other undefined behaviour.
+
 """
 import csv
 import random
@@ -18,7 +19,6 @@ from tkinter import messagebox
 from tkinter import font as tkFont
 from tkinter import simpledialog
 from tkinter import ttk
-from typing import Optional
 
 import requests
 
@@ -26,26 +26,35 @@ from PIL import Image, ImageTk
 
 
 class MetaData:
-    """Provide variables and utitlies for checking current release against the most up to date release.
+    """Provide variables and utilities for checking current release against the most up to date release.
 
     Attributes:
-        github_api_releases_url: URL to fetch data from.
-        github_releases_url: URL to releases page for project.
-        plaform: The OS of the system the program is running on.
-        version: The version of the code, shipped with releases.
+        github_api_releases_url (str): URL to fetch data from.
+        github_releases_url (str): URL to releases page for project.
+        platform (str): The OS of the system the program is running on.
+        version (str): The version of the code, shipped with releases.
 
     """
     github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
     github_releases_url = 'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
     platform = system()
-    # This is a dummy variable for the purpose of source code.
-    # The releases will have the proper information contained within
-    # This information will directly correlate to the release info on GitHub
+
+    # This is a dummy value for the purpose of source code.
+    # The releases will have the proper information contained within.
+    # This information will directly correlate to the release info on GitHub.
     version = 'vX.X.X'
 
     @staticmethod
-    def get_release_tags(url: str) -> list[str]:
-        """Fetch the releases tags from GitHub's repo API."""
+    def get_release_tags(url):
+        """Fetch the releases tags from GitHub's repo API.
+
+        Args:
+            url (str): Url pointing to the API JSON for GitHub releases.
+
+        Returns:
+            list[str]: A list of all the release tags for the OS the game is running on.
+
+        """
         github_release_data = requests.get(url).json()
         tags = [release['tag_name'] for release in github_release_data]
         tags_linux, tags_windows = [
@@ -57,8 +66,13 @@ class MetaData:
             return tags_windows
 
     @staticmethod
-    def is_release_up_to_date() -> bool:
-        """Compare release to most up to date."""
+    def is_release_up_to_date():
+        """Compare release to most up to date.
+
+        Returns:
+            bool: True if the version is the most recent, or is the development dummy version.
+
+        """
         if MetaData.version == 'vX.X.X':
             return True
         tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
@@ -78,7 +92,7 @@ class MetaData:
         return up_to_date_release == current_release
 
     @staticmethod
-    def outdated_notice() -> None:
+    def outdated_notice():
         """Display pop up message detailing release is out of date."""
         message = (
             f'This release is not up to date, '
@@ -94,19 +108,19 @@ class MetaData:
 
 
 class ClickMode(Enum):
-    """Enum represeting the current clicking mode of the game"""
+    """Enum representing the current clicking mode of the game."""
     UNCOVER = auto()
     FLAG = auto()
 
 
 class GameState(Enum):
-    """Enum representing the current state of the game"""
+    """Enum representing the current state of the game."""
     DONE = auto()
     PLAYING = auto()
 
 
 class Difficulty(Enum):
-    """Enum representing the difficulty values for the game, in percentages"""
+    """Enum representing the difficulty values for the game, in percentages."""
     EASY = 0.13
     MEDIUM = 0.16
     HARD = 0.207
@@ -116,30 +130,32 @@ class Difficulty(Enum):
 class Constants:
     """Container for various game constants.
 
+    Data types listed are intended data types to be used after all objects have been initialized.
     Attributes:
-        BOARD_IMAGES: Sprites used for the base Minesweeper game.
-        SEVSEG_IMAGES: Sprites used for seven segment displays.
-        EXTENDED_BOARD_IMAGES: Sprites used for multimine mode.
-        BOARD_SQUARE_SIZE: Size of a square on the board, in pixels.
-        SEGMENT_HEIGHT: Height of a seven segment number, in pixels.
-        SEGMENT_WIDTH: Width of a seven segment number, in pixels.
-        PADDING_DIST: Padding distance to space various widgets, in pixels.
-        BACKGROUND_COLOUR: Background colour of the window, in #rrggbb
-        DEFAULT_COLOUR: Default colour of the window, in #rrggbb
-        FONT: Smaller font used for in game text.
-        FONT_BIG: Larger font used for in game text.
-        MAINLOOP_TIME: Time spent sleeping in mainloop of game.
-        LOCKED_BLACK_SQUARE: Sprite for a locked disabled square.
-        UNLOCKED_BLACK_SQUARE: Sprite for an unlocked disabled square.
-        FILE_EXTENSION: File extension used for saving and loading board files.
-        FILE_TYPE: File type and extension, for file dialogues.
-        LEADERBOARD_FILENAME: Path to the leaderboard JSON used to save times.
-        SAVE_LOAD_DIR: Default directory for saving and loading board files.
-        MAIN_ICON_ICO: Path to main window icon, relatively.
-        SETTINGS_ICON_ICO: Path to settings window icon, relatively.
-        LEADERBOARD_ICON_ICO: Path to leaderboard window icon, relatively.
-        MAIN_ICON_PNG: PNG image for main window icon.
-        SETTINGS_ICON_PNG: PNG image for settings window icon.
+        BOARD_IMAGES (list[tk.PhotoImage]): Sprites used for the base Minesweeper game.
+        SEVSEG_IMAGES (list[tk.PhotoImage]): Sprites used for seven segment displays.
+        EXTENDED_BOARD_IMAGES (list[tk.PhotoImage]): Sprites used for multimine mode.
+        BOARD_SQUARE_SIZE (int): Size of a square on the board, in pixels.
+        SEGMENT_HEIGHT (int): Height of a seven segment number, in pixels.
+        SEGMENT_WIDTH (int): Width of a seven segment number, in pixels.
+        PADDING_DIST (int): Padding distance to space various widgets, in pixels.
+        BACKGROUND_COLOUR (str): Background colour of the window, in #rrggbb.
+        DEFAULT_COLOUR (str): Default colour of the window, in #rrggbb.
+        FONT (tkFont.Font): Smaller font used for in game text.
+        FONT_BIG (tkFont.Font): Larger font used for in game text.
+        MAINLOOP_TIME (float): Time spent sleeping in mainloop of game.
+        LOCKED_BLACK_SQUARE (tk.PhotoImage): Sprite for a locked disabled square.
+        UNLOCKED_BLACK_SQUARE (tk.PhotoImage): Sprite for an unlocked disabled square.
+        FILE_EXTENSION (str): File extension used for saving and loading board files.
+        FILE_TYPE (tuple[str, str]): File type and extension, for file dialogues.
+        LEADERBOARD_FILENAME (str): Path to the leaderboard JSON used to save times.
+        SAVE_LOAD_DIR (str): Default directory for saving and loading board files.
+        MAIN_ICON_ICO (str): Path to main window icon, relatively.
+        SETTINGS_ICON_ICO (str): Path to settings window icon, relatively.
+        LEADERBOARD_ICON_ICO (str): Path to leaderboard window icon, relatively.
+        MAIN_ICON_PNG (str): PNG image for main window icon.
+        SETTINGS_ICON_PNG (str): PNG image for settings window icon.
+
     """
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
@@ -163,13 +179,13 @@ class Constants:
     LEADERBOARD_ICON_ICO = 'assets/icon_leaderboard.ico'
 
     @staticmethod
-    def init_board_images() -> None:
-        """Initialize the images used for the game board
+    def init_board_images():
+        """Initialize the images used for the game board.
 
-        First the proper sprite is drawn on UNLOCKED_BLACK_SQUARE
-        Doing this procedurally keeps the spritesheet tidy
-        The board spritesheet is load and cut into the individual squares
-        All the PIL images are converted to PhotoImage objects for TKinter
+        First the proper sprite is drawn on UNLOCKED_BLACK_SQUARE.
+        Doing this procedurally keeps the spritesheet tidy.
+        The board spritesheet is load and cut into the individual squares.
+        All the PIL images are converted to PhotoImage objects for TKinter.
         """
         ubs_x, ubs_y = Constants.UNLOCKED_BLACK_SQUARE.size
         for i in range(ubs_y):
@@ -191,11 +207,11 @@ class Constants:
         setattr(Constants, 'BOARD_IMAGES', BOARD_IMAGES)
 
     @staticmethod
-    def init_sevseg_images() -> None:
-        """Initialize the images used for the seven segment displays
+    def init_sevseg_images():
+        """Initialize the images used for the seven segment displays.
 
-        The seven segment spritesheet is load and cut into the individual numbers
-        All the PIL images are converted to PhotoImage objects for TKinter
+        The seven segment spritesheet is load and cut into the individual numbers.
+        All the PIL images are converted to PhotoImage objects for TKinter.
         """
         SEVSEG_IMAGES = []
         with Image.open('assets/sevseg_sheet.png') as sevseg_sheet:
@@ -208,11 +224,11 @@ class Constants:
         setattr(Constants, 'SEVSEG_IMAGES', SEVSEG_IMAGES)
 
     @staticmethod
-    def init_extended_board_images() -> None:
-        """Initialize the images used for the multimine mode
+    def init_extended_board_images():
+        """Initialize the images used for the multimine mode.
 
-        The extened board spritesheet is load and cut into the individual squares
-        All the PIL images are converted to PhotoImage objects for TKinter
+        The extended board spritesheet is load and cut into the individual squares.
+        All the PIL images are converted to PhotoImage objects for TKinter.
         """
         EXTENDED_BOARD_IMAGES = []
         with Image.open('assets/board_sheet_extended.png') as board_sheet:
@@ -225,10 +241,10 @@ class Constants:
         setattr(Constants, 'EXTENDED_BOARD_IMAGES', EXTENDED_BOARD_IMAGES)
 
     @staticmethod
-    def init_window_icons() -> None:
-        """Initialize the images used for the window icons
+    def init_window_icons():
+        """Initialize the images used for the window icons.
 
-        The PIL images are converted to PhotoImage objects for TKinter
+        The PIL images are converted to PhotoImage objects for TKinter.
         """
         MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
         SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
@@ -239,6 +255,10 @@ class Constants:
 
     @staticmethod
     def init_fonts():
+        """Initialize the fonts used in the game.
+
+        Searches if the included font exists and uses it. Defaults to Courier.
+        """
         if 'Minesweeper' in tkFont.families():
             FONT = tkFont.Font(family='Minesweeper', size=7, weight='normal')
             FONT_BIG = tkFont.Font(family='Minesweeper', size=9, weight='normal')
@@ -250,18 +270,18 @@ class Constants:
 
 
 class Options:
-    """Container for utilites to customize the game
+    """Container for utilities to customize the game
 
     Attributes:
-        multimines: Flag if the game is in multimine mode.
-        grace_rule: Flag if the grace rule is set.
-        multimine_sq_inc: Probability of getting multimines buff.
-        flagless: Flag if the game is in flagless mode.
-        multimine_mine_inc: Percentage mine increase in multimine mode.
-        rows: Number of rows in the game space.
-        cols: DNumber of colummns in the game space.
-        window_width: Width of the window, in pixels.
-        board_height: Height of the game board, in pixels.
+        multimines (bool): Flag if the game is in multimine mode.
+        grace_rule (bool): Flag if the grace rule is set.
+        multimine_sq_inc (float): Probability of getting multimines buff.
+        flagless (bool): Flag if the game is in flagless mode.
+        multimine_mine_inc (float): Percentage mine increase in multimine mode.
+        rows (int): Number of rows in the game space.
+        cols (int): Number of columns in the game space.
+        window_width (int): Width of the window, in pixels.
+        board_height (int): Height of the game board, in pixels.
 
     """
     multimines = False
@@ -276,19 +296,19 @@ class Options:
 
 
 class GameControl:
-    """Container for utilites to control the game
+    """Container for utilities to control the game
 
     Attributes:
-        click_mode: Flag controlling how mouse events are handled.
-        game_state: Flag controlling if the game is in progress.
-        difficulty: Flag representing the current difficulty of the game.
-        num_mines: Number of mines in the board.
-        squares_to_win: Number of squares to uncover needed to win.
-        squares_uncovered: Number of squares that have been uncovered.
-        flags_placed: Number of flags placed on the board.
-        seconds_elapsed: Time elapsed playing the game, in seconds.
-        on_hold: Flag controlling if the game is on hold, ie, creating a board.
-        drag_mode: Flag controlling if clicking dragging adds or remove squares in board creation.
+        click_mode (ClickMode): Flag controlling how mouse events are handled.
+        game_state (GameState): Flag controlling if the game is in progress.
+        difficulty (Difficulty): Flag representing the current difficulty of the game.
+        num_mines (int): Number of mines in the board.
+        squares_to_win (int): Number of squares to uncover needed to win.
+        squares_uncovered (int): Number of squares that have been uncovered.
+        flags_placed (int): Number of flags placed on the board.
+        seconds_elapsed (int): Time elapsed playing the game, in seconds.
+        on_hold (bool): Flag controlling if the game is on hold, ie, creating a board.
+        drag_mode (bool): Flag controlling if clicking dragging adds or remove squares in board creation.
 
     """
     click_mode = ClickMode.UNCOVER
@@ -303,8 +323,8 @@ class GameControl:
     drag_mode = True
 
     @staticmethod
-    def check_win() -> None:
-        """Check if the game has been won, and executes winning sequence if so."""
+    def check_win():
+        """Check if the game has been won, and execute winning sequence if so."""
         if GameControl.squares_uncovered == GameControl.squares_to_win and GameControl.game_state is GameState.PLAYING:
             WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[16])
             GameControl.game_state = GameState.DONE
@@ -321,7 +341,7 @@ class GameControl:
                 GameControl.save_time_to_file()
 
     @staticmethod
-    def has_lost() -> None:
+    def has_lost():
         """Execute losing sequence."""
         WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[15])
         GameControl.game_state = GameState.DONE
@@ -343,7 +363,7 @@ class GameControl:
                     square.config(im=Constants.EXTENDED_BOARD_IMAGES[square.num_flags + 42])
 
     @staticmethod
-    def play_game() -> None:
+    def play_game():
         """Core gameplay loop when it is being played as Minesweeper, or a variant."""
         WindowControl.game_root.unbind('<Control-i>')
         if Options.flagless:
@@ -424,8 +444,8 @@ class GameControl:
         GameControl.game_state = GameState.PLAYING
 
     @staticmethod
-    def new_game() -> None:
-        """Display dialouge prompt to start a new game, and reset if confirmed."""
+    def new_game():
+        """Display dialogue prompt to start a new game, and start a new game if confirmed."""
         if GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
             WindowControl.messagebox_open = True
             reset = messagebox.askyesno(
@@ -452,8 +472,8 @@ class GameControl:
             GameControl.play_game()
 
     @staticmethod
-    def stop_game() -> None:
-        """Display dialouge prompt to stop the current game, and place game on hold if confirmed."""
+    def stop_game():
+        """Display dialogue prompt to stop the current game, and place game on hold if confirmed."""
         if GameControl.game_state is GameState.PLAYING:
             WindowControl.messagebox_open = True
             stop = messagebox.askyesno(
@@ -498,7 +518,7 @@ class GameControl:
             sq.unbind('<Double-Button-1>')
 
     @staticmethod
-    def change_difficulty(difficulty: Difficulty, btn_pressed: tk.Button) -> None:
+    def change_difficulty(difficulty: Difficulty, btn_pressed: tk.Button):
         """Change the difficulty of the game.
 
         Args:
@@ -513,22 +533,22 @@ class GameControl:
         btn_pressed.config(relief='sunken', bg=Constants.BACKGROUND_COLOUR)
 
     @staticmethod
-    def fill_board() -> None:
+    def fill_board():
         """Make all squares enabled."""
         for sq in WindowControl.board_frame.grid_slaves():
             if not sq.enabled:
                 sq.toggle_enable()
 
     @staticmethod
-    def clear_board() -> None:
+    def clear_board():
         """Make all squares disabled."""
         for sq in WindowControl.board_frame.grid_slaves():
             if sq.enabled:
                 sq.toggle_enable()
 
     @staticmethod
-    def switch_mode() -> None:
-        """Switch the effect clcking has a square during the game."""
+    def switch_mode():
+        """Switch the effect clicking has a square during the game."""
         if GameControl.click_mode is ClickMode.UNCOVER:
             GameControl.click_mode = ClickMode.FLAG
             WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[18])
@@ -550,8 +570,13 @@ class GameControl:
                     sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
     @staticmethod
-    def compress_board() -> list[str]:
-        """Compress the current board to its smallest possible form."""
+    def compress_board():
+        """Compress the current board to its smallest possible form.
+
+        Return
+            list[str]: A list of binary strings representing a game board.
+
+        """
         # Keep track of the leftmost enabled square. Set to the right side of the field
         leftmost = Options.cols - 1
         # Will be the final bit mapping of the board
@@ -605,11 +630,26 @@ class GameControl:
 
     @staticmethod
     def compress_board_textually():
+        """Compress board to it's smallest form using running length compression.
+
+        Returns:
+            str: Run length encoded string representing a game board.
+
+        """
         board = 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
         return ''.join(str(len(list(g)))+k for k, g in groupby(board))
 
     @staticmethod
     def decompress_board_textually(txt_compressed_board):
+        """Decompress a running length encoded board back into a list of binary strings.
+
+        Args:
+            txt_compressed_board (str): Run length encoded board.
+
+        Returns:
+            list[str]: A list of binary strings representing a game board.
+
+        """
         decompressed_board = ''
         current_num = ''
         for char in txt_compressed_board:
@@ -622,7 +662,7 @@ class GameControl:
         return decompressed_board
 
     @staticmethod
-    def save_board() -> None:
+    def save_board():
         """Save the current board to a file."""
         compressed_board = GameControl.compress_board()
         board_file = filedialog.asksaveasfilename(
@@ -649,11 +689,11 @@ class GameControl:
             WindowControl.messagebox_open = False
 
     @staticmethod
-    def load_board(filename: str = None) -> None:
+    def load_board(filename=None):
         """Load an external board into the game.
 
         Args:
-            filename: Name of the board file to load.
+            filename (str, optional): Name of the board file to load. Defaults to None.
 
         """
         board_file = filename or filedialog.askopenfilename(initialdir=Constants.SAVE_LOAD_DIR, title='Open Board', filetypes=Constants.FILE_TYPE)
@@ -679,17 +719,18 @@ class GameControl:
                     WindowControl.board_frame.grid_slaves(row=curr_row, column=curr_col)[0].toggle_enable()
 
     @staticmethod
-    def invert_board() -> None:
+    def invert_board():
         """Toggle all the squares on the board betwixt enabled and disabled."""
         for sq in WindowControl.board_frame.grid_slaves():
             sq.toggle_enable()
 
     @staticmethod
-    def save_time_to_file(filename: str = Constants.LEADERBOARD_FILENAME) -> None:
+    def save_time_to_file(filename=Constants.LEADERBOARD_FILENAME):
         """Save the completion time for the current board to the leaderboard file.
 
         Args:
-            filename (optional): File path to save time to. Defaults to `Constants.LEADERBOARD_FILENAME`.
+            filename (str, optional): File path to save time to. Defaults to Constants.LEADERBOARD_FILENAME.
+
         """
         try:
             with open(filename, newline='') as read_fp:
@@ -751,23 +792,23 @@ class BoardSquare(tk.Label):
     """A toggable square used in playing Minesweeper.
 
     Args:
-        master: Parent widget.
-        size: Dimensions, in pixels.
-        tk_image: Image displayed in square.
+        master (tk.Widget): Parent widget.
+        size (int): Dimensions, in pixels.
+        tk_image (tk.PhotoImage): Image displayed in square.
 
     Attributes:
-        master: Parent widget
-        image: Image displayed in square.
-        uncovered: Flag for if the square has been uncovered.
-        flagged: Flag for if the square has been flagged.
-        enabled: Flag if the square is enabled to use in game.
-        num_flags: Number of flags on the square.
-        value: Number in the square.
-        directions: 8 main directions.
-        neighbours: Neighbouring squares, in each of the 8 directions.
+        master (tk.Widget): Parent widget
+        image (tk.PhotoImage): Image displayed in square.
+        uncovered (bool): Flag for if the square has been uncovered.
+        flagged (bool): Flag for if the square has been flagged.
+        enabled (bool): Flag if the square is enabled to use in game.
+        num_flags (int): Number of flags on the square.
+        value (int): Number in the square.
+        directions (tuple[str, str, str, str, str, str, str, str]): 8 main directions.
+        neighbours (dict[str, BoardSquare]): Neighbouring squares, in each of the 8 directions.
 
     """
-    def __init__(self, master: tk.Widget, size: int, tk_image: tk.PhotoImage) -> None:
+    def __init__(self, master, size, tk_image):
         super().__init__(master, height=size, width=size, im=tk_image, bd=0)
         self.master = master
         self.image = tk_image
@@ -779,8 +820,8 @@ class BoardSquare(tk.Label):
         self.directions = ('nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se')
         self.neighbours = dict.fromkeys(self.directions)
 
-    def link_to_neighbours(self) -> None:
-        """Find and store all neighbouring squares"""
+    def link_to_neighbours(self):
+        """Find and store all neighbouring squares."""
         grid_x = self.grid_info()['row']
         grid_y = self.grid_info()['column']
         directions = list(self.directions)
@@ -800,8 +841,8 @@ class BoardSquare(tk.Label):
                         if isinstance(child_widget, BoardSquare) and child_widget.enabled:
                             self.neighbours[curr_direction] = child_widget
 
-    def uncover(self) -> None:
-        """Uncover the square."""
+    def uncover(self):
+        """Uncover the square if allowed and check if that results in thw game being won."""
         if not self.enabled or GameControl.game_state is GameState.DONE:
             return
         if not self.uncovered and not self.flagged:
@@ -837,8 +878,8 @@ class BoardSquare(tk.Label):
                 self.config(im=self.image)
         GameControl.check_win()
 
-    def flag(self) -> None:  # For normal gameplay
-        """Toggle a flag on the square."""
+    def flag(self):  # For normal gameplay
+        """Toggle a flag on the square, and update the counter."""
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
         if not self.flagged and GameControl.flags_placed < GameControl.num_mines:
@@ -855,8 +896,8 @@ class BoardSquare(tk.Label):
             GameControl.flags_placed -= 1
         WindowControl.update_flag_counter()
 
-    def add_flag(self) -> None:  # For multimine
-        """Add a flag to the square."""
+    def add_flag(self):  # For multimine
+        """Add a flag to the square, and update the counter."""
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
         if self.num_flags < 5 and GameControl.flags_placed < GameControl.num_mines:
@@ -870,8 +911,8 @@ class BoardSquare(tk.Label):
             self.config(im=self.image)
         WindowControl.update_flag_counter()
 
-    def remove_flag(self) -> None:  # For multimine
-        """Remove a flag from the square."""
+    def remove_flag(self):  # For multimine
+        """Remove a flag from the square, and update the counter."""
         if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
             return
         if self.num_flags > 0:
@@ -887,7 +928,7 @@ class BoardSquare(tk.Label):
             self.config(im=self.image)
         WindowControl.update_flag_counter()
 
-    def chord(self) -> None:
+    def chord(self):
         """Chord the square (click all the squares around it if appropriate)."""
         if not self.enabled or GameControl.game_state is GameState.DONE:
             return
@@ -901,26 +942,26 @@ class BoardSquare(tk.Label):
                     if neighbour is not None and not neighbour.flagged:
                         neighbour.uncover()
 
-    def toggle_enable(self) -> None:
-        """Toggle square betwixt enabled and disabled"""
+    def toggle_enable(self):
+        """Toggle square between enabled and disabled."""
         if self.enabled:
             self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
         else:
             self.config(im=self.image)
         self.enabled = not self.enabled
 
-    def lock(self) -> None:
+    def lock(self):
         """Lock the square so it can't be toggled."""
         if not self.enabled:
             self.config(im=Constants.LOCKED_BLACK_SQUARE)
 
-    def unlock(self) -> None:
+    def unlock(self):
         """Unlock the square so it can be toggled."""
         if not self.enabled:
             self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
 
-    def reset(self) -> None:
-        """Reset the square back to base initialization"""
+    def reset(self):
+        """Reset the square back to base initialization."""
         self.image = Constants.BOARD_IMAGES[20]
         self.config(im=self.image)
         self.uncovered = False
@@ -932,28 +973,31 @@ class BoardSquare(tk.Label):
 
 
 class WindowControl:
-    """Utility class containing the window objects and related funuctions.
+    """Utility class containing the window objects and related functions.
 
     Attributes:
-        messagebox_open: Flag if a messagebo is open so multiple are not created and stacked.
-        hidden_root: Absolute parent of the program. Only used for handling game close.
-        game_root: Main window of the program.
-        main_frame: Primary frame all other widgets reside in.
-        menu_frame: Frame all control widgets reside in.
-        board_frame: Frame all squares of the board reside in.
-        mswpr_frame: Frame to group various game widgets.
-        presets_frame: Frame to group preset widgets.
-        diff_frame: Frame to group difficulty widgets.
-        timer_frame: Frame to group timer widgets.
-        flags_frame: Frame to group flag widgets.
-        controls_frame: Frame to group control widgets.
-        new_game_button: Game reset button.
-        mode_switch_button: Click mode switch button.
-        settings_button: Settings button.
-        play_button: Play game button.
-        stop_button: Stop game button.
+        messagebox_open (bool): Flag if a messagebox is open so multiple are not created and stacked.
+        hidden_root (tk.Tk): Absolute parent of the program. Only used for handling game close.
+        game_root (tk.Toplevel): Main window of the program.
+        main_frame (tk.Frame): Primary frame all other widgets reside in.
+        menu_frame (tk.Frame): Frame all control widgets reside in.
+        board_frame (tk.Frame): Frame all squares of the board reside in.
+        mswpr_frame (tk.Frame): Frame to group various game widgets.
+        presets_frame (tk.Frame): Frame to group preset widgets.
+        diff_frame (tk.Frame): Frame to group difficulty widgets.
+        timer_frame (tk.Frame): Frame to group timer widgets.
+        flags_frame (tk.Frame): Frame to group flag widgets.
+        controls_frame (tk.Frame): Frame to group control widgets.
+        leaderboard_frame (tk.Frame): Frame to group leaderboard widgets.
+        new_game_button (tk.Label): Game reset button.
+        mode_switch_button (tk.Label): Click mode switch button.
+        settings_button (tk.Button): Settings button.
+        play_button (tk.Button): Play game button.
+        stop_button (tk.Button): Stop game button.
+
     """
     messagebox_open = False
+
     hidden_root = tk.Tk()
     game_root = tk.Toplevel(class_='FreeForm Minesweeper')
     main_frame = tk.Frame(
@@ -976,6 +1020,7 @@ class WindowControl:
     flags_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     controls_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     leaderboard_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
+
     new_game_button = tk.Label(
         mswpr_frame,
         width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
@@ -998,7 +1043,7 @@ class WindowControl:
     stop_button = tk.Button(mswpr_frame, text='Stop', width=5, command=GameControl.stop_game)
 
     @staticmethod
-    def init_window() -> None:
+    def init_window():
         """Initialize window widgets."""
         WindowControl.hidden_root.withdraw()
         WindowControl.game_root.resizable(0, 0)
@@ -1015,7 +1060,7 @@ class WindowControl:
         WindowControl.main_frame.grid(row=2, column=0, sticky='nsew')
 
     @staticmethod
-    def init_board() -> None:
+    def init_board():
         """Initialize board widgets."""
         for i in range(Options.rows):
             WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
@@ -1030,7 +1075,7 @@ class WindowControl:
                 sq.grid(row=x, column=y, sticky='nsew')
 
     @staticmethod
-    def init_menu() -> None:
+    def init_menu():
         """Initialize menu widgets."""
         preset_easy = tk.Button(
             WindowControl.presets_frame, text='Easy', font=Constants.FONT, width=6,
@@ -1175,7 +1220,7 @@ class WindowControl:
         simpledialog.ask = lambda title, prompt, **kw: simpledialog._QueryString(title, prompt, have_entry=False, **kw).result
 
     @staticmethod
-    def update_timer() -> None:
+    def update_timer():
         """Update timer widgets."""
         if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
             seconds = list(str(int(GameControl.seconds_elapsed)).zfill(3))
@@ -1183,13 +1228,13 @@ class WindowControl:
                 number.config(im=Constants.SEVSEG_IMAGES[int(seconds.pop())])
 
     @staticmethod
-    def reset_timer() -> None:
+    def reset_timer():
         """Reset timer widgets."""
         for number in WindowControl.timer_frame.grid_slaves():
             number.config(im=Constants.SEVSEG_IMAGES[0])
 
     @staticmethod
-    def update_flag_counter() -> None:
+    def update_flag_counter():
         """Update flag widgets."""
         flags = GameControl.num_mines - GameControl.flags_placed
         value_container = list(str(flags).zfill(3))
@@ -1197,18 +1242,19 @@ class WindowControl:
             number.config(im=Constants.SEVSEG_IMAGES[int(value_container.pop())])
 
     @staticmethod
-    def reset_flag_counter() -> None:
+    def reset_flag_counter():
         """Reset flag widgets."""
         for number in WindowControl.flags_frame.grid_slaves():
             number.config(im=Constants.SEVSEG_IMAGES[0])
 
     @staticmethod
-    def drag_enable_toggle(event: tk.EventType.Motion, initial_square: BoardSquare) -> None:
-        """Turn all squares under the mouse to a state based on an inital square while dragging.
+    def drag_enable_toggle(event, initial_square):
+        """Turn all squares under the mouse to a state based on an initial square while dragging.
 
         Args:
-            event: Mouse motion event.
-            initial_square: The initial square the dragging began on.
+            event (tk.Event): Mouse motion event.
+            initial_square (BoardSquare): The initial square the dragging began on.
+
         """
         x = (event.x_root - initial_square.master.winfo_rootx()) // Constants.BOARD_SQUARE_SIZE
         y = (event.y_root - initial_square.master.winfo_rooty()) // Constants.BOARD_SQUARE_SIZE
@@ -1223,7 +1269,7 @@ class WindowControl:
                     square.toggle_enable()
 
     @staticmethod
-    def settings_window() -> None:
+    def settings_window():
         """Create and display the settings window."""
         WindowControl.settings_button.config(state='disabled')
         WindowControl.play_button.config(state='disabled')
@@ -1236,7 +1282,7 @@ class WindowControl:
             settings_root.iconphoto(False, Constants.SETTINGS_ICON_PNG)
         settings_root.config(bg=Constants.DEFAULT_COLOUR)
 
-        def settings_root_close() -> None:
+        def settings_root_close():
             """Return button states to normal upon window close."""
             try:
                 WindowControl.settings_button.config(state='normal')
@@ -1341,7 +1387,7 @@ class WindowControl:
         columns_slider.pack()
         columns_frame.grid(row=6, column=0, sticky='w', pady=Constants.PADDING_DIST)
 
-        def submit_vars() -> None:
+        def submit_vars():
             """Save options to the Options container class, and close the window."""
             Options.grace_rule = gracerule.get()
             Options.multimines = multimode.get()
@@ -1372,19 +1418,20 @@ class WindowControl:
 
     @staticmethod
     def leaderboard_entry_window(player_var, board_var, status_flag, leaderboard_info):
-        """Create and display the leaderboard entry window to accept new times
+        """Create and display the leaderboard entry window to accept new times.
 
         Args:
-            player_var (tk.StringVar): String variable tracking the name of the player
-            board_var (tk.StringVar): String variable tracking the name of the board the player provides
-            status_flag (tk.StringVar): String variable tracking the status of submitting a leaderboard entry
-            leaderboard_info (tuple): Tuple containing the current leaderboard and the ID of the current board
+            player_var (tk.StringVar): String variable tracking the name of the player.
+            board_var (tk.StringVar): String variable tracking the name of the board the player provides.
+            status_flag (tk.StringVar): String variable tracking the status of submitting a leaderboard entry.
+            leaderboard_info (tuple): Tuple containing the current leaderboard and the ID of the current board.
+
         """
         leaderboard, board_id = leaderboard_info
         boards_with_id = [board for board in leaderboard if board['BoardID'] == board_id]
 
         def save_time_root_close():
-            """Handler for leaderboard entry window closing"""
+            """Handler for leaderboard entry window closing."""
             try:
                 WindowControl.settings_button.config(state='normal')
                 WindowControl.stop_button.config(state='normal')
@@ -1397,7 +1444,7 @@ class WindowControl:
                     status_flag.set('Failed:Window closed without saving')
 
         def submit_name_player():
-            """Validate user inputted names and close window if they satisfy requirements"""
+            """Validate user inputted names and close window if they satisfy requirements."""
             board_var.set(board_var.get().upper())
             player_var.set(player_var.get().upper())
             if not board_var.get() or not player_var.get():
@@ -1420,7 +1467,7 @@ class WindowControl:
             save_time_root.destroy()
 
         def autofill_board_name():
-            """Autofill the name in the board entry based on the current board and player"""
+            """Autofill the name in the board entry based on the current board and player."""
             board_for_player = [
                 board['Board']
                 for board in boards_with_id
@@ -1462,8 +1509,8 @@ class WindowControl:
         save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
 
         if Options.multimines:
-            mutlimine_label = tk.Label(save_time_frame, text='You played on multimine mode', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-            mutlimine_label.grid(row=5, column=0, pady=6)
+            multimine_label = tk.Label(save_time_frame, text='You played on multimine mode', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+            multimine_label.grid(row=5, column=0, pady=6)
 
         time_label.grid(row=0, column=0, pady=6)
         player_label.grid(row=1, column=0)
@@ -1481,10 +1528,12 @@ class WindowControl:
 
     @staticmethod
     def leaderboard_view_window(leaderboard_file=Constants.LEADERBOARD_FILENAME):
-        """Create and display window to view leaderboard in
+        """Create and display window to view leaderboard in.
 
          Args:
-            leaderboard_info (str): The current leaderboard file path
+            leaderboard_info (str, optional): The current leaderboard file path.
+                                              Defaults to Constants.LEADERBOARD_FILENAME.
+
         """
         MAX_WIDTH = 400
         NOTEBOOK_HEIGHT = 132 + Constants.FONT_BIG.metrics('linespace')
@@ -1500,13 +1549,14 @@ class WindowControl:
             fieldnames = reader.fieldnames
 
         def update_leaderboard():
+            """Write the current local leaderboard to disk."""
             with open(leaderboard_file, 'w', newline='') as write_fp:
                 writer = csv.DictWriter(write_fp, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(current_leaderboard)
 
         def leaderboard_view_root_close():
-            """Handler for leaderboard entry window closing"""
+            """Handler for leaderboard entry window closing."""
             try:
                 WindowControl.settings_button.config(state='normal')
                 WindowControl.stop_button.config(state='normal')
@@ -1516,7 +1566,7 @@ class WindowControl:
                 return
 
         def rename_player():
-            """Rename a player in the leaderboard"""
+            """Rename a player in the leaderboard."""
             new_player_name = simpledialog.askstring(
                 'FFMS Player Name Change',
                 'Enter New Name [A-Z]',
@@ -1553,7 +1603,7 @@ class WindowControl:
                 update_leaderboard()
 
         def rename_board():
-            """Rename a board in the leaderboard"""
+            """Rename a board in the leaderboard."""
             new_board_name = simpledialog.askstring(
                 'FFMS Board Name Change',
                 'Enter New Name [A-Z]',
@@ -1584,11 +1634,7 @@ class WindowControl:
                 update_leaderboard()
 
         def delete_board():
-            """Delete all a boards times from a player
-
-            Args:
-                tab_index (int): The index of the current leaderboard tab
-            """
+            """Delete all a boards times from a player."""
             nonlocal current_leaderboard, selected_page_index
             sure = simpledialog.ask(
                 'FFMS Leaderboard Deletion',
@@ -1608,7 +1654,7 @@ class WindowControl:
             update_leaderboard()
 
         def delete_time():
-            """Delete a single time from a player"""
+            """Delete a single time from a player."""
             sure = simpledialog.ask(
                 'FFMS Leaderboard Deletion',
                 'Are you sure you wish to delete this entry?',
@@ -1632,6 +1678,14 @@ class WindowControl:
             update_leaderboard()
 
         def canvas_item_popup(event, canvas, popup):
+            """Create a popup menu on a canvas in response to an event.
+
+            Args:
+                event (tk.Event): Event causing the popup to occur.
+                canvas (tk.Canvas): Canvas receiving the event.
+                popup (tk.Menu): Menu to display as a popup.
+
+            """
             nonlocal canvas_right_clicked, canvas_right_clicked_time_id
             try:
                 canvas_item_id = event.widget.find_withtag('current')[0]
@@ -1642,7 +1696,7 @@ class WindowControl:
             WindowControl.make_popup_menu(event, popup)
 
         def display_boards_from_player():
-            """Display the boards from a player in a paginated notebook"""
+            """Display the boards from a player in a paginated notebook."""
             nonlocal selected_page_index
             boards = [entry for entry in current_leaderboard if entry['Player'] == player_var.get().upper()]
             page_left_btn.grid_remove()
@@ -1726,6 +1780,12 @@ class WindowControl:
             change_notebook_page(0)
 
         def change_notebook_page(step):
+            """Change the displayed notebook in a paginated list of notebooks.
+
+            Args:
+                step (int): Amount of pages to move. Negative numbers move left and positive numbers move right.
+
+            """
             nonlocal selected_page_index
             if (selected_page_index + step) in range(len(notebook_pages)):
                 notebook_pages[selected_page_index].grid_remove()
@@ -1803,6 +1863,16 @@ class WindowControl:
 
     @staticmethod
     def generate_board_thumbnail(compressed_board_id):
+        """Generate a black and white image respresenting a board.
+
+        Args:
+            compressed_board_id (list[str]): List of binary strings representing the board.
+                                             Active squares are displayed as white, and inactive as black.
+
+        Returns:
+            PIL.Image: Image generated from board.
+
+        """
         board_bits = GameControl.decompress_board_textually(compressed_board_id)
         max_dim_y = len(max(board_bits, key=len))
         max_dim_x = len(board_bits)
@@ -1824,7 +1894,14 @@ class WindowControl:
         return thumbnail
 
     @staticmethod
-    def make_popup_menu(event, menu: tk.Menu):
+    def make_popup_menu(event, menu):
+        """Display a popup menu on the screen at the position of the mouse.
+
+        Args:
+            event (tk.Event): The event causing the menu to occur. Intended to be a (right) mouse click.
+            menu (tk.Menu): Menu to display on the screen.
+
+        """
         try:
             root = event.widget.winfo_toplevel()
             is_over_menu = tk.BooleanVar(master=root, value=True)
@@ -1843,13 +1920,20 @@ class WindowControl:
 
     @staticmethod
     def menu_on_notebook_tab_click(event, notebook, menu):
+        """Display a popup menu when the active tab of a notebook is clicked.
+
+        Args:
+            event (tk.Event): Event triggering the popup to occur.
+            notebook (ttk.Notebook): The notebook receiving the event.
+            menu (tk.Menu): The popup menu to display.
+        """
         clicked_tab = notebook.tk.call(notebook._w, 'identify', 'tab', event.x, event.y)
         active_tab = notebook.index(notebook.select())
         if clicked_tab == active_tab:
             WindowControl.make_popup_menu(event, menu)
 
 
-def main() -> None:
+def main():
     """Initialize all game components and run the mainloop."""
     WindowControl.init_window()
     Constants.init_fonts()
