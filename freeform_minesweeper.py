@@ -293,6 +293,7 @@ class Options:
     cols = 30
     window_width = Constants.BOARD_SQUARE_SIZE * cols
     board_height = Constants.BOARD_SQUARE_SIZE * rows
+    window_height = board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST
 
 
 class GameControl:
@@ -1449,7 +1450,8 @@ class WindowControl:
             Options.multimine_sq_inc = density.get()
             if rows.get() != Options.rows:
                 Options.board_height = Constants.BOARD_SQUARE_SIZE * rows.get()
-                WindowControl.main_frame.config(height=Options.board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST)
+                Options.window_height = Options.board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST
+                WindowControl.main_frame.config(height=Options.window_height)
                 WindowControl.board_frame.config(height=Options.board_height)
             if columns.get() != Options.cols:
                 Options.window_width = Constants.BOARD_SQUARE_SIZE * columns.get()
@@ -1459,12 +1461,11 @@ class WindowControl:
             if rows.get() != Options.rows or columns.get() != Options.cols:
                 Options.rows = rows.get()
                 Options.cols = columns.get()
+                WindowControl.game_root.geometry(f'{Options.window_width}x{Options.window_height}')
                 for sq in WindowControl.board_frame.grid_slaves():
                     sq.destroy()
                 WindowControl.init_board()
             settings_root.destroy()
-            WindowControl.settings_button.config(state=tk.NORMAL)
-            WindowControl.play_button.config(state=tk.NORMAL)
 
         submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
         submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
@@ -1982,7 +1983,7 @@ def main():
     if not MetaData.is_release_up_to_date():
         MetaData.outdated_notice()
     tkFont.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT.cget('family'), size=Constants.FONT_BIG.cget('size'))
-    WindowControl.game_root.bind('y', lambda event: GameControl.save_time_to_file())
+    # WindowControl.game_root.bind('y', lambda event: GameControl.save_time_to_file())
     while True:
         try:
             WindowControl.game_root.update_idletasks()
