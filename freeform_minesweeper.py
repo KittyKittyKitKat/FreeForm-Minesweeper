@@ -260,8 +260,8 @@ class Constants:
         Searches if the included font exists and uses it. Defaults to Courier.
         """
         if 'Minesweeper' in tkFont.families():
-            FONT = tkFont.Font(family='Minesweeper', size=7, weight='normal')
-            FONT_BIG = tkFont.Font(family='Minesweeper', size=9, weight='normal')
+            FONT = tkFont.Font(family='Minesweeper', size=7, weight=tk.NORMAL)
+            FONT_BIG = tkFont.Font(family='Minesweeper', size=9, weight=tk.NORMAL)
         else:
             FONT = tkFont.Font(family='Courier', size=9, weight='bold')
             FONT_BIG = tkFont.Font(family='Courier', size=15, weight='bold')
@@ -378,7 +378,7 @@ class GameControl:
 
         WindowControl.game_root.unbind('<Control-i>')
         if Options.flagless:
-            WindowControl.mode_switch_button.config(state='disabled')
+            WindowControl.mode_switch_button.config(state=tk.DISABLED)
         else:
             WindowControl.game_root.bind('<Control-f>', lambda event: GameControl.switch_mode())
             WindowControl.mode_switch_button.bind('<ButtonPress-1>', lambda event: GameControl.switch_mode())
@@ -445,7 +445,7 @@ class GameControl:
         )
         for btn in btns:
             if isinstance(btn, tk.Button):
-                btn.config(state='disabled')
+                btn.config(state=tk.DISABLED)
 
         WindowControl.update_flag_counter()
         GameControl.switch_mode()
@@ -517,9 +517,9 @@ class GameControl:
         )
         for btn in btns:
             if isinstance(btn, tk.Button):
-                btn.config(state='normal')
+                btn.config(state=tk.NORMAL)
         if Options.flagless:
-            WindowControl.mode_switch_button.config(state='normal')
+            WindowControl.mode_switch_button.config(state=tk.NORMAL)
         for sq in WindowControl.board_frame.grid_slaves():
             sq.unlock()
             sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
@@ -538,8 +538,8 @@ class GameControl:
         GameControl.difficulty = difficulty
         for diff_btn in WindowControl.diff_frame.grid_slaves():
             if isinstance(diff_btn, tk.Button):
-                diff_btn.config(relief='raised', bg=Constants.DEFAULT_COLOUR)
-        btn_pressed.config(relief='sunken', bg=Constants.BACKGROUND_COLOUR)
+                diff_btn.config(relief=tk.RAISED, bg=Constants.DEFAULT_COLOUR)
+        btn_pressed.config(relief=tk.SUNKEN, bg=Constants.BACKGROUND_COLOUR)
 
     @staticmethod
     def fill_board():
@@ -826,7 +826,7 @@ class BoardSquare(tk.Label):
         self.enabled = True
         self.num_flags = 0
         self.value = 0
-        self.directions = ('nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se')
+        self.directions = (tk.NW, tk.N, tk.NE, tk.W, tk.E, tk.SW, tk.S, tk.SE)
         self.neighbours = dict.fromkeys(self.directions)
 
     def link_to_neighbours(self):
@@ -1070,9 +1070,9 @@ class WindowControl:
         WindowControl.board_frame.grid_propagate(0)
         for i in range(7):
             WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
-        WindowControl.menu_frame.grid(row=0, column=0, sticky='nsew')
-        WindowControl.board_frame.grid(row=1, column=0, sticky='nsew')
-        WindowControl.main_frame.grid(row=2, column=0, sticky='nsew')
+        WindowControl.menu_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        WindowControl.board_frame.grid(row=1, column=0, sticky=tk.NSEW)
+        WindowControl.main_frame.grid(row=2, column=0, sticky=tk.NSEW)
 
     @staticmethod
     def init_board():
@@ -1087,7 +1087,7 @@ class WindowControl:
                 sq.toggle_enable()
                 sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
                 sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
-                sq.grid(row=x, column=y, sticky='nsew')
+                sq.grid(row=x, column=y, sticky=tk.NSEW)
 
     @staticmethod
     def init_menu():
@@ -1108,18 +1108,18 @@ class WindowControl:
             WindowControl.presets_frame, text='Expert', font=Constants.FONT, width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.EXPERT, diff_4) or GameControl.load_board('presets/expert.ffmnswpr')
         )
-        preset_easy.grid(row=0, column=0, sticky='nsew')
-        preset_medium.grid(row=0, column=1, sticky='nsew')
-        preset_hard.grid(row=1, column=0, sticky='nsew')
-        preset_expert.grid(row=1, column=1, sticky='nsew')
+        preset_easy.grid(row=0, column=0, sticky=tk.NSEW)
+        preset_medium.grid(row=0, column=1, sticky=tk.NSEW)
+        preset_hard.grid(row=1, column=0, sticky=tk.NSEW)
+        preset_expert.grid(row=1, column=1, sticky=tk.NSEW)
         WindowControl.presets_frame.grid(row=0, column=0)
 
         flag_left = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         flag_mid = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         flag_right = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        flag_left.grid(row=0, column=0, sticky='nsew')
-        flag_mid.grid(row=0, column=1, sticky='nsew')
-        flag_right.grid(row=0, column=2, sticky='nsew')
+        flag_left.grid(row=0, column=0, sticky=tk.NSEW)
+        flag_mid.grid(row=0, column=1, sticky=tk.NSEW)
+        flag_right.grid(row=0, column=2, sticky=tk.NSEW)
         WindowControl.flags_frame.grid(row=0, column=1)
 
         WindowControl.play_button['font'] = Constants.FONT
@@ -1128,18 +1128,18 @@ class WindowControl:
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
         WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
         WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19], command=WindowControl.settings_window)
-        WindowControl.mode_switch_button.grid(row=0, column=0, sticky='nsew')
-        WindowControl.new_game_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3, sticky='nsew')
-        WindowControl.settings_button.grid(row=0, column=2, sticky='nsew')
-        WindowControl.play_button.grid(row=1, column=0, columnspan=3, sticky='nsew')
+        WindowControl.mode_switch_button.grid(row=0, column=0, sticky=tk.NSEW)
+        WindowControl.new_game_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3, sticky=tk.NSEW)
+        WindowControl.settings_button.grid(row=0, column=2, sticky=tk.NSEW)
+        WindowControl.play_button.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW)
         WindowControl.mswpr_frame.grid(row=0, column=2)
 
         timer_left = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         timer_mid = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
         timer_right = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        timer_left.grid(row=0, column=0, sticky='nsew')
-        timer_mid.grid(row=0, column=1, sticky='nsew')
-        timer_right.grid(row=0, column=2, sticky='nsew')
+        timer_left.grid(row=0, column=0, sticky=tk.NSEW)
+        timer_mid.grid(row=0, column=1, sticky=tk.NSEW)
+        timer_right.grid(row=0, column=2, sticky=tk.NSEW)
         WindowControl.timer_frame.grid(row=0, column=3)
 
         diff_label = tk.Label(WindowControl.diff_frame, text='Difficulty', font=Constants.FONT, bg=Constants.BACKGROUND_COLOUR)
@@ -1159,11 +1159,11 @@ class WindowControl:
             WindowControl.diff_frame, text='4', font=Constants.FONT,
             command=lambda diff=Difficulty.EXPERT: GameControl.change_difficulty(diff, diff_4)
         )
-        diff_label.grid(row=0, column=1, columnspan=4, sticky='nsew')
-        diff_1.grid(row=1, column=1, sticky='nsew')
-        diff_2.grid(row=1, column=2, sticky='nsew')
-        diff_3.grid(row=1, column=3, sticky='nsew')
-        diff_4.grid(row=1, column=4, sticky='nsew')
+        diff_label.grid(row=0, column=1, columnspan=4, sticky=tk.NSEW)
+        diff_1.grid(row=1, column=1, sticky=tk.NSEW)
+        diff_2.grid(row=1, column=2, sticky=tk.NSEW)
+        diff_3.grid(row=1, column=3, sticky=tk.NSEW)
+        diff_4.grid(row=1, column=4, sticky=tk.NSEW)
         WindowControl.diff_frame.grid(row=0, column=4)
 
         fill_button = tk.Button(WindowControl.controls_frame, text='Fill', font=Constants.FONT, width=5, command=GameControl.fill_board)
@@ -1175,10 +1175,10 @@ class WindowControl:
         WindowControl.leaderboard_button.grid(row=0, column=0)
         WindowControl.leaderboard_frame.grid(row=0, column=5)
 
-        fill_button.grid(row=0, column=1, sticky='nsew')
-        clear_button.grid(row=1, column=1, sticky='nsew')
-        save_board_button.grid(row=0, column=2, sticky='nsew')
-        load_board_button.grid(row=1, column=2, sticky='nsew')
+        fill_button.grid(row=0, column=1, sticky=tk.NSEW)
+        clear_button.grid(row=1, column=1, sticky=tk.NSEW)
+        save_board_button.grid(row=0, column=2, sticky=tk.NSEW)
+        load_board_button.grid(row=1, column=2, sticky=tk.NSEW)
         WindowControl.controls_frame.grid(row=0, column=6)
 
     @staticmethod
@@ -1282,20 +1282,20 @@ class WindowControl:
     @staticmethod
     def lock_controls():
         """Lock the controls for the game."""
-        WindowControl.settings_button.config(state='disabled')
-        WindowControl.play_button.config(state='disabled')
-        WindowControl.stop_button.config(state='disabled')
-        WindowControl.leaderboard_button.config(state='disabled')
+        WindowControl.settings_button.config(state=tk.DISABLED)
+        WindowControl.play_button.config(state=tk.DISABLED)
+        WindowControl.stop_button.config(state=tk.DISABLED)
+        WindowControl.leaderboard_button.config(state=tk.DISABLED)
         WindowControl.new_game_button.unbind('<ButtonPress-1>')
         WindowControl.new_game_button.unbind('<ButtonRelease-1>')
 
     @staticmethod
     def unlock_controls():
         """Unlock the controls for the game."""
-        WindowControl.settings_button.config(state='normal')
-        WindowControl.play_button.config(state='normal')
-        WindowControl.stop_button.config(state='normal')
-        WindowControl.leaderboard_button.config(state='normal')
+        WindowControl.settings_button.config(state=tk.NORMAL)
+        WindowControl.play_button.config(state=tk.NORMAL)
+        WindowControl.stop_button.config(state=tk.NORMAL)
+        WindowControl.leaderboard_button.config(state=tk.NORMAL)
         WindowControl.new_game_button.bind('<ButtonPress-1>', lambda event: WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[14]))
         WindowControl.new_game_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
 
@@ -1358,10 +1358,10 @@ class WindowControl:
             grace_frame, text='Off', font=Constants.FONT_BIG, variable=gracerule,
             value=False, bg=Constants.DEFAULT_COLOUR, bd=0
         )
-        grace_label.pack(anchor='w')
-        grace_on_choice.pack(anchor='w')
-        grace_off_choice.pack(anchor='w')
-        grace_frame.grid(row=1, column=0, sticky='w', pady=Constants.PADDING_DIST)
+        grace_label.pack(anchor=tk.W)
+        grace_on_choice.pack(anchor=tk.W)
+        grace_off_choice.pack(anchor=tk.W)
+        grace_frame.grid(row=1, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
 
         multimode = tk.BooleanVar(settings_root, Options.multimines)
         multi_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
@@ -1374,32 +1374,32 @@ class WindowControl:
             multi_frame, text='MultiMine Mode', font=Constants.FONT_BIG, variable=multimode,
             value=True, bg=Constants.DEFAULT_COLOUR, bd=0
         )
-        multi_label.pack(anchor='w')
-        normal_choice.pack(anchor='w')
-        multi_choice.pack(anchor='w')
-        multi_frame.grid(row=2, column=0, sticky='w', pady=Constants.PADDING_DIST)
+        multi_label.pack(anchor=tk.W)
+        normal_choice.pack(anchor=tk.W)
+        multi_choice.pack(anchor=tk.W)
+        multi_frame.grid(row=2, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
 
         mines = tk.DoubleVar(settings_root, Options.multimine_mine_inc)
         mines_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
         mines_label = tk.Label(mines_frame, text='MultiMine Mine Increase', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         mines_slider = tk.Scale(
-            mines_frame, variable=mines, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            mines_frame, variable=mines, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
             resolution=0.01, from_=0.0, to=0.6, length=300, bd=0
         )
-        mines_label.pack(anchor='w')
+        mines_label.pack(anchor=tk.W)
         mines_slider.pack()
-        mines_frame.grid(row=3, column=0, sticky='w', pady=Constants.PADDING_DIST)
+        mines_frame.grid(row=3, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
 
         density = tk.DoubleVar(settings_root, Options.multimine_sq_inc)
         density_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
         density_label = tk.Label(density_frame, text='MultiMine Probability', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         density_slider = tk.Scale(
-            density_frame, variable=density, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            density_frame, variable=density, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
             resolution=0.01, from_=0.1, to=0.9, length=300, bd=0
         )
-        density_label.pack(anchor='w')
+        density_label.pack(anchor=tk.W)
         density_slider.pack()
-        density_frame.grid(row=4, column=0, sticky='w', pady=Constants.PADDING_DIST)
+        density_frame.grid(row=4, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
 
         flagless = tk.BooleanVar(settings_root, Options.flagless)
         flagless_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
@@ -1412,32 +1412,32 @@ class WindowControl:
             flagless_frame, text='On', font=Constants.FONT_BIG, variable=flagless,
             value=True, bg=Constants.DEFAULT_COLOUR, bd=0
         )
-        flagless_label.pack(anchor='w')
-        flagless_off_choice.pack(anchor='w')
-        flagless_on_choice.pack(anchor='w')
-        flagless_frame.grid(row=5, column=0, sticky='w', pady=Constants.PADDING_DIST)
+        flagless_label.pack(anchor=tk.W)
+        flagless_off_choice.pack(anchor=tk.W)
+        flagless_on_choice.pack(anchor=tk.W)
+        flagless_frame.grid(row=5, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
 
         rows = tk.IntVar(settings_root, Options.rows)
         rows_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
         rows_label = tk.Label(rows_frame, text='Rows', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         rows_slider = tk.Scale(
-            rows_frame, variable=rows, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            rows_frame, variable=rows, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
             resolution=1, from_=Constants.MIN_ROWS, to=Constants.MAX_ROWS, length=300, bd=0
         )
-        rows_label.pack(anchor='w')
+        rows_label.pack(anchor=tk.W)
         rows_slider.pack()
-        rows_frame.grid(row=6, column=0, sticky='w', pady=Constants.PADDING_DIST)
+        rows_frame.grid(row=6, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
 
         columns = tk.IntVar(settings_root, Options.cols)
         columns_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
         columns_label = tk.Label(rows_frame, text='Columns', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
         columns_slider = tk.Scale(
-            rows_frame, variable=columns, orient='horizontal', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            rows_frame, variable=columns, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
             resolution=1, from_=Constants.MIN_COLUMNS, to=Constants.MAX_COLUMNS, length=300, bd=0
         )
-        columns_label.pack(anchor='w')
+        columns_label.pack(anchor=tk.W)
         columns_slider.pack()
-        columns_frame.grid(row=6, column=0, sticky='w', pady=Constants.PADDING_DIST)
+        columns_frame.grid(row=6, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
 
         def submit_vars():
             """Save options to the Options container class, and close the window."""
@@ -1462,8 +1462,8 @@ class WindowControl:
                     sq.destroy()
                 WindowControl.init_board()
             settings_root.destroy()
-            WindowControl.settings_button.config(state='normal')
-            WindowControl.play_button.config(state='normal')
+            WindowControl.settings_button.config(state=tk.NORMAL)
+            WindowControl.play_button.config(state=tk.NORMAL)
 
         submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
         submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
@@ -1523,9 +1523,9 @@ class WindowControl:
             ]
             if board_for_player:
                 board_var.set(board_for_player[0])
-                name_entry.config(state='disabled')
+                name_entry.config(state=tk.DISABLED)
             elif not submitting:
-                name_entry.config(state='normal')
+                name_entry.config(state=tk.NORMAL)
                 name_entry.delete(0, tk.END)
 
         player_var.trace_add('write', lambda *_: autofill_board_name())
@@ -1784,7 +1784,7 @@ class WindowControl:
                         activefill='#444444'
                     )
 
-                times_canvas.config(yscrollcommand=times_scrollbar.set, scrollregion=times_canvas.bbox('all'))
+                times_canvas.config(yscrollcommand=times_scrollbar.set, scrollregion=times_canvas.bbox(tk.ALL))
                 if TEXT_HEIGHT * len(times) > NOTEBOOK_HEIGHT:
                     times_scrollbar.grid(row=1, column=2, sticky=tk.N+tk.S)
                     times_canvas.yview_moveto('0.0')
