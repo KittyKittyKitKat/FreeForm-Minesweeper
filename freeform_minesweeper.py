@@ -1330,6 +1330,7 @@ class WindowControl:
             except tk.TclError:
                 pass
 
+        toplevel_root.bind('<Escape>', lambda event: toplevel_root.destroy())
         return (toplevel_root, toplevel_root_close)
 
     @staticmethod
@@ -1981,7 +1982,7 @@ def main():
     if not MetaData.is_release_up_to_date():
         MetaData.outdated_notice()
     tkFont.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT.cget('family'), size=Constants.FONT_BIG.cget('size'))
-    # WindowControl.game_root.bind('y', lambda event: GameControl.save_time_to_file())
+    WindowControl.game_root.bind('y', lambda event: GameControl.save_time_to_file())
     while True:
         try:
             WindowControl.game_root.update_idletasks()
