@@ -1021,6 +1021,12 @@ class WindowControl:
     controls_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
     leaderboard_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
 
+    leaderboard_button = tk.Button(
+        leaderboard_frame,
+        width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
+        bd=0, highlightthickness=0,
+        bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
+    )
     new_game_button = tk.Label(
         mswpr_frame,
         width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
@@ -1156,12 +1162,8 @@ class WindowControl:
         save_board_button = tk.Button(WindowControl.controls_frame, text='Save', font=Constants.FONT, width=5, command=lambda: GameControl.save_board())
         load_board_button = tk.Button(WindowControl.controls_frame, text='Load', font=Constants.FONT, width=5, command=lambda: GameControl.load_board())
 
-        leaderboard_button = tk.Button(
-            WindowControl.leaderboard_frame, width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
-            bd=0, highlightthickness=0, bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR,
-            im=Constants.LEADERBOARD_ICON_PNG, command=WindowControl.leaderboard_view_window
-        )
-        leaderboard_button.grid(row=0, column=0)
+        WindowControl.leaderboard_button.config(im=Constants.LEADERBOARD_ICON_PNG, command=WindowControl.leaderboard_view_window)
+        WindowControl.leaderboard_button.grid(row=0, column=0)
         WindowControl.leaderboard_frame.grid(row=0, column=5)
 
         fill_button.grid(row=0, column=1, sticky='nsew')
@@ -1269,27 +1271,68 @@ class WindowControl:
                     square.toggle_enable()
 
     @staticmethod
-    def settings_window():
-        """Create and display the settings window."""
+    def lock_controls():
+        """Lock the controls for the game."""
         WindowControl.settings_button.config(state='disabled')
         WindowControl.play_button.config(state='disabled')
-        settings_root = tk.Toplevel(class_='FFM Options')
-        settings_root.title('FreeForm Minesweeper Options')
-        settings_root.resizable(0, 0)
-        if MetaData.platform == 'Windows':
-            settings_root.iconbitmap(Constants.SETTINGS_ICON_ICO)
-        elif MetaData.platform == 'Linux':
-            settings_root.iconphoto(False, Constants.SETTINGS_ICON_PNG)
-        settings_root.config(bg=Constants.DEFAULT_COLOUR)
+        WindowControl.stop_button.config(state='disabled')
+        WindowControl.leaderboard_button.config(state='disabled')
+        WindowControl.new_game_button.unbind('<ButtonPress-1>')
+        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
 
-        def settings_root_close():
-            """Return button states to normal upon window close."""
+    @staticmethod
+    def unlock_controls():
+        """Unlock the controls for the game."""
+        WindowControl.settings_button.config(state='normal')
+        WindowControl.play_button.config(state='normal')
+        WindowControl.stop_button.config(state='normal')
+        WindowControl.leaderboard_button.config(state='normal')
+        WindowControl.new_game_button.bind('<ButtonPress-1>', lambda event: WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[14]))
+        WindowControl.new_game_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
+
+    @staticmethod
+    def create_new_toplevel(title, class_, resizable, icon_ico, icon_png):
+        """Create a new Toplevel/popup window with attributes.
+
+        Args:
+            title (str): Title of the window.
+            class_ (str): WM Class of the window.
+            resizable (tuple[int, int]): X and Y resizability of the window.
+            icon_ico: ICO for window icon.
+            icon_png: PNG for window icon.
+
+        Returns:
+            tk.Toplevel: Window created.
+            function: Default function to be bound to the Toplevel's destruction. No parameters. Returns None.
+
+        """
+        WindowControl.lock_controls()
+        toplevel_root = tk.Toplevel(class_=class_)
+        toplevel_root.title(title)
+        toplevel_root.resizable(*resizable)
+        if MetaData.platform == 'Windows':
+            toplevel_root.iconbitmap(icon_ico)
+        elif MetaData.platform == 'Linux':
+            toplevel_root.iconphoto(False, icon_png)
+
+        def toplevel_root_close():
             try:
-                WindowControl.settings_button.config(state='normal')
-                WindowControl.play_button.config(state='normal')
-            except Exception:
+                WindowControl.unlock_controls()
+            except tk.TclError:
                 pass
 
+        return (toplevel_root, toplevel_root_close)
+
+    @staticmethod
+    def settings_window():
+        """Create and display the settings window."""
+        settings_root, settings_root_close = WindowControl.create_new_toplevel(
+            'FreeForm Minesweeper Options',
+            'FFM Options',
+            (0, 0),
+            Constants.SETTINGS_ICON_ICO,
+            Constants.SETTINGS_ICON_PNG
+        )
         settings_root.bind('<Destroy>', lambda event: settings_root_close())
 
         options_label = tk.Label(settings_root, text='Game Options', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
@@ -1429,14 +1472,12 @@ class WindowControl:
         """
         leaderboard, board_id = leaderboard_info
         boards_with_id = [board for board in leaderboard if board['BoardID'] == board_id]
+        submitting = False
 
         def save_time_root_close():
             """Handler for leaderboard entry window closing."""
             try:
-                WindowControl.settings_button.config(state='normal')
-                WindowControl.stop_button.config(state='normal')
-                WindowControl.new_game_button.bind('<ButtonPress-1>', lambda event: WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[14]))
-                WindowControl.new_game_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
+                WindowControl.lock_controls()
             except Exception:
                 status_flag.set('Failed:Main window destroyed')
             else:
@@ -1445,23 +1486,20 @@ class WindowControl:
 
         def submit_name_player():
             """Validate user inputted names and close window if they satisfy requirements."""
+            nonlocal submitting
+            submitting = True
             board_var.set(board_var.get().upper())
             player_var.set(player_var.get().upper())
+            submitting = False
             if not board_var.get() or not player_var.get():
-                WindowControl.messagebox_open = True
-                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered cannot be blank')
-                WindowControl.messagebox_open = False
+                status_flag.set('Failed:Names entered cannot be blank')
                 return
             if not (board_var.get().isalpha() and player_var.get().isalpha()):
-                WindowControl.messagebox_open = True
-                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
-                WindowControl.messagebox_open = False
+                status_flag.set('Failed:Names entered can only contain letters [A-Z]')
                 return
             for entry in leaderboard:
                 if entry['Player'] == player_var.get() and entry['Board'] == board_var.get():
-                    WindowControl.messagebox_open = True
-                    messagebox.showerror(title='FFM Leaderboard Error', message='Board names must be unique for a player')
-                    WindowControl.messagebox_open = False
+                    status_flag.set('Failed:Board names must be unique for a player')
                     return
             status_flag.set('Success')
             save_time_root.destroy()
@@ -1477,24 +1515,20 @@ class WindowControl:
             if board_for_player:
                 board_var.set(board_for_player[0])
                 name_entry.config(state='disabled')
-            else:
+            elif not submitting:
                 name_entry.config(state='normal')
+                name_entry.delete(0, tk.END)
 
         player_var.trace_add('write', lambda *_: autofill_board_name())
 
-        WindowControl.settings_button.config(state='disabled')
-        WindowControl.stop_button.config(state='disabled')
-        WindowControl.new_game_button.unbind('<ButtonPress-1>')
-        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
-
-        save_time_root = tk.Toplevel(class_='FFM Leaderboard')
-        save_time_root.title('Save to Leaderboard')
-        save_time_root.resizable(0, 0)
+        save_time_root, _ = WindowControl.create_new_toplevel(
+            'Save to Leaderboard',
+            'FFM Leaderboard',
+            (0, 0),
+            Constants.LEADERBOARD_ICON_ICO,
+            Constants.LEADERBOARD_ICON_PNG
+        )
         save_time_root.bind('<Destroy>', lambda event: save_time_root_close())
-        if MetaData.platform == 'Windows':
-            save_time_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
-        elif MetaData.platform == 'Linux':
-            save_time_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
 
         save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=400, height=200 if not Options.multimines else 250)
         save_time_frame.grid_propagate(False)
@@ -1521,9 +1555,9 @@ class WindowControl:
         save_time_frame.grid(row=0, column=0)
 
         player_entry.focus()
-        player_entry.bind('<Control-KeyRelease-a>', lambda e: player_entry.select_range(0, tk.END))
-        name_entry.bind('<Control-KeyRelease-a>', lambda e: name_entry.select_range(0, tk.END))
-        save_time_root.bind('<Return>', lambda e: submit_name_player())
+        player_entry.bind('<Control-KeyRelease-a>', lambda event: player_entry.select_range(0, tk.END))
+        name_entry.bind('<Control-KeyRelease-a>', lambda event: name_entry.select_range(0, tk.END))
+        save_time_root.bind('<Return>', lambda event: submit_name_player())
         save_button.wait_variable(status_flag)
 
     @staticmethod
@@ -1554,16 +1588,6 @@ class WindowControl:
                 writer = csv.DictWriter(write_fp, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(current_leaderboard)
-
-        def leaderboard_view_root_close():
-            """Handler for leaderboard entry window closing."""
-            try:
-                WindowControl.settings_button.config(state='normal')
-                WindowControl.stop_button.config(state='normal')
-                WindowControl.new_game_button.bind('<ButtonPress-1>', lambda event: WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[14]))
-                WindowControl.new_game_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
-            except Exception:
-                return
 
         def rename_player():
             """Rename a player in the leaderboard."""
@@ -1800,19 +1824,14 @@ class WindowControl:
             else:
                 page_right_btn.config(state=tk.NORMAL)
 
-        WindowControl.settings_button.config(state='disabled')
-        WindowControl.stop_button.config(state='disabled')
-        WindowControl.new_game_button.unbind('<ButtonPress-1>')
-        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
-
-        leaderboard_view_root = tk.Toplevel(class_='FFM Leaderboard')
-        leaderboard_view_root.title('FreeForm Minesweeper Leaderboard')
-        leaderboard_view_root.resizable(0, 0)
+        leaderboard_view_root, leaderboard_view_root_close = WindowControl.create_new_toplevel(
+            'FreeForm Minesweeper Leaderboard',
+            'FFM Leaderboard',
+            (0, 0),
+            Constants.LEADERBOARD_ICON_ICO,
+            Constants.LEADERBOARD_ICON_PNG
+        )
         leaderboard_view_root.bind('<Destroy>', lambda event: leaderboard_view_root_close())
-        if MetaData.platform == 'Windows':
-            leaderboard_view_root.iconbitmap(Constants.LEADERBOARD_ICON_ICO)
-        elif MetaData.platform == 'Linux':
-            leaderboard_view_root.iconphoto(False, Constants.LEADERBOARD_ICON_PNG)
 
         leaderboard_view_frame = tk.Frame(leaderboard_view_root, width=MAX_WIDTH)
         page_left_btn = tk.Button(
@@ -1856,7 +1875,7 @@ class WindowControl:
         player_entry.grid(row=1, column=0, columnspan=2, padx=(MAX_WIDTH + 2 - player_entry.winfo_reqwidth())//2)
         leaderboard_view_frame.grid(row=0, column=0, columnspan=2)
         player_entry.focus_set()
-        player_entry.bind('<Control-KeyRelease-a>', lambda e: player_entry.select_range(0, tk.END))
+        player_entry.bind('<Control-KeyRelease-a>', lambda event: player_entry.select_range(0, tk.END))
         player_entry.bind('<Button-3>', lambda event: WindowControl.make_popup_menu(event, player_entry_popup_menu))
         player_var.trace_add('write', lambda *_: display_boards_from_player())
         player_var.trace_add('write', lambda *_: player_var.set(player_var.get().upper()) if not player_var.get().isupper() else None)
@@ -1953,7 +1972,7 @@ def main():
     if not MetaData.is_release_up_to_date():
         MetaData.outdated_notice()
     tkFont.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT.cget('family'), size=Constants.FONT_BIG.cget('size'))
-
+    # WindowControl.game_root.bind('y', lambda event: GameControl.save_time_to_file())
     while True:
         try:
             WindowControl.game_root.update_idletasks()
