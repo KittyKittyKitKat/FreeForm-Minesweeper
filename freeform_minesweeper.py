@@ -365,6 +365,17 @@ class GameControl:
     @staticmethod
     def play_game():
         """Core gameplay loop when it is being played as Minesweeper, or a variant."""
+        squares = WindowControl.board_frame.grid_slaves()
+
+        for sq in squares:
+            if sq.enabled:
+                break
+        else:
+            WindowControl.messagebox_open = True
+            messagebox.showwarning(title='FreeForm Minesweeper', message='Cannot start a game with no active squares.')
+            WindowControl.messagebox_open = False
+            return
+
         WindowControl.game_root.unbind('<Control-i>')
         if Options.flagless:
             WindowControl.mode_switch_button.config(state='disabled')
@@ -381,8 +392,6 @@ class GameControl:
         if GameControl.click_mode is ClickMode.FLAG:
             GameControl.switch_mode()
         GameControl.on_hold = False
-
-        squares = WindowControl.board_frame.grid_slaves()
 
         GameControl.num_mines = min(int(num_squares * local_diff), 999)
         seed_mines = (GameControl.num_mines // 2) if Options.multimines else GameControl.num_mines
