@@ -444,7 +444,8 @@ class GameControl:
             WindowControl.diff_frame.grid_slaves(),
             WindowControl.controls_frame.grid_slaves(),
             WindowControl.presets_frame.grid_slaves(),
-            (WindowControl.settings_button,)
+            (WindowControl.settings_button,),
+            (WindowControl.leaderboard_button,)
         )
         for btn in btns:
             if isinstance(btn, tk.Button):
@@ -516,7 +517,8 @@ class GameControl:
             WindowControl.diff_frame.grid_slaves(),
             WindowControl.controls_frame.grid_slaves(),
             WindowControl.presets_frame.grid_slaves(),
-            (WindowControl.settings_button,)
+            (WindowControl.settings_button,),
+            (WindowControl.leaderboard_button,)
         )
         for btn in btns:
             if isinstance(btn, tk.Button):
@@ -1554,11 +1556,13 @@ class WindowControl:
             """Handler for leaderboard entry window closing."""
             try:
                 WindowControl.lock_controls()
-            except Exception:
+            except tk.TclError:
                 status_flag.set('Failed:Main window destroyed')
             else:
+                WindowControl.unlock_controls()
+                WindowControl.leaderboard_button.config(state=tk.DISABLED)
                 if status_flag.get() != 'Success':
-                    status_flag.set('Failed:Window closed without saving')
+                    status_flag.set('Failed:Leaderboard Entry window destroyed')
 
         def submit_name_player():
             """Validate user inputted names and close window if they satisfy requirements."""
@@ -1568,14 +1572,20 @@ class WindowControl:
             player_var.set(player_var.get().upper())
             submitting = False
             if not board_var.get() or not player_var.get():
-                status_flag.set('Failed:Names entered cannot be blank')
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='Save to Leaderboard Error', message='Names entered cannot be blank')
+                WindowControl.messagebox_open = False
                 return
             if not (board_var.get().isalpha() and player_var.get().isalpha()):
-                status_flag.set('Failed:Names entered can only contain letters [A-Z]')
+                WindowControl.messagebox_open = True
+                messagebox.showerror(title='Save to Leaderboard Error', message='Names entered can only contain letters [A-Z]')
+                WindowControl.messagebox_open = False
                 return
             for entry in leaderboard:
                 if entry['Player'] == player_var.get() and entry['Board'] == board_var.get():
-                    status_flag.set('Failed:Board names must be unique for a player')
+                    WindowControl.messagebox_open = True
+                    messagebox.showerror(title='FFM Leaderboard Error', message='Board names must be unique for a player')
+                    WindowControl.messagebox_open = False
                     return
             status_flag.set('Success')
             save_time_root.destroy()
