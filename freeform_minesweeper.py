@@ -592,11 +592,15 @@ class GameControl:
                     sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
 
     @staticmethod
-    def compress_board():
+    def compress_board(as_RLE):
         """Compress the current board to its smallest possible form.
 
-        Return
-            list[str]: A list of binary strings representing a game board.
+        Args:
+            as_RLE (bool): Return the compressed board as an RLE encoded string instead of bit strings.
+
+        Returns:
+            list[str]: A list of bit strings representing a game board, if as_RLE is false.
+            str: Run length encoded string representing a game board, if RLE is true.
 
         """
         # Keep track of the leftmost enabled square. Set to the right side of the field
@@ -648,25 +652,18 @@ class GameControl:
                 # Trim the bigging of the row from the index of the leftmost enabled square
                 board_bits[i] = row[leftmost:]
         # At this point the board is saved as rows of bits that has been trimmed down to the smallest possible dimensions of the board
+        if as_RLE:
+            board_txt = 'N'.join(board_bits).replace('1', 'E').replace('0', 'D')
+            board_rle = ''.join(str(len(list(g)))+k for k, g in groupby(board_txt))
+            return board_rle
         return board_bits
 
     @staticmethod
-    def compress_board_textually():
-        """Compress board to it's smallest form using running length compression.
-
-        Returns:
-            str: Run length encoded string representing a game board.
-
-        """
-        board = 'N'.join(GameControl.compress_board()).replace('1', 'E').replace('0', 'D')
-        return ''.join(str(len(list(g)))+k for k, g in groupby(board))
-
-    @staticmethod
-    def decompress_board_textually(txt_compressed_board):
-        """Decompress a running length encoded board back into a list of binary strings.
+    def decompress_board_textually(rle_compressed_board):
+        """Decompress a running length encoded board back into a list of bit strings.
 
         Args:
-            txt_compressed_board (str): Run length encoded board.
+            rle_compressed_board (str): Run length encoded board.
 
         Returns:
             list[str]: A list of binary strings representing a game board.
@@ -674,7 +671,7 @@ class GameControl:
         """
         decompressed_board = ''
         current_num = ''
-        for char in txt_compressed_board:
+        for char in rle_compressed_board:
             if char.isalpha():
                 decompressed_board += char * int(current_num)
                 current_num = ''
@@ -686,7 +683,7 @@ class GameControl:
     @staticmethod
     def save_board():
         """Save the current board to a file."""
-        compressed_board = GameControl.compress_board()
+        compressed_board = GameControl.compress_board(as_RLE=False)
         board_file = filedialog.asksaveasfilename(
             initialdir=Constants.SAVE_LOAD_DIR, title='Save Board',
             filetypes=Constants.FILE_TYPE, defaultextension=Constants.FILE_EXTENSION
@@ -767,7 +764,7 @@ class GameControl:
                 current_leaderboard = []
                 fieldnames = ['BoardID', 'Player', 'Board', 'Time', 'MultiMode', 'Date']
         try:
-            board_id = GameControl.compress_board_textually()
+            board_id = GameControl.compress_board(as_RLE=True)
         except tk.TclError:
             return
 
