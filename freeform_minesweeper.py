@@ -138,7 +138,6 @@ class Constants:
         BOARD_SQUARE_SIZE (int): Size of a square on the board, in pixels.
         SEGMENT_HEIGHT (int): Height of a seven segment number, in pixels.
         SEGMENT_WIDTH (int): Width of a seven segment number, in pixels.
-        PADDING_DIST (int): Padding distance to space various widgets, in pixels.
         BACKGROUND_COLOUR (str): Background colour of the window, in #rrggbb.
         DEFAULT_COLOUR (str): Default colour of the window, in #rrggbb.
         FONT (tkFont.Font): Smaller font used for in game text.
@@ -160,7 +159,6 @@ class Constants:
     BOARD_SQUARE_SIZE = 32
     SEGMENT_HEIGHT = 46
     SEGMENT_WIDTH = 26
-    PADDING_DIST = 5
     MIN_ROWS = 1
     MIN_COLUMNS = 25
     MAX_ROWS = 60
@@ -293,7 +291,7 @@ class Options:
     cols = 30
     window_width = Constants.BOARD_SQUARE_SIZE * cols
     board_height = Constants.BOARD_SQUARE_SIZE * rows
-    window_height = board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST
+    window_height = board_height + Constants.SEGMENT_HEIGHT + 4 * 5
 
 
 class GameControl:
@@ -1036,10 +1034,10 @@ class WindowControl:
     game_root = tk.Toplevel(class_='FreeForm Minesweeper')
     main_frame = tk.Frame(
         game_root, width=Options.window_width,
-        height=Options.board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST, bg='black'
+        height=Options.board_height + Constants.SEGMENT_HEIGHT + 4 * 5, bg='black'
     )
     menu_frame = tk.Frame(
-        main_frame, width=Options.window_width, height=Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST,
+        main_frame, width=Options.window_width, height=Constants.SEGMENT_HEIGHT + 4 * 5,
         bg=Constants.BACKGROUND_COLOUR
     )
     board_frame = tk.Frame(
@@ -1162,7 +1160,7 @@ class WindowControl:
         WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
         WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19], command=WindowControl.settings_window)
         WindowControl.mode_switch_button.grid(row=0, column=0, sticky=tk.NSEW)
-        WindowControl.new_game_button.grid(row=0, column=1, padx=Constants.PADDING_DIST, pady=3, sticky=tk.NSEW)
+        WindowControl.new_game_button.grid(row=0, column=1, padx=5, pady=3, sticky=tk.NSEW)
         WindowControl.settings_button.grid(row=0, column=2, sticky=tk.NSEW)
         WindowControl.play_button.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW)
         WindowControl.mswpr_frame.grid(row=0, column=2)
@@ -1417,7 +1415,7 @@ class WindowControl:
         settings_root.bind('<Destroy>', lambda event: settings_root_close())
 
         options_label = tk.Label(settings_root, text='Game Options', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
-        options_label.grid(row=0, column=0, pady=Constants.PADDING_DIST)
+        options_label.grid(row=0, column=0, pady=5)
 
         grace_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
         gracerule = tk.BooleanVar(settings_root, Options.grace_rule)
@@ -1433,7 +1431,7 @@ class WindowControl:
         grace_label.pack(anchor=tk.W)
         grace_on_choice.pack(anchor=tk.W)
         grace_off_choice.pack(anchor=tk.W)
-        grace_frame.grid(row=1, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
+        grace_frame.grid(row=1, column=0, sticky=tk.W, pady=5)
 
         multimode = tk.BooleanVar(settings_root, Options.multimines)
         multi_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
@@ -1449,7 +1447,7 @@ class WindowControl:
         multi_label.pack(anchor=tk.W)
         normal_choice.pack(anchor=tk.W)
         multi_choice.pack(anchor=tk.W)
-        multi_frame.grid(row=2, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
+        multi_frame.grid(row=2, column=0, sticky=tk.W, pady=5)
 
         mines = tk.DoubleVar(settings_root, Options.multimine_mine_inc)
         mines_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
@@ -1460,7 +1458,7 @@ class WindowControl:
         )
         mines_label.pack(anchor=tk.W)
         mines_slider.pack()
-        mines_frame.grid(row=3, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
+        mines_frame.grid(row=3, column=0, sticky=tk.W, pady=5)
 
         density = tk.DoubleVar(settings_root, Options.multimine_sq_inc)
         density_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
@@ -1471,7 +1469,7 @@ class WindowControl:
         )
         density_label.pack(anchor=tk.W)
         density_slider.pack()
-        density_frame.grid(row=4, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
+        density_frame.grid(row=4, column=0, sticky=tk.W, pady=5)
 
         flagless = tk.BooleanVar(settings_root, Options.flagless)
         flagless_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
@@ -1487,7 +1485,7 @@ class WindowControl:
         flagless_label.pack(anchor=tk.W)
         flagless_off_choice.pack(anchor=tk.W)
         flagless_on_choice.pack(anchor=tk.W)
-        flagless_frame.grid(row=5, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
+        flagless_frame.grid(row=5, column=0, sticky=tk.W, pady=5)
 
         rows = tk.IntVar(settings_root, Options.rows)
         rows_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
@@ -1498,7 +1496,7 @@ class WindowControl:
         )
         rows_label.pack(anchor=tk.W)
         rows_slider.pack()
-        rows_frame.grid(row=6, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
+        rows_frame.grid(row=6, column=0, sticky=tk.W, pady=5)
 
         columns = tk.IntVar(settings_root, Options.cols)
         columns_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
@@ -1509,7 +1507,7 @@ class WindowControl:
         )
         columns_label.pack(anchor=tk.W)
         columns_slider.pack()
-        columns_frame.grid(row=6, column=0, sticky=tk.W, pady=Constants.PADDING_DIST)
+        columns_frame.grid(row=6, column=0, sticky=tk.W, pady=5)
 
         def submit_vars():
             """Save options to the Options container class, and close the window."""
@@ -1520,7 +1518,7 @@ class WindowControl:
             Options.multimine_sq_inc = density.get()
             if rows.get() != Options.rows:
                 Options.board_height = Constants.BOARD_SQUARE_SIZE * rows.get()
-                Options.window_height = Options.board_height + Constants.SEGMENT_HEIGHT + 4 * Constants.PADDING_DIST
+                Options.window_height = Options.board_height + Constants.SEGMENT_HEIGHT + 4 * 5
                 WindowControl.main_frame.config(height=Options.window_height)
                 WindowControl.board_frame.config(height=Options.board_height)
             if columns.get() != Options.cols:
@@ -1538,7 +1536,7 @@ class WindowControl:
             settings_root.destroy()
 
         submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
-        submit_button.grid(row=7, column=0, pady=Constants.PADDING_DIST)
+        submit_button.grid(row=7, column=0, pady=5)
 
     @staticmethod
     def leaderboard_entry_window(player_var, board_var, status_flag, leaderboard_info):
