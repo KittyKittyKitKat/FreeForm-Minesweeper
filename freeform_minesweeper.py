@@ -377,6 +377,8 @@ class GameControl:
             WindowControl.messagebox_open = False
             return
 
+        WindowControl.clear_history()
+
         WindowControl.game_root.unbind('<Control-i>')
         if Options.flagless:
             WindowControl.mode_switch_button.config(state=tk.DISABLED)
@@ -428,6 +430,8 @@ class GameControl:
             sq.lock()
             sq.link_to_neighbours()
             sq.unbind('<B1-Motion>')
+            sq.unbind('<ButtonRelease-1>')
+            sq.unbind_all('<Button-1>')
             sq.bind('<Button-1>', lambda event, square=sq: square.uncover())
             if not(Options.flagless or Options.multimines):
                 sq.bind('<Button-3>', lambda event, square=sq: square.flag())
@@ -523,8 +527,14 @@ class GameControl:
             WindowControl.mode_switch_button.config(state=tk.NORMAL)
         for sq in WindowControl.board_frame.grid_slaves():
             sq.unlock()
-            sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
+            sq.bind('<Button-1>',
+                    lambda event, square=sq: (
+                        square.toggle_enable(),
+                        WindowControl.draw_history_step.append(square)
+                    )
+                )
             sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
+            sq.bind('<ButtonRelease-1>', lambda event: WindowControl.inc_history())
             sq.unbind('<Double-Button-1>')
 
     @staticmethod
@@ -548,6 +558,8 @@ class GameControl:
         for sq in WindowControl.board_frame.grid_slaves():
             if not sq.enabled:
                 sq.toggle_enable()
+                WindowControl.draw_history_step.append(sq)
+        WindowControl.inc_history()
 
     @staticmethod
     def clear_board():
@@ -555,6 +567,8 @@ class GameControl:
         for sq in WindowControl.board_frame.grid_slaves():
             if sq.enabled:
                 sq.toggle_enable()
+                WindowControl.draw_history_step.append(sq)
+        WindowControl.inc_history()
 
     @staticmethod
     def switch_mode():
@@ -727,12 +741,15 @@ class GameControl:
             for curr_col, bit in enumerate(bit_row):
                 if bit == '1':
                     WindowControl.board_frame.grid_slaves(row=curr_row, column=curr_col)[0].toggle_enable()
+        WindowControl.clear_history()
 
     @staticmethod
     def invert_board():
         """Toggle all the squares on the board betwixt enabled and disabled."""
         for sq in WindowControl.board_frame.grid_slaves():
             sq.toggle_enable()
+            WindowControl.draw_history_step.append(sq)
+        WindowControl.inc_history()
 
     @staticmethod
     def save_time_to_file(filename=Constants.LEADERBOARD_FILENAME):
@@ -987,6 +1004,9 @@ class WindowControl:
 
     Attributes:
         messagebox_open (bool): Flag if a messagebox is open so multiple are not created and stacked.
+        draw_history (list[list[BoardSquare]]): History stack used when drawing boards.
+        draw_history_buffer (list[list[BoardSquare]]): Buffer for the history for undoing and redoing.
+        draw_history_step (list[BoardSquare]): Intermediate history to track compound drawing actions.
         hidden_root (tk.Tk): Absolute parent of the program. Only used for handling game close.
         game_root (tk.Toplevel): Main window of the program.
         main_frame (tk.Frame): Primary frame all other widgets reside in.
@@ -1007,6 +1027,10 @@ class WindowControl:
 
     """
     messagebox_open = False
+
+    draw_history = []
+    draw_history_buffer = []
+    draw_history_step = []
 
     hidden_root = tk.Tk()
     game_root = tk.Toplevel(class_='FreeForm Minesweeper')
@@ -1086,9 +1110,17 @@ class WindowControl:
             for y in range(Options.cols):
                 sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[20])
                 sq.toggle_enable()
-                sq.bind('<Button-1>', lambda event, square=sq: square.toggle_enable())
+                sq.bind('<Button-1>',
+                    lambda event, square=sq: (
+                        square.toggle_enable(),
+                        WindowControl.draw_history_step.append(square)
+                    )
+                )
                 sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
+                sq.bind('<ButtonRelease-1>', lambda event: WindowControl.inc_history())
                 sq.grid(row=x, column=y, sticky=tk.NSEW)
+        WindowControl.game_root.bind('<Control-KeyPress-z>', lambda event: WindowControl.undo_history())
+        WindowControl.game_root.bind('<Control-Shift-KeyPress-Z>', lambda event: WindowControl.redo_history())
 
     @staticmethod
     def init_menu():
@@ -1260,6 +1292,43 @@ class WindowControl:
             number.config(im=Constants.SEVSEG_IMAGES[0])
 
     @staticmethod
+    def inc_history():
+        """Add the current history step to the history and check against the buffer."""
+        WindowControl.draw_history.append(WindowControl.draw_history_step.copy())
+        if WindowControl.draw_history_buffer and WindowControl.draw_history_step == WindowControl.draw_history_buffer[-1]:
+            WindowControl.draw_history_buffer.pop(-1)
+        else:
+            WindowControl.draw_history_buffer.clear()
+        WindowControl.draw_history_step.clear()
+
+    @staticmethod
+    def undo_history():
+        """Move to the previous point in history and add the current point to the buffer."""
+        if not WindowControl.draw_history:
+            return
+        step = WindowControl.draw_history.pop(-1)
+        WindowControl.draw_history_buffer.append(step)
+        for square in step:
+            square.toggle_enable()
+
+    @staticmethod
+    def redo_history():
+        """Move to the next point in the history buffer and add the buffer to the history."""
+        if not WindowControl.draw_history_buffer:
+            return
+        step = WindowControl.draw_history_buffer.pop(-1)
+        WindowControl.draw_history.append(step)
+        for square in step:
+            square.toggle_enable()
+
+    @staticmethod
+    def clear_history():
+        """Clear all the drawing history data."""
+        WindowControl.draw_history.clear()
+        WindowControl.draw_history_step.clear()
+        WindowControl.draw_history_buffer.clear()
+
+    @staticmethod
     def drag_enable_toggle(event, initial_square):
         """Turn all squares under the mouse to a state based on an initial square while dragging.
 
@@ -1279,6 +1348,7 @@ class WindowControl:
             else:
                 if square.enabled is not GameControl.drag_mode:
                     square.toggle_enable()
+                    WindowControl.draw_history_step.append(square)
 
     @staticmethod
     def lock_controls():
