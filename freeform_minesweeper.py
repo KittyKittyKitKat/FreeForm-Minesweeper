@@ -15,7 +15,6 @@ from itertools import chain, groupby
 from os.path import expanduser
 from platform import system
 from tkinter import filedialog
-from tkinter import messagebox
 from tkinter import font as tkFont
 from tkinter import simpledialog
 from tkinter import ttk
@@ -77,15 +76,16 @@ class MetaData:
             return True
         tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
         if tags == '':
-            WindowControl.messagebox_open = True
-            messagebox.showwarning(
+            WindowControl.dialogue_open = True
+            WindowControl.dialogue_box(
                 title='OS Fetching Error',
-                message=(
+                prompt=(
                     'Could not retrieve operating system information to queue updates.\n'
                     'You can safely ignore this message.'
-                )
+                ),
+                format=DialogueType.MESSAGE
             )
-            WindowControl.messagebox_open = False
+            WindowControl.dialogue_open = False
             return True
         up_to_date_release = tags[-1]
         current_release = MetaData.platform + '-' + MetaData.version
@@ -99,12 +99,13 @@ class MetaData:
             'and as such you may be missing out on important new features or bug fixes.\n'
             f'Please go to {MetaData.github_releases_url} to download and install the lastest release.'
         )
-        WindowControl.messagebox_open = True
-        messagebox.showwarning(
+        WindowControl.dialogue_open = True
+        WindowControl.dialogue_box(
             title='Outdated Release',
-            message=message
+            prompt=message,
+            format=DialogueType.MESSAGE
         )
-        WindowControl.messagebox_open = False
+        WindowControl.dialogue_open = False
 
 
 class ClickMode(Enum):
@@ -125,6 +126,12 @@ class Difficulty(Enum):
     MEDIUM = 0.16
     HARD = 0.207
     EXPERT = 0.25
+
+
+class DialogueType(Enum):
+    ASK = auto()
+    MESSAGE = auto()
+    ENTRY = auto()
 
 
 class Constants:
@@ -335,7 +342,11 @@ class GameControl:
                         square.config(im=Constants.BOARD_IMAGES[11])
                     else:
                         square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 38])
-            save_time = messagebox.askyesno(title='FreeForm Minesweeper', message='You Win!\nSave your time to the leaderboard?')
+            save_time = WindowControl.dialogue_box(
+                title='FreeForm Minesweeper',
+                prompt='You Win!\nSave your time to the leaderboard?',
+                format=DialogueType.ASK
+            )
             if save_time:
                 GameControl.save_time_to_file()
 
@@ -370,9 +381,13 @@ class GameControl:
             if sq.enabled:
                 break
         else:
-            WindowControl.messagebox_open = True
-            messagebox.showwarning(title='FreeForm Minesweeper', message='Cannot start a game with no active squares.')
-            WindowControl.messagebox_open = False
+            WindowControl.dialogue_open = True
+            WindowControl.dialogue_box(
+                title='FreeForm Minesweeper',
+                prompt='Cannot start a game with no active squares.',
+                format=DialogueType.MESSAGE
+            )
+            WindowControl.dialogue_open = False
             return
 
         WindowControl.clear_history()
@@ -460,18 +475,18 @@ class GameControl:
     def new_game():
         """Display dialogue prompt to start a new game, and start a new game if confirmed."""
         if GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
-            WindowControl.messagebox_open = True
-            reset = messagebox.askyesno(
+            WindowControl.dialogue_open = True
+            reset = WindowControl.dialogue_box(
                 title='Reset Game?',
-                message='Are you sure you want to start a new game?',
-                default=messagebox.NO
+                prompt='Are you sure you want to start a new game?',
+                format=DialogueType.ASK
             )
             if reset:
                 WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
-                WindowControl.messagebox_open = False
+                WindowControl.dialogue_open = False
                 return
             else:
-                WindowControl.messagebox_open = False
+                WindowControl.dialogue_open = False
         GameControl.game_state = GameState.DONE
         WindowControl.new_game_button.unbind('<ButtonPress-1>')
         WindowControl.new_game_button.unbind('<ButtonRelease-1>')
@@ -488,17 +503,17 @@ class GameControl:
     def stop_game():
         """Display dialogue prompt to stop the current game, and place game on hold if confirmed."""
         if GameControl.game_state is GameState.PLAYING:
-            WindowControl.messagebox_open = True
-            stop = messagebox.askyesno(
+            WindowControl.dialogue_open = True
+            stop = WindowControl.dialogue_box(
                 title='Stop Playing?',
-                message='Are you sure you want to stop playing?',
-                default=messagebox.NO
+                prompt='Are you sure you want to stop playing?',
+                format=DialogueType.ASK
             )
             if not stop:
-                WindowControl.messagebox_open = False
+                WindowControl.dialogue_open = False
                 return
             else:
-                WindowControl.messagebox_open = False
+                WindowControl.dialogue_open = False
         GameControl.game_state = GameState.DONE
         GameControl.on_hold = True
         WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
@@ -693,21 +708,26 @@ class GameControl:
         if not board_file:
             return
         if not board_file.endswith(Constants.FILE_EXTENSION):
-            WindowControl.messagebox_open = True
-            messagebox.showerror(
+            WindowControl.dialogue_open = True
+            WindowControl.dialogue_box(
                 title='Extension Error',
-                message=f'Invalid extension for FreeForm Minesweeper board ({"".join(board_file.partition(".")[1:])}).'
+                prompt=f'Invalid extension for FreeForm Minesweeper board ({"".join(board_file.partition(".")[1:])}).',
+                format=DialogueType.MESSAGE
             )
-            WindowControl.messagebox_open = False
+            WindowControl.dialogue_open = False
             return
         try:
             with open(board_file, 'w') as board_save_file:
                 board_save_file.write('\n'.join(compressed_board))
                 board_save_file.write('\n')
         except Exception:
-            WindowControl.messagebox_open = True
-            messagebox.showerror(title='Saving Error', message='Was not able to save the file.')
-            WindowControl.messagebox_open = False
+            WindowControl.dialogue_open = True
+            WindowControl.dialogue_box(
+                title='Saving Error',
+                prompt='Was not able to save the file.',
+                format=DialogueType.MESSAGE
+            )
+            WindowControl.dialogue_open = False
 
     @staticmethod
     def load_board(filename=None):
@@ -724,14 +744,22 @@ class GameControl:
             with open(board_file, 'r') as board_load_file:
                 board_bits = [line.strip() for line in board_load_file.readlines()]
         except Exception:
-            WindowControl.messagebox_open = True
-            messagebox.showerror(title='Opening Error', message='Was not able to open the file.')
-            WindowControl.messagebox_open = False
+            WindowControl.dialogue_open = True
+            WindowControl.dialogue_box(
+                title='Opening Error',
+                prompt='Was not able to open the file.',
+                format=DialogueType.MESSAGE
+            )
+            WindowControl.dialogue_open = False
             return
         if len(board_bits) > Options.rows or len(max(board_bits, key=len)) > Options.cols:
-            WindowControl.messagebox_open = True
-            messagebox.showerror(title='Loading Error', message='Board was too large to be loaded properly.')
-            WindowControl.messagebox_open = False
+            WindowControl.dialogue_open = True
+            WindowControl.dialogue_box(
+                title='Loading Error',
+                prompt='Board was too large to be loaded properly.',
+                format=DialogueType.MESSAGE
+            )
+            WindowControl.dialogue_open = False
             return
         GameControl.clear_board()
         for curr_row, bit_row in enumerate(board_bits):
@@ -784,9 +812,13 @@ class GameControl:
             error_msg = status.get().split(':')[1]
             try:
                 WindowControl.game_root.state()
-                WindowControl.messagebox_open = True
-                messagebox.showerror(title='FFM Leaderboard Error', message=f'Failed to save time to leaderboard.\n{error_msg}')
-                WindowControl.messagebox_open = False
+                WindowControl.dialogue_open = True
+                WindowControl.dialogue_box(
+                    title='FFM Leaderboard Error',
+                    prompt=f'Failed to save time to leaderboard.\n{error_msg}',
+                    format=DialogueType.MESSAGE
+                )
+                WindowControl.dialogue_open = False
             except:
                 pass
             return
@@ -1000,7 +1032,7 @@ class WindowControl:
     """Utility class containing the window objects and related functions.
 
     Attributes:
-        messagebox_open (bool): Flag if a messagebox is open so multiple are not created and stacked.
+        dialogue_open (bool): Flag if a dialogue is open so multiple are not created and stacked.
         draw_history (list[list[BoardSquare]]): History stack used when drawing boards.
         draw_history_buffer (list[list[BoardSquare]]): Buffer for the history for undoing and redoing.
         draw_history_step (list[BoardSquare]): Intermediate history to track compound drawing actions.
@@ -1023,7 +1055,7 @@ class WindowControl:
         stop_button (tk.Button): Stop game button.
 
     """
-    messagebox_open = False
+    dialogue_open = False
 
     draw_history = []
     draw_history_buffer = []
@@ -1213,16 +1245,16 @@ class WindowControl:
 
     @staticmethod
     def init_dialogue_customization():
-        """Customize existing dialogue boxes."""
+        """Customize existing dialogue boxes and add a dialogue box to WindowControl."""
         def __init__(self, title, prompt,
-                    initialvalue=None,
-                    minvalue = None, maxvalue = None,
-                    parent = None, have_entry=True):
-            self.prompt   = prompt
+                    format=DialogueType.ENTRY, initialvalue=None,
+                    minvalue=None, maxvalue=None,
+                    parent=None):
+            self.prompt = prompt
             self.minvalue = minvalue
             self.maxvalue = maxvalue
             self.initialvalue = initialvalue
-            self.have_entry = have_entry
+            self.format = format
             simpledialog.Dialog.__init__(self, parent, title)
 
         def body(self, master):
@@ -1232,7 +1264,7 @@ class WindowControl:
 
 
             self.entry = tk.Entry(master, name='entry', font=Constants.FONT_BIG)
-            if not self.have_entry:
+            if self.format is not DialogueType.ENTRY:
                 return w
 
             self.entry.grid(row=1, padx=5, sticky=tk.W+tk.E)
@@ -1244,13 +1276,25 @@ class WindowControl:
 
         def buttonbox(self):
             box = tk.Frame(self)
+            match (self.format):
+                case DialogueType.ASK:
+                    b1_text = 'Yes'
+                    b2_text = 'No'
+                case DialogueType.MESSAGE:
+                    b1_text = 'Ok'
+                    b2_text = None
+                case DialogueType.ENTRY:
+                    b1_text = 'Ok'
+                    b2_text = 'Cancel'
 
-            w = tk.Button(box, text='OK' if self.have_entry else 'Yes', width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
-            w.grid(column=0, row=0)
-            w = tk.Button(box, text='Cancel' if self.have_entry else 'No', width=5, command=self.cancel, font=Constants.FONT)
-            w.grid(column=1, row=0)
+            b1 = tk.Button(box, text=b1_text, width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
+            if b1_text is not None:
+                b1.grid(column=0, row=0)
+            b2 = tk.Button(box, text=b2_text, width=5, command=self.cancel, font=Constants.FONT)
+            if b2_text is not None:
+                b2.grid(column=1, row=0)
 
-            self.bind('<Return>', self.ok)
+            # self.bind('<Return>', self.ok)
             self.bind('<Escape>', self.cancel)
 
             box.pack()
@@ -1258,7 +1302,14 @@ class WindowControl:
         simpledialog._QueryDialog.__init__ = __init__
         simpledialog._QueryDialog.body = body
         simpledialog._QueryDialog.buttonbox = buttonbox
-        simpledialog.ask = lambda title, prompt, **kw: simpledialog._QueryString(title, prompt, have_entry=False, **kw).result
+        def ask(title, prompt, **kw):
+            query = simpledialog._QueryString(title, prompt, **kw)
+            outcome = query.result
+            if query.format is DialogueType.ENTRY:
+                return outcome
+            else:
+                return outcome is not None
+        setattr(WindowControl, 'dialogue_box', ask)
 
     @staticmethod
     def update_timer():
@@ -1572,20 +1623,32 @@ class WindowControl:
             player_var.set(player_var.get().upper())
             submitting = False
             if not board_var.get() or not player_var.get():
-                WindowControl.messagebox_open = True
-                messagebox.showerror(title='Save to Leaderboard Error', message='Names entered cannot be blank')
-                WindowControl.messagebox_open = False
+                WindowControl.dialogue_open = True
+                WindowControl.dialogue_box(
+                    title='Save to Leaderboard Error',
+                    prompt='Names entered cannot be blank',
+                    format=DialogueType.MESSAGE
+                )
+                WindowControl.dialogue_open = False
                 return
             if not (board_var.get().isalpha() and player_var.get().isalpha()):
-                WindowControl.messagebox_open = True
-                messagebox.showerror(title='Save to Leaderboard Error', message='Names entered can only contain letters [A-Z]')
-                WindowControl.messagebox_open = False
+                WindowControl.dialogue_open = True
+                WindowControl.dialogue_box(
+                    title='Save to Leaderboard Error',
+                    prompt='Names entered can only contain letters [A-Z]',
+                    format=DialogueType.MESSAGE
+                )
+                WindowControl.dialogue_open = False
                 return
             for entry in leaderboard:
                 if entry['Player'] == player_var.get() and entry['Board'] == board_var.get():
-                    WindowControl.messagebox_open = True
-                    messagebox.showerror(title='FFM Leaderboard Error', message='Board names must be unique for a player')
-                    WindowControl.messagebox_open = False
+                    WindowControl.dialogue_open = True
+                    WindowControl.dialogue_box(
+                        title='FFM Leaderboard Error',
+                        prompt='Board names must be unique for a player',
+                        format=DialogueType.MESSAGE
+                    )
+                    WindowControl.dialogue_open = False
                     return
             status_flag.set('Success')
             save_time_root.destroy()
@@ -1685,26 +1748,38 @@ class WindowControl:
             if new_player_name is None:
                 return
             if not new_player_name.isalpha():
-                WindowControl.messagebox_open = True
-                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
-                WindowControl.messagebox_open = False
+                WindowControl.dialogue_open = True
+                WindowControl.dialogue_box(
+                    title='FFM Leaderboard Error',
+                    prompt='Names entered can only contain letters [A-Z]',
+                    format=DialogueType.MESSAGE
+                )
+                WindowControl.dialogue_open = False
                 return
             new_player_name = new_player_name.upper()
             if new_player_name:
                 old_player_name = player_var.get().upper()
                 for entry in current_leaderboard:
                     if entry['Player'] == new_player_name:
-                        WindowControl.messagebox_open = True
-                        messagebox.showerror(title='FFM Leaderboard Error', message='Player names already exists')
-                        WindowControl.messagebox_open = False
+                        WindowControl.dialogue_open = True
+                        WindowControl.dialogue_box(
+                            title='FFM Leaderboard Error',
+                            prompt='Player names already exists',
+                            format=DialogueType.MESSAGE
+                        )
+                        WindowControl.dialogue_open = False
                         return
                 for entry in current_leaderboard:
                     if entry['Player'] == old_player_name:
                         break
                 else:
-                    WindowControl.messagebox_open = True
-                    messagebox.showerror(title='FFM Leaderboard Error', message='Player cannot be renamed.\nPlayer does not exist')
-                    WindowControl.messagebox_open = False
+                    WindowControl.dialogue_open = True
+                    WindowControl.dialogue_box(
+                        title='FFM Leaderboard Error',
+                        prompt='Player cannot be renamed.\nPlayer does not exist',
+                        format=DialogueType.MESSAGE
+                    )
+                    WindowControl.dialogue_open = False
                     return
                 for entry in current_leaderboard:
                     if entry['Player'] == old_player_name:
@@ -1722,9 +1797,13 @@ class WindowControl:
             if new_board_name is None:
                 return
             if not new_board_name.isalpha():
-                WindowControl.messagebox_open = True
-                messagebox.showerror(title='FFM Leaderboard Error', message='Names entered can only contain letters [A-Z]')
-                WindowControl.messagebox_open = False
+                WindowControl.dialogue_open = True
+                WindowControl.dialogue_box(
+                    title='FFM Leaderboard Error',
+                    prompt='Names entered can only contain letters [A-Z]',
+                    format=DialogueType.MESSAGE
+                )
+                WindowControl.dialogue_open = False
                 return
             new_board_name = new_board_name.upper()
             if new_board_name:
@@ -1733,9 +1812,13 @@ class WindowControl:
                 player = player_var.get().upper()
                 for entry in current_leaderboard:
                     if entry['Player'] == player and entry['Board'] == new_board_name and entry['Board'] != old_board_name:
-                        WindowControl.messagebox_open = True
-                        messagebox.showerror(title='FFM Leaderboard Error', message='Board names must be unique for a player')
-                        WindowControl.messagebox_open = False
+                        WindowControl.dialogue_open = True
+                        WindowControl.dialogue_box(
+                            title='FFM Leaderboard Error',
+                            prompt='Board names must be unique for a player',
+                            format=DialogueType.MESSAGE
+                        )
+                        WindowControl.dialogue_open = False
                         return
                 for entry in current_leaderboard:
                     if entry['Board'] == old_board_name and entry['Player'] == player:
@@ -1746,9 +1829,10 @@ class WindowControl:
         def delete_board():
             """Delete all a boards times from a player."""
             nonlocal current_leaderboard, selected_page_index
-            sure = simpledialog.ask(
-                'FFMS Leaderboard Deletion',
-                'Are you sure you wish to delete\n all of this board\'s entries?',
+            sure = WindowControl.dialogue_box(
+                title='FFMS Leaderboard Deletion',
+                prompt='Are you sure you wish to delete\n all of this board\'s entries?',
+                format=DialogueType.ASK,
                 parent=leaderboard_view_root
             )
             if sure is None:
@@ -1765,9 +1849,10 @@ class WindowControl:
 
         def delete_time():
             """Delete a single time from a player."""
-            sure = simpledialog.ask(
-                'FFMS Leaderboard Deletion',
-                'Are you sure you wish to delete this entry?',
+            sure = WindowControl.dialogue_box(
+                title='FFMS Leaderboard Deletion',
+                prompt='Are you sure you wish to delete this entry?',
+                format=DialogueType.ASK,
                 parent=leaderboard_view_root
             )
             if sure is None:
