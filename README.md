@@ -4,7 +4,7 @@ FreeForm Minesweeper is the game of Minesweeper as you know and love, but now wi
 ## Version 2.0 is coming soon!
   ### What you can expect
   * A score keeping system to keep track of all your best times!
-  * Support for theming, with an included dark theme!
+  * Game themes, including a dark theme!
   * Undoing and redoing when drawing boards!
   * A better (un)installation system!
   * Lots of bugfixes!
