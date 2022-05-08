@@ -260,18 +260,21 @@ class Constants:
 
     @staticmethod
     def init_fonts():
-        """Initialize the fonts used in the game.
-
-        Searches if the included font exists and uses it. Defaults to Courier.
-        """
-        if 'Minesweeper' in tkFont.families():
-            FONT = tkFont.Font(family='Minesweeper', size=7, weight=tk.NORMAL)
-            FONT_BIG = tkFont.Font(family='Minesweeper', size=9, weight=tk.NORMAL)
+        """Initialize the fonts used in the game. Searches if the included font exists and uses it. Defaults to Courier."""
+        default_fonts = tkFont.names()
+        installed_fonts = tkFont.families()
+        if 'Minesweeper' in installed_fonts:
+            game_font = 'Minesweeper'
+            game_font_size_offset = -3
+            game_font_weight = tk.NORMAL
         else:
-            FONT = tkFont.Font(family='Courier', size=9, weight='bold')
-            FONT_BIG = tkFont.Font(family='Courier', size=15, weight='bold')
-        setattr(Constants, 'FONT', FONT)
-        setattr(Constants, 'FONT_BIG', FONT_BIG)
+            game_font = 'Courier'
+            game_font_size_offset = 0
+            game_font_weight = tkFont.BOLD
+
+        for font_name in default_fonts:
+            tk_font = tkFont.nametofont(font_name)
+            tk_font.config(family=game_font, size=tk_font.cget('size')+game_font_size_offset, weight=game_font_weight)
 
 
 class Options:
@@ -1155,19 +1158,19 @@ class WindowControl:
     def init_menu():
         """Initialize menu widgets."""
         preset_easy = tk.Button(
-            WindowControl.presets_frame, text='Easy', font=Constants.FONT, width=6,
+            WindowControl.presets_frame, text='Easy', width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.EASY, diff_1) or GameControl.load_board('presets/easy.ffmnswpr')
         )
         preset_medium = tk.Button(
-            WindowControl.presets_frame, text='Medium', font=Constants.FONT, width=6,
+            WindowControl.presets_frame, text='Medium', width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.MEDIUM, diff_2) or GameControl.load_board('presets/medium.ffmnswpr')
         )
         preset_hard = tk.Button(
-            WindowControl.presets_frame, text='Hard', font=Constants.FONT, width=6,
+            WindowControl.presets_frame, text='Hard', width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.HARD, diff_3) or GameControl.load_board('presets/hard.ffmnswpr')
         )
         preset_expert = tk.Button(
-            WindowControl.presets_frame, text='Expert', font=Constants.FONT, width=6,
+            WindowControl.presets_frame, text='Expert', width=6,
             command=lambda: GameControl.change_difficulty(Difficulty.EXPERT, diff_4) or GameControl.load_board('presets/expert.ffmnswpr')
         )
         preset_easy.grid(row=0, column=0, sticky=tk.NSEW)
@@ -1183,9 +1186,6 @@ class WindowControl:
         flag_mid.grid(row=0, column=1, sticky=tk.NSEW)
         flag_right.grid(row=0, column=2, sticky=tk.NSEW)
         WindowControl.flags_frame.grid(row=0, column=1)
-
-        WindowControl.play_button['font'] = Constants.FONT
-        WindowControl.stop_button['font'] = Constants.FONT
 
         WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
         WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
@@ -1204,21 +1204,21 @@ class WindowControl:
         timer_right.grid(row=0, column=2, sticky=tk.NSEW)
         WindowControl.timer_frame.grid(row=0, column=3)
 
-        diff_label = tk.Label(WindowControl.diff_frame, text='Difficulty', font=Constants.FONT, bg=Constants.BACKGROUND_COLOUR)
+        diff_label = tk.Label(WindowControl.diff_frame, text='Difficulty', bg=Constants.BACKGROUND_COLOUR)
         diff_1 = tk.Button(
-            WindowControl.diff_frame, text='1', font=Constants.FONT,
+            WindowControl.diff_frame, text='1',
             command=lambda diff=Difficulty.EASY: GameControl.change_difficulty(diff, diff_1)
         )
         diff_2 = tk.Button(
-            WindowControl.diff_frame, text='2', font=Constants.FONT,
+            WindowControl.diff_frame, text='2',
             command=lambda diff=Difficulty.MEDIUM: GameControl.change_difficulty(diff, diff_2)
         )
         diff_3 = tk.Button(
-            WindowControl.diff_frame, text='3', font=Constants.FONT,
+            WindowControl.diff_frame, text='3',
             command=lambda diff=Difficulty.HARD: GameControl.change_difficulty(diff, diff_3)
         )
         diff_4 = tk.Button(
-            WindowControl.diff_frame, text='4', font=Constants.FONT,
+            WindowControl.diff_frame, text='4',
             command=lambda diff=Difficulty.EXPERT: GameControl.change_difficulty(diff, diff_4)
         )
         diff_label.grid(row=0, column=1, columnspan=4, sticky=tk.NSEW)
@@ -1228,10 +1228,10 @@ class WindowControl:
         diff_4.grid(row=1, column=4, sticky=tk.NSEW)
         WindowControl.diff_frame.grid(row=0, column=4)
 
-        fill_button = tk.Button(WindowControl.controls_frame, text='Fill', font=Constants.FONT, width=5, command=GameControl.fill_board)
-        clear_button = tk.Button(WindowControl.controls_frame, text='Clear', font=Constants.FONT, width=5, command=GameControl.clear_board)
-        save_board_button = tk.Button(WindowControl.controls_frame, text='Save', font=Constants.FONT, width=5, command=lambda: GameControl.save_board())
-        load_board_button = tk.Button(WindowControl.controls_frame, text='Load', font=Constants.FONT, width=5, command=lambda: GameControl.load_board())
+        fill_button = tk.Button(WindowControl.controls_frame, text='Fill', width=5, command=GameControl.fill_board)
+        clear_button = tk.Button(WindowControl.controls_frame, text='Clear', width=5, command=GameControl.clear_board)
+        save_board_button = tk.Button(WindowControl.controls_frame, text='Save', width=5, command=lambda: GameControl.save_board())
+        load_board_button = tk.Button(WindowControl.controls_frame, text='Load', width=5, command=lambda: GameControl.load_board())
 
         WindowControl.leaderboard_button.config(im=Constants.LEADERBOARD_ICON_PNG, command=WindowControl.leaderboard_view_window)
         WindowControl.leaderboard_button.grid(row=0, column=0)
@@ -1259,11 +1259,11 @@ class WindowControl:
 
         def body(self, master):
 
-            w = tk.Label(master, text=self.prompt, justify=tk.LEFT, font=Constants.FONT_BIG)
+            w = tk.Label(master, text=self.prompt, justify=tk.LEFT)
             w.grid(row=0, padx=5, sticky=tk.W)
 
 
-            self.entry = tk.Entry(master, name='entry', font=Constants.FONT_BIG)
+            self.entry = tk.Entry(master, name='entry')
             if self.format is not DialogueType.ENTRY:
                 return w
 
@@ -1287,10 +1287,10 @@ class WindowControl:
                     b1_text = 'Ok'
                     b2_text = 'Cancel'
 
-            b1 = tk.Button(box, text=b1_text, width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
+            b1 = tk.Button(box, text=b1_text, width=5, command=self.ok, default=tk.ACTIVE)
             if b1_text is not None:
                 b1.grid(column=0, row=0)
-            b2 = tk.Button(box, text=b2_text, width=5, command=self.cancel, font=Constants.FONT)
+            b2 = tk.Button(box, text=b2_text, width=5, command=self.cancel)
             if b2_text is not None:
                 b2.grid(column=1, row=0)
 
@@ -1464,18 +1464,18 @@ class WindowControl:
         )
         settings_root.bind('<Destroy>', lambda event: settings_root_close())
 
-        options_label = tk.Label(settings_root, text='Game Options', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        options_label = tk.Label(settings_root, text='Game Options', bg=Constants.DEFAULT_COLOUR)
         options_label.grid(row=0, column=0, pady=5)
 
         grace_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
         gracerule = tk.BooleanVar(settings_root, Options.grace_rule)
-        grace_label = tk.Label(grace_frame, text='Grace Rule', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        grace_label = tk.Label(grace_frame, text='Grace Rule', bg=Constants.DEFAULT_COLOUR)
         grace_on_choice = tk.Radiobutton(
-            grace_frame, text='On', font=Constants.FONT_BIG, variable=gracerule,
+            grace_frame, text='On', variable=gracerule,
             value=True, bg=Constants.DEFAULT_COLOUR, bd=0
         )
         grace_off_choice = tk.Radiobutton(
-            grace_frame, text='Off', font=Constants.FONT_BIG, variable=gracerule,
+            grace_frame, text='Off', variable=gracerule,
             value=False, bg=Constants.DEFAULT_COLOUR, bd=0
         )
         grace_label.pack(anchor=tk.W)
@@ -1485,13 +1485,13 @@ class WindowControl:
 
         multimode = tk.BooleanVar(settings_root, Options.multimines)
         multi_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        multi_label = tk.Label(multi_frame, text='GameMode', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        multi_label = tk.Label(multi_frame, text='GameMode', bg=Constants.DEFAULT_COLOUR)
         normal_choice = tk.Radiobutton(
-            multi_frame, text='Normal Mode', font=Constants.FONT_BIG, variable=multimode,
+            multi_frame, text='Normal Mode', variable=multimode,
             value=False, bg=Constants.DEFAULT_COLOUR, bd=0
         )
         multi_choice = tk.Radiobutton(
-            multi_frame, text='MultiMine Mode', font=Constants.FONT_BIG, variable=multimode,
+            multi_frame, text='MultiMine Mode', variable=multimode,
             value=True, bg=Constants.DEFAULT_COLOUR, bd=0
         )
         multi_label.pack(anchor=tk.W)
@@ -1501,9 +1501,9 @@ class WindowControl:
 
         mines = tk.DoubleVar(settings_root, Options.multimine_mine_inc)
         mines_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        mines_label = tk.Label(mines_frame, text='MultiMine Mine Increase', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        mines_label = tk.Label(mines_frame, text='MultiMine Mine Increase', bg=Constants.DEFAULT_COLOUR)
         mines_slider = tk.Scale(
-            mines_frame, variable=mines, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            mines_frame, variable=mines, orient=tk.HORIZONTAL, bg=Constants.DEFAULT_COLOUR,
             resolution=0.01, from_=0.0, to=0.6, length=300, bd=0
         )
         mines_label.pack(anchor=tk.W)
@@ -1512,9 +1512,9 @@ class WindowControl:
 
         density = tk.DoubleVar(settings_root, Options.multimine_sq_inc)
         density_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        density_label = tk.Label(density_frame, text='MultiMine Probability', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        density_label = tk.Label(density_frame, text='MultiMine Probability', bg=Constants.DEFAULT_COLOUR)
         density_slider = tk.Scale(
-            density_frame, variable=density, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            density_frame, variable=density, orient=tk.HORIZONTAL, bg=Constants.DEFAULT_COLOUR,
             resolution=0.01, from_=0.1, to=0.9, length=300, bd=0
         )
         density_label.pack(anchor=tk.W)
@@ -1523,13 +1523,13 @@ class WindowControl:
 
         flagless = tk.BooleanVar(settings_root, Options.flagless)
         flagless_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        flagless_label = tk.Label(flagless_frame, text='Flagless', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        flagless_label = tk.Label(flagless_frame, text='Flagless', bg=Constants.DEFAULT_COLOUR)
         flagless_on_choice = tk.Radiobutton(
-            flagless_frame, text='Off', font=Constants.FONT_BIG, variable=flagless,
+            flagless_frame, text='Off', variable=flagless,
             value=False, bg=Constants.DEFAULT_COLOUR, bd=0
         )
         flagless_off_choice = tk.Radiobutton(
-            flagless_frame, text='On', font=Constants.FONT_BIG, variable=flagless,
+            flagless_frame, text='On', variable=flagless,
             value=True, bg=Constants.DEFAULT_COLOUR, bd=0
         )
         flagless_label.pack(anchor=tk.W)
@@ -1539,9 +1539,9 @@ class WindowControl:
 
         rows = tk.IntVar(settings_root, Options.rows)
         rows_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        rows_label = tk.Label(rows_frame, text='Rows', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        rows_label = tk.Label(rows_frame, text='Rows', bg=Constants.DEFAULT_COLOUR)
         rows_slider = tk.Scale(
-            rows_frame, variable=rows, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            rows_frame, variable=rows, orient=tk.HORIZONTAL, bg=Constants.DEFAULT_COLOUR,
             resolution=1, from_=Constants.MIN_ROWS, to=Constants.MAX_ROWS, length=300, bd=0
         )
         rows_label.pack(anchor=tk.W)
@@ -1550,9 +1550,9 @@ class WindowControl:
 
         columns = tk.IntVar(settings_root, Options.cols)
         columns_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        columns_label = tk.Label(rows_frame, text='Columns', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
+        columns_label = tk.Label(rows_frame, text='Columns', bg=Constants.DEFAULT_COLOUR)
         columns_slider = tk.Scale(
-            rows_frame, variable=columns, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
+            rows_frame, variable=columns, orient=tk.HORIZONTAL, bg=Constants.DEFAULT_COLOUR,
             resolution=1, from_=Constants.MIN_COLUMNS, to=Constants.MAX_COLUMNS, length=300, bd=0
         )
         columns_label.pack(anchor=tk.W)
@@ -1585,7 +1585,7 @@ class WindowControl:
                 WindowControl.init_board()
             settings_root.destroy()
 
-        submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
+        submit_button = tk.Button(settings_root, text='Apply Settings', command=submit_vars)
         submit_button.grid(row=7, column=0, pady=5)
 
     @staticmethod
@@ -1684,15 +1684,15 @@ class WindowControl:
         save_time_frame.grid_columnconfigure(0, weight=1)
         save_time_frame.grid_rowconfigure(8, weight=1)
 
-        time_label = tk.Label(save_time_frame, text=f'Your time was: {int(GameControl.seconds_elapsed)} seconds.', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        player_label = tk.Label(save_time_frame, text='Player Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var)
-        name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=board_var)
-        save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
+        time_label = tk.Label(save_time_frame, text=f'Your time was: {int(GameControl.seconds_elapsed)} seconds.', bg=Constants.BACKGROUND_COLOUR)
+        player_label = tk.Label(save_time_frame, text='Player Name', bg=Constants.BACKGROUND_COLOUR)
+        player_entry = tk.Entry(save_time_frame, exportselection=False, textvariable=player_var)
+        name_label = tk.Label(save_time_frame, text='Name This Board', bg=Constants.BACKGROUND_COLOUR)
+        name_entry = tk.Entry(save_time_frame, exportselection=False, textvariable=board_var)
+        save_button = tk.Button(save_time_frame, text='Save Time', command=submit_name_player)
 
         if Options.multimines:
-            multimine_label = tk.Label(save_time_frame, text='You played on multimine mode', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
+            multimine_label = tk.Label(save_time_frame, text='You played on multimine mode', bg=Constants.BACKGROUND_COLOUR)
             multimine_label.grid(row=5, column=0, pady=6)
 
         time_label.grid(row=0, column=0, pady=6)
@@ -1719,7 +1719,7 @@ class WindowControl:
 
         """
         MAX_WIDTH = 400
-        NOTEBOOK_HEIGHT = 132 + Constants.FONT_BIG.metrics('linespace')
+        NOTEBOOK_HEIGHT = 132 + tkFont.nametofont('TkDefaultFont').metrics('linespace')
         player_var = tk.StringVar()
         notebook_pages = []
         selected_page_index = 0
@@ -1913,7 +1913,7 @@ class WindowControl:
                 if current_board_id in ids_covered and ids_covered[current_board_id] == current_multimode:
                     continue
                 tab_text = board['Board']
-                current_width += max(Constants.FONT_BIG.measure(tab_text) + 8, 23)
+                current_width += max(tkFont.nametofont('TkDefaultFont').measure(tab_text) + 8, 23)
                 if current_width >= MAX_WIDTH:
                     notebook_pages.append(current_notebook_page)
                     current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
@@ -1924,7 +1924,7 @@ class WindowControl:
                 entry_thumbnail_label = tk.Label(entry_frame, height=128, width=128, im=thumbnail_tk)
                 entry_thumbnail_label.image = thumbnail_tk
 
-                multimode_label = tk.Label(entry_frame, font=Constants.FONT_BIG, text='Normal Mode')
+                multimode_label = tk.Label(entry_frame, text='Normal Mode')
                 if current_multimode == '1':
                     multimode_label.config(text='MultiMine Mode')
                 times_canvas = tk.Canvas(entry_frame, width=MAX_WIDTH - 128 - 20, height=128)
@@ -1936,12 +1936,12 @@ class WindowControl:
                     board['MultiMode'] == current_multimode
                 ]
 
-                TEXT_HEIGHT = Constants.FONT_BIG.cget('size') + 10
+                TEXT_HEIGHT = tkFont.nametofont('TkDefaultFont').cget('size') + 10
                 for i, time in enumerate(sorted(times, key=lambda time: int(time['Time']))):
                     time_text = f'{time["Time"]:0>3} seconds  {time["Date"]}'
                     times_canvas.create_text(
                         0, TEXT_HEIGHT * i,
-                        text=time_text, font=Constants.FONT_BIG,
+                        text=time_text,
                         tags='entry_text',
                         activefill='#444444'
                     )
@@ -1970,7 +1970,7 @@ class WindowControl:
                 for page in notebook_pages:
                     page.enable_traversal()
             else:
-                notebook_pages.append(tk.Label(leaderboard_view_root, text='No boards for this player', font=Constants.FONT_BIG))
+                notebook_pages.append(tk.Label(leaderboard_view_root, text='No boards for this player'))
             notebook_pages[0].grid(row=2, column=0, columnspan=2, pady=(10, 0))
             change_notebook_page(0)
 
@@ -2007,12 +2007,12 @@ class WindowControl:
         leaderboard_view_frame = tk.Frame(leaderboard_view_root, width=MAX_WIDTH)
         page_left_btn = tk.Button(
             leaderboard_view_frame, height=1,
-            text='<<', font=Constants.FONT,
+            text='<<',
             command=lambda: change_notebook_page(-1)
         )
         page_right_btn = tk.Button(
             leaderboard_view_frame, height=1,
-            text='>>', font=Constants.FONT,
+            text='>>',
             command=lambda: change_notebook_page(1)
         )
 
@@ -2032,11 +2032,11 @@ class WindowControl:
         player_entry_popup_menu.add_separator()
         player_entry_popup_menu.add_command(label='Close')
 
-        player_label = tk.Label(leaderboard_view_frame, text='Player Name', font=Constants.FONT_BIG)
-        player_entry = tk.Entry(leaderboard_view_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var, width=20)
+        player_label = tk.Label(leaderboard_view_frame, text='Player Name')
+        player_entry = tk.Entry(leaderboard_view_frame, exportselection=False, textvariable=player_var, width=20)
 
         s = ttk.Style()
-        s.configure('TNotebook.Tab', font=Constants.FONT_BIG, padding=[0,0])
+        s.configure('TNotebook.Tab', padding=[0,0])
         s.configure('TNotebook', tabmargins=[2,2,2,2])
         display_boards_from_player()
         change_notebook_page(0)
@@ -2142,7 +2142,6 @@ def main():
     WindowControl.init_board()
     if not MetaData.is_release_up_to_date():
         MetaData.outdated_notice()
-    tkFont.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT.cget('family'), size=Constants.FONT_BIG.cget('size'))
     # WindowControl.game_root.bind('y', lambda event: GameControl.save_time_to_file())
     while True:
         try:
