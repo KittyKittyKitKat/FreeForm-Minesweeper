@@ -1,2162 +1,1834 @@
 """The game FreeForm Minesweeper, bundled with MultiMinesweeper mode.
 
-Play the game by executing the file as a program, and have fun!
-The only code intended to be executed is the main() function. Any other use may result in errors or other undefined behaviour.
-
+Play the game by executing the file with Python >= 3.11.2 as a program, and have fun!
 """
-import csv
-import random
+
 import tkinter as tk
-import time
-
-from datetime import date
+import tkinter.ttk as ttk
 from enum import Enum, auto
+from functools import cached_property
 from itertools import chain, groupby
-from os.path import expanduser
-from platform import system
+from math import ceil, floor
+from pathlib import Path, PurePath
+from random import sample
+from time import sleep
 from tkinter import filedialog
-from tkinter import font as tkFont
-from tkinter import simpledialog
-from tkinter import ttk
+from typing import Final, Literal
 
-import requests
+from boardsquare import BoardSquare
+from dialogues import (
+    AcknowledgementDialogue,
+    AcknowledgementWithLinkDialogue,
+    LeaderboardEntryDialogue,
+    LeaderboardViewDialogue,
+    SettingsDialogue,
+    YesNoDialogue,
+)
+from imagehandler import ImageHandler
+from releasemanager import ReleaseManager
 
-from PIL import Image, ImageTk
 
+# TODO: User set mine spread?
+# TODO: Make better (un)installers. Install in local program dirs
+# TODO: Get a licence. Apache 2.0 likely
+# TODO: Add colours for everything in ttk style in order to do theming later
+# Look into json for other spec files to load in themes, including default
+# Make the dark theme built in though, I'd say, maybe
+class FreeFormMinesweeper:
+    """A game of FreeForm Minesweeper."""
 
-class MetaData:
-    """Provide variables and utilities for checking current release against the most up to date release.
+    class State(Enum):
+        """Enum representing the current state of the game."""
 
-    Attributes:
-        github_api_releases_url (str): URL to fetch data from.
-        github_releases_url (str): URL to releases page for project.
-        platform (str): The OS of the system the program is running on.
-        version (str): The version of the code, shipped with releases.
+        DRAW = auto()
+        SWEEP = auto()
+        PAUSE = auto()
 
-    """
-    github_api_releases_url = 'https://api.github.com/repos/KittyKittyKitKat/FreeForm-Minesweeper/releases'
-    github_releases_url = 'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
-    platform = system()
+    class ClickMode(Enum):
+        """Enum representing the current clicking mode of the game."""
 
-    # This is a dummy value for the purpose of source code.
-    # The releases will have the proper information contained within.
-    # This information will directly correlate to the release info on GitHub.
-    version = 'vX.X.X'
+        UNCOVER = auto()
+        FLAG = auto()
+        FLAGLESS = auto()
 
-    @staticmethod
-    def get_release_tags(url):
-        """Fetch the releases tags from GitHub's repo API.
-
-        Args:
-            url (str): Url pointing to the API JSON for GitHub releases.
-
-        Returns:
-            list[str]: A list of all the release tags for the OS the game is running on.
-
-        """
-        github_release_data = requests.get(url).json()
-        tags = [release['tag_name'] for release in github_release_data]
-        tags_linux, tags_windows = [
-            list(g) for _, g in groupby(sorted(tags), key=lambda s: s[0])
-        ]
-        if MetaData.platform == 'Linux':
-            return tags_linux
-        elif MetaData.platform == 'Windows':
-            return tags_windows
-
-    @staticmethod
-    def is_release_up_to_date():
-        """Compare release to most up to date.
-
-        Returns:
-            bool: True if the version is the most recent, or is the development dummy version.
-
-        """
-        if MetaData.version == 'vX.X.X':
-            return True
-        tags = MetaData.get_release_tags(MetaData.github_api_releases_url)
-        if tags == '':
-            WindowControl.dialogue_open = True
-            WindowControl.dialogue_box(
-                title='OS Fetching Error',
-                prompt=(
-                    'Could not retrieve operating system information to queue updates.\n'
-                    'You can safely ignore this message.'
-                ),
-                format=DialogueType.MESSAGE
-            )
-            WindowControl.dialogue_open = False
-            return True
-        up_to_date_release = tags[-1]
-        current_release = MetaData.platform + '-' + MetaData.version
-        return up_to_date_release == current_release
-
-    @staticmethod
-    def outdated_notice():
-        """Display pop up message detailing release is out of date."""
-        message = (
-            f'This release is not up to date, '
-            'and as such you may be missing out on important new features or bug fixes.\n'
-            f'Please go to {MetaData.github_releases_url} to download and install the lastest release.'
+    def __init__(self) -> None:
+        """Initialize a game of FreeForm Minesweeper."""
+        # Constants
+        self.MAINLOOP_TIME: Final = 0.01
+        self.UI_PADDING: Final = 4
+        self.BACKGROUND_COLOUR: Final = '#c0c0c0'
+        self.FILE_EXTENSION: Final = '.ffmnswpr'
+        self.FILE_TYPE: Final = (
+            ('FreeForm Minesweeper Board', f'*{self.FILE_EXTENSION}'),
         )
-        WindowControl.dialogue_open = True
-        WindowControl.dialogue_box(
-            title='Outdated Release',
-            prompt=message,
-            format=DialogueType.MESSAGE
+        self.TUTORIAL_PAGE: Final = Path('tutorial.html').absolute().as_uri()
+        self.GITHUB_PAGE: Final = 'https://github.com/KittyKittyKitKat/'
+        self.SAVE_LOAD_DIR: Final = str(Path.home())
+        self.SMALL_SCALE: Final = 'small'
+        self.LARGE_SCALE: Final = 'large'
+        self.SMALL_FONT: Final = ('Courier', 8, 'bold')
+        self.LARGE_FONT: Final = ('Courier', 10, 'bold')
+        self.DIFF_EASY: Final = 0.13
+        self.DIFF_MEDIUM: Final = 0.16
+        self.DIFF_HARD: Final = 0.207
+        self.DIFF_EXPERT: Final = 0.25
+
+        # Instance level UI elements
+        self._hidden_root = tk.Tk()
+        self.game_root = tk.Toplevel(class_='FreeForm Minesweeper')
+        self.ih = ImageHandler()
+        self.style = ttk.Style()
+        self.menubar = tk.Menu(self.game_root)
+
+        self.main_frame = ttk.Frame(self.game_root)
+        self.menu_frame = ttk.Frame(self.main_frame)
+        self.board_frame = ttk.Frame(self.main_frame)
+
+        self.presets_frame = ttk.Frame(self.menu_frame)
+        self.flags_frame = ttk.Frame(self.menu_frame)
+        self.mswpr_frame = ttk.Frame(self.menu_frame)
+        self.timer_frame = ttk.Frame(self.menu_frame)
+        self.diff_frame = ttk.Frame(self.menu_frame)
+        self.controls_frame = ttk.Frame(self.menu_frame)
+
+        self.mode_switch_button = ttk.Label(self.mswpr_frame)
+        self.new_game_button = ttk.Label(self.mswpr_frame)
+        self.leaderboard_button = ttk.Button(self.mswpr_frame)
+        self.play_button = ttk.Button(self.mswpr_frame)
+        self.stop_button = ttk.Button(self.mswpr_frame)
+
+        # Options
+        self.rows = tk.IntVar(value=28)
+        self.rows.trace_add('write', lambda *_: self.rows_trace())
+
+        self.columns = tk.IntVar(value=30)
+        self.columns.trace_add('write', lambda *_: self.columns_trace())
+
+        self.board_scale = tk.StringVar(value=self.LARGE_SCALE)
+        self.board_scale.trace_add('write', lambda *_: self.board_scale_trace())
+
+        self.ui_scale = tk.StringVar(value=self.LARGE_SCALE)
+        self.ui_scale.trace_add('write', lambda *_: self.ui_scale_trace())
+
+        self.multimine = tk.BooleanVar(value=False)
+        self.multimine.trace_add('write', lambda *_: self.multimine_trace())
+
+        self.multimine_diff_inc = tk.DoubleVar(value=0.25)
+
+        self.multimine_likelihood = tk.DoubleVar(value=0.5)
+
+        self.mine_spread = tk.DoubleVar(value=1.01)
+
+        self.flagless = tk.BooleanVar(value=False)
+        self.flagless.trace_add('write', lambda *_: self.flagless_trace())
+
+        self.grace_rule = tk.BooleanVar(value=True)
+
+        self.adaptive_ui = tk.BooleanVar(value=True)
+        self.adaptive_ui.trace_add('write', lambda *_: self.adaptive_ui_trace())
+
+        # Values related to setting the options
+        self.theme: Literal['light', 'dark'] = self.ih.LIGHT
+        self.board_square_size: Literal['16x16', '32x32'] = self.ih.LG_SQUARE
+        self.ui_square_size: Literal['16x16', '32x32'] = self.ih.LG_SQUARE
+        self.sevseg_size: Literal['13x23', '26x46'] = self.ih.LG_SEVSEG
+        self.max_flags = 1
+        self.board_square_size_px = int(self.board_square_size.split('x')[0])
+
+        # Game instance variables
+        self.difficulty = tk.DoubleVar(value=self.DIFF_EASY)
+        self.state = self.State.DRAW
+        self.click_mode = self.ClickMode.UNCOVER
+        self.draw_history: list[list[BoardSquare]] = []
+        self.draw_history_buffer: list[list[BoardSquare]] = []
+        self.draw_history_step: list[BoardSquare] = []
+        self.num_mines = 0
+        self.squares_cleared = 0
+        self.flags_placed = 0
+        self.squares_to_win = 0
+        self.time_elapsed = 0.0
+
+        # Set up all UI elements, split into methods for readability
+        self.init_style()
+        self.init_window()
+        self.init_toolbar()
+        self.game_root.update_idletasks()
+        self.init_menu()
+        self.game_root.update_idletasks()
+        self.init_board()
+        self.game_root.title('FreeForm Minesweeper')
+
+    # Settings Functions
+
+    def rows_trace(self) -> None:
+        """Update the number of rows in the board."""
+        self.set_guard()
+
+        rows = self.rows.get()
+        num_rows_present = 0
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            row = square.position[0]
+            num_rows_present = max(num_rows_present, row)
+        self.board_frame.config(height=self.board_square_size_px * rows)
+        self.game_root.update_idletasks()
+        if num_rows_present < rows - 1:
+            for x in range(num_rows_present + 1, rows):
+                for y in range(self.columns.get()):
+                    self.make_square(x, y)
+        elif num_rows_present > rows - 1:
+            for i in range(num_rows_present, rows - 1, -1):
+                for widget in self.board_frame.grid_slaves(row=i):
+                    widget.grid_forget()
+                    widget.destroy()
+
+        self.unset_guard()
+
+    def columns_trace(self) -> None:
+        """Update the number of columns in the board."""
+        self.set_guard()
+
+        columns = self.columns.get()
+        num_columns_present = 0
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            column = square.position[1]
+            num_columns_present = max(num_columns_present, column)
+        self.board_frame.config(width=self.board_square_size_px * columns)
+        self.game_root.update_idletasks()
+        if num_columns_present < columns - 1:
+            for y in range(num_columns_present + 1, columns):
+                for x in range(self.rows.get()):
+                    self.make_square(x, y)
+        elif num_columns_present > columns - 1:
+            for i in range(num_columns_present, columns - 1, -1):
+                for widget in self.board_frame.grid_slaves(column=i):
+                    widget.grid_forget()
+                    widget.destroy()
+        self.ui_collapse()
+
+        self.unset_guard()
+
+    def board_scale_trace(self) -> None:
+        """Update the board square size."""
+        self.set_guard()
+
+        if self.board_scale.get() == self.SMALL_SCALE:
+            self.board_square_size = self.ih.SM_SQUARE
+        elif self.board_scale.get() == self.LARGE_SCALE:
+            self.board_square_size = self.ih.LG_SQUARE
+        self.board_square_size_px = int(self.board_square_size.split('x')[0])
+        self.board_frame.config(
+            height=self.board_square_size_px * self.rows.get(),
+            width=self.board_square_size_px * self.columns.get(),
         )
-        WindowControl.dialogue_open = False
 
-
-class ClickMode(Enum):
-    """Enum representing the current clicking mode of the game."""
-    UNCOVER = auto()
-    FLAG = auto()
-
-
-class GameState(Enum):
-    """Enum representing the current state of the game."""
-    DONE = auto()
-    PLAYING = auto()
-
-
-class Difficulty(Enum):
-    """Enum representing the difficulty values for the game, in percentages."""
-    EASY = 0.13
-    MEDIUM = 0.16
-    HARD = 0.207
-    EXPERT = 0.25
-
-
-class DialogueType(Enum):
-    ASK = auto()
-    MESSAGE = auto()
-    ENTRY = auto()
-
-
-class Constants:
-    """Container for various game constants.
-
-    Data types listed are intended data types to be used after all objects have been initialized.
-    Attributes:
-        BOARD_IMAGES (list[tk.PhotoImage]): Sprites used for the base Minesweeper game.
-        SEVSEG_IMAGES (list[tk.PhotoImage]): Sprites used for seven segment displays.
-        EXTENDED_BOARD_IMAGES (list[tk.PhotoImage]): Sprites used for multimine mode.
-        BOARD_SQUARE_SIZE (int): Size of a square on the board, in pixels.
-        SEGMENT_HEIGHT (int): Height of a seven segment number, in pixels.
-        SEGMENT_WIDTH (int): Width of a seven segment number, in pixels.
-        BACKGROUND_COLOUR (str): Background colour of the window, in #rrggbb.
-        DEFAULT_COLOUR (str): Default colour of the window, in #rrggbb.
-        FONT (tkFont.Font): Smaller font used for in game text.
-        FONT_BIG (tkFont.Font): Larger font used for in game text.
-        MAINLOOP_TIME (float): Time spent sleeping in mainloop of game.
-        LOCKED_BLACK_SQUARE (tk.PhotoImage): Sprite for a locked disabled square.
-        UNLOCKED_BLACK_SQUARE (tk.PhotoImage): Sprite for an unlocked disabled square.
-        FILE_EXTENSION (str): File extension used for saving and loading board files.
-        FILE_TYPE (tuple[str, str]): File type and extension, for file dialogues.
-        LEADERBOARD_FILENAME (str): Path to the leaderboard JSON used to save times.
-        SAVE_LOAD_DIR (str): Default directory for saving and loading board files.
-        MAIN_ICON_ICO (str): Path to main window icon, relatively.
-        SETTINGS_ICON_ICO (str): Path to settings window icon, relatively.
-        LEADERBOARD_ICON_ICO (str): Path to leaderboard window icon, relatively.
-        MAIN_ICON_PNG (str): PNG image for main window icon.
-        SETTINGS_ICON_PNG (str): PNG image for settings window icon.
-
-    """
-    BOARD_SQUARE_SIZE = 32
-    SEGMENT_HEIGHT = 46
-    SEGMENT_WIDTH = 26
-    MIN_ROWS = 1
-    MIN_COLUMNS = 25
-    MAX_ROWS = 60
-    MAX_COLUMNS = 60
-    BACKGROUND_COLOUR = '#c0c0c0'
-    DEFAULT_COLOUR = '#d9d9d9'
-    MAINLOOP_TIME = 0.01
-    LOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
-    UNLOCKED_BLACK_SQUARE = Image.new('RGBA', size=(BOARD_SQUARE_SIZE, BOARD_SQUARE_SIZE), color=(0, 0, 0))
-    FILE_EXTENSION = '.ffmnswpr'
-    FILE_TYPE = (('FreeForm Minesweeper Board', f'*{FILE_EXTENSION}'),)
-    LEADERBOARD_FILENAME = 'assets/leaderboard.csv'
-    SAVE_LOAD_DIR = expanduser('~/Desktop')
-    MAIN_ICON_ICO = 'assets/icon_main.ico'
-    SETTINGS_ICON_ICO = 'assets/icon_settings.ico'
-    LEADERBOARD_ICON_ICO = 'assets/icon_leaderboard.ico'
-
-    @staticmethod
-    def init_board_images():
-        """Initialize the images used for the game board.
-
-        First the proper sprite is drawn on UNLOCKED_BLACK_SQUARE.
-        Doing this procedurally keeps the spritesheet tidy.
-        The board spritesheet is load and cut into the individual squares.
-        All the PIL images are converted to PhotoImage objects for TKinter.
-        """
-        ubs_x, ubs_y = Constants.UNLOCKED_BLACK_SQUARE.size
-        for i in range(ubs_y):
-            Constants.UNLOCKED_BLACK_SQUARE.putpixel((0, i), (128, 128, 128))
-            Constants.UNLOCKED_BLACK_SQUARE.putpixel((1, i), (128, 128, 128))
-        for i in range(ubs_x):
-            Constants.UNLOCKED_BLACK_SQUARE.putpixel((i, 0), (128, 128, 128))
-            Constants.UNLOCKED_BLACK_SQUARE.putpixel((i, 1), (128, 128, 128))
-        Constants.UNLOCKED_BLACK_SQUARE = ImageTk.PhotoImage(image=Constants.UNLOCKED_BLACK_SQUARE)
-        Constants.LOCKED_BLACK_SQUARE = ImageTk.PhotoImage(image=Constants.LOCKED_BLACK_SQUARE)
-        BOARD_IMAGES = []
-        with Image.open('assets/board_sheet.png') as board_sheet:
-            x, y = board_sheet.size
-            for i in range(0, y, Constants.BOARD_SQUARE_SIZE):
-                for j in range(0, x, Constants.BOARD_SQUARE_SIZE):
-                    im = board_sheet.crop((j, i, j + Constants.BOARD_SQUARE_SIZE, i + Constants.BOARD_SQUARE_SIZE))
-                    im2 = ImageTk.PhotoImage(im)
-                    BOARD_IMAGES.append(im2)
-        setattr(Constants, 'BOARD_IMAGES', BOARD_IMAGES)
-
-    @staticmethod
-    def init_sevseg_images():
-        """Initialize the images used for the seven segment displays.
-
-        The seven segment spritesheet is load and cut into the individual numbers.
-        All the PIL images are converted to PhotoImage objects for TKinter.
-        """
-        SEVSEG_IMAGES = []
-        with Image.open('assets/sevseg_sheet.png') as sevseg_sheet:
-            x, y = sevseg_sheet.size
-            for i in range(0, y, Constants.SEGMENT_HEIGHT):
-                for j in range(0, x, Constants.SEGMENT_WIDTH):
-                    im = sevseg_sheet.crop((j, i, j + Constants.SEGMENT_WIDTH, i + Constants.SEGMENT_HEIGHT))
-                    im2 = ImageTk.PhotoImage(im)
-                    SEVSEG_IMAGES.append(im2)
-        setattr(Constants, 'SEVSEG_IMAGES', SEVSEG_IMAGES)
-
-    @staticmethod
-    def init_extended_board_images():
-        """Initialize the images used for the multimine mode.
-
-        The extended board spritesheet is load and cut into the individual squares.
-        All the PIL images are converted to PhotoImage objects for TKinter.
-        """
-        EXTENDED_BOARD_IMAGES = []
-        with Image.open('assets/board_sheet_extended.png') as board_sheet:
-            x, y = board_sheet.size
-            for i in range(0, y, Constants.BOARD_SQUARE_SIZE):
-                for j in range(0, x, Constants.BOARD_SQUARE_SIZE):
-                    im = board_sheet.crop((j, i, j + Constants.BOARD_SQUARE_SIZE, i + Constants.BOARD_SQUARE_SIZE))
-                    im2 = ImageTk.PhotoImage(im)
-                    EXTENDED_BOARD_IMAGES.append(im2)
-        setattr(Constants, 'EXTENDED_BOARD_IMAGES', EXTENDED_BOARD_IMAGES)
-
-    @staticmethod
-    def init_window_icons():
-        """Initialize the images used for the window icons.
-
-        The PIL images are converted to PhotoImage objects for TKinter.
-        """
-        MAIN_ICON = ImageTk.PhotoImage(Image.open('assets/icon_main.png'))
-        SETTINGS_ICON = ImageTk.PhotoImage(Image.open('assets/icon_settings.png'))
-        LEADERBOARD_ICON = ImageTk.PhotoImage(Image.open('assets/icon_leaderboard.png'))
-        setattr(Constants, 'MAIN_ICON_PNG', MAIN_ICON)
-        setattr(Constants, 'SETTINGS_ICON_PNG', SETTINGS_ICON)
-        setattr(Constants, 'LEADERBOARD_ICON_PNG', LEADERBOARD_ICON)
-
-    @staticmethod
-    def init_fonts():
-        """Initialize the fonts used in the game.
-
-        Searches if the included font exists and uses it. Defaults to Courier.
-        """
-        if 'Minesweeper' in tkFont.families():
-            FONT = tkFont.Font(family='Minesweeper', size=7, weight=tk.NORMAL)
-            FONT_BIG = tkFont.Font(family='Minesweeper', size=9, weight=tk.NORMAL)
-        else:
-            FONT = tkFont.Font(family='Courier', size=9, weight='bold')
-            FONT_BIG = tkFont.Font(family='Courier', size=15, weight='bold')
-        setattr(Constants, 'FONT', FONT)
-        setattr(Constants, 'FONT_BIG', FONT_BIG)
-
-
-class Options:
-    """Container for utilities to customize the game
-
-    Attributes:
-        multimines (bool): Flag if the game is in multimine mode.
-        grace_rule (bool): Flag if the grace rule is set.
-        multimine_sq_inc (float): Probability of getting multimines buff.
-        flagless (bool): Flag if the game is in flagless mode.
-        multimine_mine_inc (float): Percentage mine increase in multimine mode.
-        rows (int): Number of rows in the game space.
-        cols (int): Number of columns in the game space.
-        window_width (int): Width of the window, in pixels.
-        board_height (int): Height of the game board, in pixels.
-
-    """
-    multimines = False
-    grace_rule = True
-    multimine_sq_inc = 0.1
-    flagless = False
-    multimine_mine_inc = 0.05
-    rows = 28
-    cols = 30
-    window_width = Constants.BOARD_SQUARE_SIZE * cols
-    board_height = Constants.BOARD_SQUARE_SIZE * rows
-    window_height = board_height + Constants.SEGMENT_HEIGHT + 4 * 5
-
-
-class GameControl:
-    """Container for utilities to control the game
-
-    Attributes:
-        click_mode (ClickMode): Flag controlling how mouse events are handled.
-        game_state (GameState): Flag controlling if the game is in progress.
-        difficulty (Difficulty): Flag representing the current difficulty of the game.
-        num_mines (int): Number of mines in the board.
-        squares_to_win (int): Number of squares to uncover needed to win.
-        squares_uncovered (int): Number of squares that have been uncovered.
-        flags_placed (int): Number of flags placed on the board.
-        seconds_elapsed (int): Time elapsed playing the game, in seconds.
-        on_hold (bool): Flag controlling if the game is on hold, ie, creating a board.
-        drag_mode (bool): Flag controlling if clicking dragging adds or remove squares in board creation.
-
-    """
-    click_mode = ClickMode.UNCOVER
-    game_state = GameState.PLAYING
-    difficulty = Difficulty.EASY
-    num_mines = 0
-    squares_to_win = 0
-    squares_uncovered = 0
-    flags_placed = 0
-    seconds_elapsed = 0
-    on_hold = True
-    drag_mode = True
-
-    @staticmethod
-    def check_win():
-        """Check if the game has been won, and execute winning sequence if so."""
-        if GameControl.squares_uncovered == GameControl.squares_to_win and GameControl.game_state is GameState.PLAYING:
-            WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[16])
-            GameControl.game_state = GameState.DONE
-            GameControl.flags_placed = GameControl.num_mines
-            WindowControl.update_flag_counter()
-            for square in WindowControl.board_frame.grid_slaves():
-                if square.enabled and not square.uncovered and square.value < 0:
-                    if square.value == -1:
-                        square.config(im=Constants.BOARD_IMAGES[11])
-                    else:
-                        square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 38])
-            save_time = WindowControl.dialogue_box(
-                title='FreeForm Minesweeper',
-                prompt='You Win!\nSave your time to the leaderboard?',
-                format=DialogueType.ASK
-            )
-            if save_time:
-                GameControl.save_time_to_file()
-
-    @staticmethod
-    def has_lost():
-        """Execute losing sequence."""
-        WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[15])
-        GameControl.game_state = GameState.DONE
-        for square in WindowControl.board_frame.grid_slaves():
-            if square.enabled and not square.uncovered and not square.flagged and square.value == -1:
-                square.config(im=Constants.BOARD_IMAGES[9])
-            elif square.enabled and not square.uncovered and not square.flagged and square.value < -1:
-                square.config(im=Constants.EXTENDED_BOARD_IMAGES[-square.value + 30])
-
-            if square.flagged and square.value > -1:
-                if square.num_flags == 1:
-                    square.config(im=Constants.BOARD_IMAGES[12])
-                elif square.num_flags > 1:
-                    square.config(im=Constants.EXTENDED_BOARD_IMAGES[square.num_flags + 42])
-            elif square.flagged and square.value <= -1 and square.num_flags != -square.value:
-                if square.num_flags == 1:
-                    square.config(im=Constants.BOARD_IMAGES[12])
-                elif square.num_flags > 1:
-                    square.config(im=Constants.EXTENDED_BOARD_IMAGES[square.num_flags + 42])
-
-    @staticmethod
-    def play_game():
-        """Core gameplay loop when it is being played as Minesweeper, or a variant."""
-        squares = WindowControl.board_frame.grid_slaves()
-
-        for sq in squares:
-            if sq.enabled:
-                break
-        else:
-            WindowControl.dialogue_open = True
-            WindowControl.dialogue_box(
-                title='FreeForm Minesweeper',
-                prompt='Cannot start a game with no active squares.',
-                format=DialogueType.MESSAGE
-            )
-            WindowControl.dialogue_open = False
-            return
-
-        WindowControl.clear_history()
-
-        WindowControl.game_root.unbind('<Control-i>')
-        if Options.flagless:
-            WindowControl.mode_switch_button.config(state=tk.DISABLED)
-        else:
-            WindowControl.game_root.bind('<Control-f>', lambda event: GameControl.switch_mode())
-            WindowControl.mode_switch_button.bind('<ButtonPress-1>', lambda event: GameControl.switch_mode())
-
-        local_diff = GameControl.difficulty.value + Options.multimine_mine_inc if Options.multimines else GameControl.difficulty.value
-        num_squares = sum([1 if sq.enabled else 0 for sq in WindowControl.board_frame.grid_slaves()])
-
-        GameControl.squares_uncovered = 0
-        GameControl.flags_placed = 0
-        GameControl.seconds_elapsed = 0
-        if GameControl.click_mode is ClickMode.FLAG:
-            GameControl.switch_mode()
-        GameControl.on_hold = False
-
-        GameControl.num_mines = min(int(num_squares * local_diff), 999)
-        seed_mines = (GameControl.num_mines // 2) if Options.multimines else GameControl.num_mines
-        wave_mines = GameControl.num_mines - seed_mines
-        seed_mines_placed = 0
-        wave_mines_placed = 0
-
-        while seed_mines_placed < seed_mines:
-            sq = random.choice(squares)
-            if sq.enabled and not sq.value:
-                sq.value -= 1
-                seed_mines_placed += 1
-
-        while wave_mines_placed < wave_mines:
-            sq = random.choice(squares)
-            if sq.enabled and not sq.value:
-                if random.random() < 1 - Options.multimine_sq_inc:
-                    sq.value -= 1
-                    wave_mines_placed += 1
-            elif sq.enabled and sq.value:
-                if sq.value != -5:
-                    sq.value -= 1
-                    wave_mines_placed += 1
-
-        squares_with_mines = 0
-        for sq in squares:
-            if sq.value < 0:
-                squares_with_mines += 1
-
-        GameControl.squares_to_win = num_squares - squares_with_mines
-
-        for sq in squares:
-            sq.lock()
-            sq.link_to_neighbours()
-            sq.unbind('<B1-Motion>')
-            sq.unbind('<ButtonRelease-1>')
-            sq.unbind_all('<Button-1>')
-            sq.bind('<Button-1>', lambda event, square=sq: square.uncover())
-            if not(Options.flagless or Options.multimines):
-                sq.bind('<Button-3>', lambda event, square=sq: square.flag())
-            sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
-
-        WindowControl.new_game_button.bind('<ButtonPress-1>', lambda event: WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[14]))
-        WindowControl.new_game_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
-        options = WindowControl.play_button.grid_info()
-        WindowControl.play_button.grid_remove()
-        WindowControl.stop_button.grid(**options)
-        btns = chain(
-            WindowControl.diff_frame.grid_slaves(),
-            WindowControl.controls_frame.grid_slaves(),
-            WindowControl.presets_frame.grid_slaves(),
-            (WindowControl.settings_button,),
-            (WindowControl.leaderboard_button,)
-        )
-        for btn in btns:
-            if isinstance(btn, tk.Button):
-                btn.config(state=tk.DISABLED)
-
-        WindowControl.update_flag_counter()
-        GameControl.switch_mode()
-        GameControl.switch_mode()
-        GameControl.game_state = GameState.PLAYING
-
-    @staticmethod
-    def new_game():
-        """Display dialogue prompt to start a new game, and start a new game if confirmed."""
-        if GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
-            WindowControl.dialogue_open = True
-            reset = WindowControl.dialogue_box(
-                title='Reset Game?',
-                prompt='Are you sure you want to start a new game?',
-                format=DialogueType.ASK
-            )
-            if reset:
-                WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
-                WindowControl.dialogue_open = False
-                return
-            else:
-                WindowControl.dialogue_open = False
-        GameControl.game_state = GameState.DONE
-        WindowControl.new_game_button.unbind('<ButtonPress-1>')
-        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
-        WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
-        WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
-        WindowControl.reset_timer()
-        for square in WindowControl.board_frame.grid_slaves():
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
             if square.enabled:
-                square.reset()
-        if not GameControl.on_hold:
-            GameControl.play_game()
-
-    @staticmethod
-    def stop_game():
-        """Display dialogue prompt to stop the current game, and place game on hold if confirmed."""
-        if GameControl.game_state is GameState.PLAYING:
-            WindowControl.dialogue_open = True
-            stop = WindowControl.dialogue_box(
-                title='Stop Playing?',
-                prompt='Are you sure you want to stop playing?',
-                format=DialogueType.ASK
-            )
-            if not stop:
-                WindowControl.dialogue_open = False
-                return
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    'covered',
+                )
             else:
-                WindowControl.dialogue_open = False
-        GameControl.game_state = GameState.DONE
-        GameControl.on_hold = True
-        WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
-        WindowControl.game_root.unbind('<Control-f>')
-        WindowControl.new_game_button.unbind('<ButtonPress-1>')
-        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
-        WindowControl.mode_switch_button.unbind('<ButtonPress-1>')
-        WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
-        GameControl.new_game()
-        WindowControl.reset_timer()
-        WindowControl.reset_flag_counter()
-        options = WindowControl.stop_button.grid_info()
-        WindowControl.stop_button.grid_remove()
-        WindowControl.play_button.grid(**options)
-        btns = chain(
-            WindowControl.diff_frame.grid_slaves(),
-            WindowControl.controls_frame.grid_slaves(),
-            WindowControl.presets_frame.grid_slaves(),
-            (WindowControl.settings_button,),
-            (WindowControl.leaderboard_button,)
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    'unlocked',
+                )
+        self.ui_collapse()
+
+        self.unset_guard()
+
+    def ui_scale_trace(self) -> None:
+        """Update the UI size."""
+        self.set_guard()
+
+        if self.ui_scale.get() == self.SMALL_SCALE:
+            self.ui_square_size = self.ih.SM_SQUARE
+            self.sevseg_size = self.ih.SM_SEVSEG
+            self.style.configure(
+                'FFMS.TButton',
+                font=self.SMALL_FONT,
+                padding=('1.5m', '0.5m'),
+            )
+            self.style.configure(
+                'FFMS.TLabel',
+                font=self.SMALL_FONT,
+            )
+            self.style.configure(
+                'FFMS.Toolbutton',
+                font=self.SMALL_FONT,
+                padding=('1.5m', '0.5m'),
+            )
+            self.style.configure(
+                'FFMS.TEntry',
+                font=self.SMALL_FONT,
+            )
+        elif self.ui_scale.get() == self.LARGE_SCALE:
+            self.ui_square_size = self.ih.LG_SQUARE
+            self.sevseg_size = self.ih.LG_SEVSEG
+            self.style.configure(
+                'FFMS.TButton',
+                font=self.LARGE_FONT,
+                padding=('3m', '1m'),
+            )
+            self.style.configure(
+                'FFMS.TLabel',
+                font=self.LARGE_FONT,
+            )
+            self.style.configure(
+                'FFMS.Toolbutton',
+                font=self.LARGE_FONT,
+                padding=('3m', '1m'),
+            )
+            self.style.configure(
+                'FFMS.TEntry',
+                font=self.LARGE_FONT,
+            )
+
+        for label in chain(
+            self.flags_frame.grid_slaves(), self.timer_frame.grid_slaves()
+        ):
+            assert isinstance(label, ttk.Label)
+            label.config(
+                image=self.ih.lookup(
+                    self.sevseg_size,
+                    self.theme,
+                    self.ih.SEVSEG,
+                    '0',
+                )
+            )
+        self.mode_switch_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'uncover',
+            ),
         )
-        for btn in btns:
-            if isinstance(btn, tk.Button):
-                btn.config(state=tk.NORMAL)
-        if Options.flagless:
-            WindowControl.mode_switch_button.config(state=tk.NORMAL)
-        for sq in WindowControl.board_frame.grid_slaves():
-            sq.unlock()
-            sq.bind('<Button-1>',
-                    lambda event, square=sq: (
-                        square.toggle_enable(),
-                        WindowControl.draw_history_step.append(square)
+        self.new_game_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'new',
+            ),
+        )
+        self.leaderboard_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'leaderboard',
+            ),
+        )
+        self.ui_collapse()
+
+        self.unset_guard()
+
+    def multimine_trace(self) -> None:
+        """Enter and exit multimine mode."""
+        if self.multimine.get():
+            self.max_flags = 5
+        else:
+            self.max_flags = 1
+
+    def flagless_trace(self) -> None:
+        """Enter and exit flagless mode."""
+        if self.flagless.get():
+            self.click_mode = self.ClickMode.FLAGLESS
+        else:
+            self.click_mode = self.ClickMode.UNCOVER
+
+    def adaptive_ui_trace(self) -> None:
+        """Respond to Adaptive UI setting."""
+        if self.adaptive_ui.get():
+            self.ui_collapse()
+        else:
+            self.controls_frame.grid()
+            self.menu_frame.grid_columnconfigure(5, weight=1)
+            self.diff_frame.grid()
+            self.menu_frame.grid_columnconfigure(4, weight=1)
+            self.presets_frame.grid()
+            self.menu_frame.grid_columnconfigure(0, weight=1)
+
+    def reset_settings(self) -> None:
+        """Reset all game settings to defaults."""
+        self.multimine.set(False)
+        self.grace_rule.set(True)
+        self.flagless.set(False)
+        self.difficulty.set(self.DIFF_EASY)
+        if self.board_scale.get() == self.SMALL_SCALE:
+            self.board_scale.set(self.LARGE_SCALE)
+        if self.ui_scale.get() == self.SMALL_SCALE:
+            self.ui_scale.set(self.LARGE_SCALE)
+        self.adaptive_ui.set(True)
+        if self.rows.get() != 28:
+            self.rows.set(28)
+        if self.columns.get() != 30:
+            self.columns.set(30)
+        self.multimine_diff_inc.set(0.25)
+        self.multimine_likelihood.set(0.5)
+
+    # UI Generation Methods
+
+    def init_style(self) -> None:
+        """Set up style for the widgets."""
+        self.style.theme_use('default')
+        self.style.configure(
+            'FFMS.TFrame',
+            background=self.BACKGROUND_COLOUR,
+        )
+        self.style.configure(
+            'FFMS.TButton',
+            font=self.LARGE_FONT,
+            padding=('3m', '1m'),
+        )
+        self.style.configure(
+            'FFMS.Toolbutton',
+            font=self.LARGE_FONT,
+            relief='raised',
+            padding=('3m', '1m'),
+            anchor='center',
+        )
+        self.style.map(
+            'FFMS.Toolbutton',
+            background=[
+                ('pressed', '#c3c3c3'),
+                ('active', '#ececec'),
+                ('selected', '#c3c3c3'),
+            ],
+            relief=[
+                ('disabled', 'groove'),
+                ('selected', 'sunken'),
+                ('pressed', 'sunken'),
+                ('active', 'raised'),
+            ],
+        )
+        self.style.configure(
+            'Flat.FFMS.TButton',
+            borderwidth=0,
+            padding=(0, 0),
+            background=self.BACKGROUND_COLOUR,
+            highlightthickness=0,
+        )
+        self.style.configure(
+            'FFMS.TLabel',
+            font=self.LARGE_FONT,
+            borderwidth=0,
+            background=self.BACKGROUND_COLOUR,
+            anchor='center',
+        )
+        self.style.configure(
+            'Link.FFMS.TLabel',
+            foreground='#0000ee',
+        )
+        self.style.configure(
+            'FFMS.Treeview',
+            font=self.LARGE_FONT,
+            rowheight=64,
+            background=self.BACKGROUND_COLOUR,
+            fieldbackground=self.BACKGROUND_COLOUR,
+        )
+        self.style.configure('FFMS.Vertical.TScrollbar', width=16)
+        self.main_frame.config(style='FFMS.TFrame')
+        self.menu_frame.config(style='FFMS.TFrame')
+        self.board_frame.config(style='FFMS.TFrame')
+        self.presets_frame.config(style='FFMS.TFrame')
+        self.flags_frame.config(style='FFMS.TFrame')
+        self.mswpr_frame.config(style='FFMS.TFrame')
+        self.timer_frame.config(style='FFMS.TFrame')
+        self.diff_frame.config(style='FFMS.TFrame')
+        self.controls_frame.config(style='FFMS.TFrame')
+        self.mode_switch_button.config(style='FFMS.TLabel')
+        self.new_game_button.config(style='FFMS.TLabel')
+        self.play_button.config(style='FFMS.TButton')
+        self.stop_button.config(style='FFMS.TButton')
+        self.leaderboard_button.config(style='Flat.FFMS.TButton')
+
+    def init_window(self) -> None:
+        """Set up window for the game."""
+        self._hidden_root.withdraw()
+
+        self.game_root.resizable(False, False)
+        self.game_root.title('FreeForm Minesweeper (Loading...)')
+        self.game_root.iconname('FreeForm Minesweeper')
+
+        def close():
+            self.game_root.withdraw()
+            self._hidden_root.destroy()
+
+        self.game_root.protocol('WM_DELETE_WINDOW', close)
+        self.game_root.iconphoto(
+            False,
+            self.ih.lookup(
+                self.ih.LG_SQUARE,
+                self.theme,
+                self.ih.UI,
+                'new',
+            ),
+        )
+        self.game_root.bind('<KeyPress-Shift_L>', lambda *_: self.toggle_click_mode())
+        self.game_root.bind('<KeyRelease-Shift_L>', lambda *_: self.toggle_click_mode())
+        self.game_root.bind('<Control-KeyPress-z>', lambda *_: self.undo_history())
+        self.game_root.bind(
+            '<Control-Shift-KeyPress-Z>', lambda *_: self.redo_history()
+        )
+
+        self.board_frame.grid_propagate(False)
+        self.main_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        self.menu_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        self.board_frame.grid(row=1, column=0, sticky=tk.NSEW)
+
+    def init_toolbar(self) -> None:
+        self.menubar.config(font=self.SMALL_FONT)
+        file_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        file_menu.add_command(label='Load Board', command=self.load_board)
+        file_menu.add_command(label='Save Board', command=self.save_board)
+        presets_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        presets_menu.add_command(
+            label='Easy',
+            command=lambda: self.load_board('presets/easy.ffmnswpr', self.DIFF_EASY),
+        )
+        presets_menu.add_command(
+            label='Medium',
+            command=lambda: self.load_board(
+                'presets/medium.ffmnswpr', self.DIFF_MEDIUM
+            ),
+        )
+        presets_menu.add_command(
+            label='Hard',
+            command=lambda: self.load_board('presets/hard.ffmnswpr', self.DIFF_HARD),
+        )
+        presets_menu.add_command(
+            label='Expert',
+            command=lambda: self.load_board(
+                'presets/expert.ffmnswpr', self.DIFF_EXPERT
+            ),
+        )
+        file_menu.add_cascade(label='Presets', menu=presets_menu)
+        samples_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        samples_menu.add_command(
+            label='Mine',
+            command=lambda: self.load_board('sample_boards/mine.ffmnswpr'),
+        )
+        samples_menu.add_command(
+            label='Flag',
+            command=lambda: self.load_board('sample_boards/flag.ffmnswpr'),
+        )
+        samples_menu.add_command(
+            label='Trophy',
+            command=lambda: self.load_board('sample_boards/trophy.ffmnswpr'),
+        )
+        samples_menu.add_command(
+            label='Win Face',
+            command=lambda: self.load_board('sample_boards/winface.ffmnswpr'),
+        )
+        file_menu.add_cascade(label='Sample Boards', menu=samples_menu)
+        file_menu.add_separator()
+        file_menu.add_command(
+            label='Leaderboard',
+            command=lambda: LeaderboardViewDialogue(self.game_root),
+        )
+        file_menu.add_separator()
+        file_menu.add_command(label='Close')
+        self.menubar.add_cascade(label='File', menu=file_menu)
+
+        edit_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        edit_menu.add_command(label='Undo', command=self.undo_history)
+        edit_menu.add_command(label='Redo', command=self.redo_history)
+        edit_menu.add_command(label='Fill Board', command=self.fill_board)
+        edit_menu.add_command(label='Clear Board', command=self.clear_board)
+        edit_menu.add_command(label='Invert Board', command=self.invert_board)
+        edit_menu.add_separator()
+        edit_menu.add_command(label='Close')
+        self.menubar.add_cascade(label='Edit', menu=edit_menu)
+
+        options_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        options_menu.add_checkbutton(label='Multimine Mode', variable=self.multimine)
+        options_menu.add_checkbutton(label='Grace Rule', variable=self.grace_rule)
+        options_menu.add_checkbutton(label='Flagless', variable=self.flagless)
+        diff_menu = tk.Menu(options_menu, tearoff=0, font=self.SMALL_FONT)
+        diff_menu.add_radiobutton(
+            label=f'{self.DIFF_EASY:.0%} Mines',
+            value=self.DIFF_EASY,
+            variable=self.difficulty,
+        )
+        diff_menu.add_radiobutton(
+            label=f'{self.DIFF_MEDIUM:.0%} Mines',
+            value=self.DIFF_MEDIUM,
+            variable=self.difficulty,
+        )
+        diff_menu.add_radiobutton(
+            label=f'{self.DIFF_HARD:.0%} Mines',
+            value=self.DIFF_HARD,
+            variable=self.difficulty,
+        )
+        diff_menu.add_radiobutton(
+            label=f'{self.DIFF_EXPERT:.0%} Mines',
+            value=self.DIFF_EXPERT,
+            variable=self.difficulty,
+        )
+        options_menu.add_cascade(label='Difficulty', menu=diff_menu)
+        bds_menu = tk.Menu(options_menu, tearoff=0, font=self.SMALL_FONT)
+        bds_menu.add_radiobutton(
+            label='Small',
+            value=self.SMALL_SCALE,
+            variable=self.board_scale,
+        )
+        bds_menu.add_radiobutton(
+            label='Large',
+            value=self.LARGE_SCALE,
+            variable=self.board_scale,
+        )
+        options_menu.add_cascade(label='Board Scale', menu=bds_menu)
+        uis_menu = tk.Menu(options_menu, tearoff=0, font=self.SMALL_FONT)
+        uis_menu.add_radiobutton(
+            label='Small',
+            value=self.SMALL_SCALE,
+            variable=self.ui_scale,
+        )
+        uis_menu.add_radiobutton(
+            label='Large', value=self.LARGE_SCALE, variable=self.ui_scale
+        )
+        options_menu.add_cascade(label='UI Scale', menu=uis_menu)
+        options_menu.add_checkbutton(label='Adaptive UI', variable=self.adaptive_ui)
+        options_menu.add_separator()
+        options_menu.add_command(
+            label='More...',
+            command=lambda: SettingsDialogue(
+                self.game_root,
+                {
+                    'Rows': (3, 64, 1, self.rows),
+                    'Columns': (3, 64, 1, self.columns),
+                    'MultiMine Difficulty Increase': (
+                        0.0,
+                        0.5,
+                        0.01,
+                        self.multimine_diff_inc,
+                    ),
+                    'MultiMine Probability': (
+                        0.0,
+                        1.0,
+                        0.01,
+                        self.multimine_likelihood,
+                    ),
+                },
+            ),
+        )
+        options_menu.add_command(label='Reset Settings', command=self.reset_settings)
+        options_menu.add_separator()
+        options_menu.add_command(label='Close')
+        self.menubar.add_cascade(label='Options', menu=options_menu)
+
+        help_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        help_menu.add_command(
+            label='About...',
+            command=lambda: AcknowledgementWithLinkDialogue(
+                self.game_root,
+                'FreeForm Minesweeper, created by KittyKittyKitKat.\nCheck out my GitHub!',
+                ('GitHub Page', self.GITHUB_PAGE),
+                title='FreeForm Minesweeper About',
+            ),
+        )
+        help_menu.add_command(
+            label='Tutorial',
+            command=lambda: AcknowledgementWithLinkDialogue(
+                self.game_root,
+                'Click the link to open the tutorial page in your browser.',
+                ('Tutorial', self.TUTORIAL_PAGE),
+                title='FreeForm Minesweeper Help',
+            ),
+        )
+        help_menu.add_separator()
+        help_menu.add_command(label='Close')
+        self.menubar.add_cascade(label='Help', menu=help_menu)
+
+        self.game_root.config(menu=self.menubar)
+
+    def init_menu(self) -> None:
+        """Set up menu for the game"""
+        self.menu_frame.config(padding=(0, self.UI_PADDING, 0))
+        self.menu_frame.grid_columnconfigure(0, weight=1)
+        self.menu_frame.grid_columnconfigure(1, weight=1)
+        self.menu_frame.grid_columnconfigure(2, weight=1)
+        self.menu_frame.grid_columnconfigure(3, weight=1)
+        self.menu_frame.grid_columnconfigure(4, weight=1)
+        self.menu_frame.grid_columnconfigure(5, weight=1)
+        preset_easy = ttk.Button(
+            self.presets_frame,
+            text='Easy',
+            width=6,
+            style='FFMS.TButton',
+            command=lambda: self.load_board('presets/easy.ffmnswpr', self.DIFF_EASY),
+            takefocus=False,
+        )
+        preset_medium = ttk.Button(
+            self.presets_frame,
+            text='Medium',
+            width=6,
+            style='FFMS.TButton',
+            command=lambda: self.load_board(
+                'presets/medium.ffmnswpr', self.DIFF_MEDIUM
+            ),
+            takefocus=False,
+        )
+        preset_hard = ttk.Button(
+            self.presets_frame,
+            text='Hard',
+            width=6,
+            style='FFMS.TButton',
+            command=lambda: self.load_board('presets/hard.ffmnswpr', self.DIFF_HARD),
+            takefocus=False,
+        )
+        preset_expert = ttk.Button(
+            self.presets_frame,
+            text='Expert',
+            width=6,
+            style='FFMS.TButton',
+            command=lambda: self.load_board(
+                'presets/expert.ffmnswpr', self.DIFF_EXPERT
+            ),
+            takefocus=False,
+        )
+        preset_easy.grid(row=0, column=0, sticky=tk.NSEW)
+        preset_medium.grid(row=0, column=1, sticky=tk.NSEW)
+        preset_hard.grid(row=1, column=0, sticky=tk.NSEW)
+        preset_expert.grid(row=1, column=1, sticky=tk.NSEW)
+        self.presets_frame.grid(row=0, column=0)
+
+        flag_left = ttk.Label(
+            self.flags_frame,
+            image=self.ih.lookup(
+                self.sevseg_size,
+                self.theme,
+                self.ih.SEVSEG,
+                '0',
+            ),
+            style='FFMS.TLabel',
+        )
+        flag_mid = ttk.Label(
+            self.flags_frame,
+            image=self.ih.lookup(
+                self.sevseg_size,
+                self.theme,
+                self.ih.SEVSEG,
+                '0',
+            ),
+            style='FFMS.TLabel',
+        )
+        flag_right = ttk.Label(
+            self.flags_frame,
+            image=self.ih.lookup(
+                self.sevseg_size,
+                self.theme,
+                self.ih.SEVSEG,
+                '0',
+            ),
+            style='FFMS.TLabel',
+        )
+        flag_left.grid(row=0, column=0, sticky=tk.NSEW)
+        flag_mid.grid(row=0, column=1, sticky=tk.NSEW)
+        flag_right.grid(row=0, column=2, sticky=tk.NSEW)
+        self.flags_frame.grid(row=0, column=1)
+
+        self.mode_switch_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'uncover',
+            ),
+        )
+        self.mode_switch_button.bind('<Button-1>', lambda *_: self.toggle_click_mode())
+        self.mode_switch_button.state([tk.DISABLED])
+        self.new_game_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'new',
+            ),
+        )
+        self.new_game_button.state([tk.DISABLED])
+
+        def hold():
+            if self.state is not self.State.DRAW:
+                self.new_game_button.config(
+                    image=self.ih.lookup(
+                        self.ui_square_size,
+                        self.theme,
+                        self.ih.UI,
+                        'held',
                     )
                 )
-            sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
-            sq.bind('<ButtonRelease-1>', lambda event: WindowControl.inc_history())
-            sq.unbind('<Double-Button-1>')
 
-    @staticmethod
-    def change_difficulty(difficulty: Difficulty, btn_pressed: tk.Button):
-        """Change the difficulty of the game.
+        self.new_game_button.bind('<Button-1>', lambda *_: hold())
+        self.new_game_button.bind('<ButtonRelease-1>', lambda *_: self.new_game())
+        self.leaderboard_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'leaderboard',
+            ),
+            command=lambda *_: LeaderboardViewDialogue(self.game_root),
+            takefocus=False,
+        )
+        self.play_button.config(
+            text='Play',
+            width=5,
+            command=self.start_game,
+            takefocus=False,
+        )
+        self.stop_button.config(
+            text='Stop',
+            width=5,
+            command=self.stop_game,
+            takefocus=False,
+        )
+
+        self.mode_switch_button.grid(row=0, column=0, sticky=tk.NSEW)
+        self.new_game_button.grid(row=0, column=1, padx=5, pady=3, sticky=tk.NSEW)
+        self.leaderboard_button.grid(row=0, column=2, sticky=tk.NSEW)
+        self.stop_button.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW)
+        self.stop_button.grid_remove()
+        self.play_button.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW)
+        self.mswpr_frame.grid(row=0, column=2)
+
+        timer_left = ttk.Label(
+            self.timer_frame,
+            image=self.ih.lookup(
+                self.sevseg_size,
+                self.theme,
+                self.ih.SEVSEG,
+                '0',
+            ),
+            style='FFMS.TLabel',
+        )
+        timer_mid = ttk.Label(
+            self.timer_frame,
+            image=self.ih.lookup(
+                self.sevseg_size,
+                self.theme,
+                self.ih.SEVSEG,
+                '0',
+            ),
+            style='FFMS.TLabel',
+        )
+        timer_right = ttk.Label(
+            self.timer_frame,
+            image=self.ih.lookup(
+                self.sevseg_size,
+                self.theme,
+                self.ih.SEVSEG,
+                '0',
+            ),
+            style='FFMS.TLabel',
+        )
+        timer_left.grid(row=0, column=0, sticky=tk.NSEW)
+        timer_mid.grid(row=0, column=1, sticky=tk.NSEW)
+        timer_right.grid(row=0, column=2, sticky=tk.NSEW)
+        self.timer_frame.grid(row=0, column=3)
+
+        diff_label = ttk.Label(
+            self.diff_frame,
+            text='Difficulty',
+            style='FFMS.TLabel',
+        )
+        diff_1 = ttk.Radiobutton(
+            self.diff_frame,
+            text='1',
+            width=1,
+            value=self.DIFF_EASY,
+            variable=self.difficulty,
+            style='FFMS.Toolbutton',
+            takefocus=False,
+        )
+        diff_2 = ttk.Radiobutton(
+            self.diff_frame,
+            text='2',
+            width=1,
+            value=self.DIFF_MEDIUM,
+            variable=self.difficulty,
+            style='FFMS.Toolbutton',
+            takefocus=False,
+        )
+        diff_3 = ttk.Radiobutton(
+            self.diff_frame,
+            text='3',
+            value=self.DIFF_HARD,
+            variable=self.difficulty,
+            style='FFMS.Toolbutton',
+            takefocus=False,
+        )
+        diff_4 = ttk.Radiobutton(
+            self.diff_frame,
+            text='4',
+            value=self.DIFF_EXPERT,
+            variable=self.difficulty,
+            style='FFMS.Toolbutton',
+            takefocus=False,
+        )
+
+        diff_label.grid(
+            row=0,
+            column=1,
+            columnspan=4,
+            sticky=tk.NSEW,
+            pady=(0, self.UI_PADDING),
+        )
+        diff_1.grid(row=1, column=1, sticky=tk.NSEW)
+        diff_2.grid(row=1, column=2, sticky=tk.NSEW)
+        diff_3.grid(row=1, column=3, sticky=tk.NSEW)
+        diff_4.grid(row=1, column=4, sticky=tk.NSEW)
+        self.diff_frame.grid(row=0, column=4)
+
+        fill_button = ttk.Button(
+            self.controls_frame,
+            text='Fill',
+            width=5,
+            style='FFMS.TButton',
+            command=self.fill_board,
+            takefocus=False,
+        )
+        clear_button = ttk.Button(
+            self.controls_frame,
+            text='Clear',
+            width=5,
+            style='FFMS.TButton',
+            command=self.clear_board,
+            takefocus=False,
+        )
+        save_board_button = ttk.Button(
+            self.controls_frame,
+            text='Save',
+            width=5,
+            style='FFMS.TButton',
+            command=self.save_board,
+            takefocus=False,
+        )
+        load_board_button = ttk.Button(
+            self.controls_frame,
+            text='Load',
+            width=5,
+            style='FFMS.TButton',
+            command=self.load_board,
+            takefocus=False,
+        )
+
+        fill_button.grid(row=0, column=1, sticky=tk.NSEW)
+        clear_button.grid(row=1, column=1, sticky=tk.NSEW)
+        save_board_button.grid(row=0, column=2, sticky=tk.NSEW)
+        load_board_button.grid(row=1, column=2, sticky=tk.NSEW)
+        self.controls_frame.grid(row=0, column=5)
+
+    def init_board(self) -> None:
+        """Set up the squares on the board."""
+        self.board_frame.config(
+            height=self.board_square_size_px * self.rows.get(),
+            width=self.board_square_size_px * self.columns.get(),
+        )
+        for x in range(self.rows.get()):
+            for y in range(self.columns.get()):
+                # self.game_root.update_idletasks()
+                self.make_square(x, y)
+
+    def make_square(self, row: int, column: int) -> None:
+        """Make a BoardSquare and place it in the grid"""
+        self.game_root.update_idletasks()
+        sq = BoardSquare(
+            self.board_frame,
+            self.ih.lookup(
+                self.board_square_size,
+                self.theme,
+                self.ih.BOARD,
+                'unlocked',
+            ),
+            'FFMS.TLabel',
+        )
+        sq.bind('<Button-1>', self.left_mouse_press_handler)
+        sq.bind('<Button-3>', self.right_mouse_press_handler)
+        sq.bind('<B1-Motion>', self.mouse_motion_handler)
+        sq.bind('<ButtonRelease-1>', self.mouse_release_handler)
+        sq.bind('<Double-Button-1>', self.double_mouse_handler)
+        sq.grid(row=row, column=column)
+
+    # UI Interaction Methods
+
+    def lock_toolbar(self) -> None:
+        """Disable the window toolbar."""
+        self.menubar.entryconfigure('File', state=tk.DISABLED)
+        self.menubar.entryconfigure('Edit', state=tk.DISABLED)
+        self.menubar.entryconfigure('Options', state=tk.DISABLED)
+
+    def unlock_toolbar(self) -> None:
+        """Enable the window toolbar."""
+        self.menubar.entryconfigure('File', state=tk.NORMAL)
+        self.menubar.entryconfigure('Edit', state=tk.NORMAL)
+        self.menubar.entryconfigure('Options', state=tk.NORMAL)
+
+    def set_guard(self) -> None:
+        """Disable the UI while important events occur."""
+        self.state = self.State.PAUSE
+        self.lock_toolbar()
+        for button in self.get_menu_buttons:
+            assert isinstance(button, ttk.Widget)
+            button.state(['disabled'])
+
+    def unset_guard(self) -> None:
+        """Enable the UI."""
+        for button in self.get_menu_buttons:
+            assert isinstance(button, ttk.Widget)
+            if button not in (self.new_game_button, self.mode_switch_button):
+                button.state(['!disabled'])
+        self.unlock_toolbar()
+        self.state = self.State.DRAW
+
+    def ui_collapse(self) -> None:
+        """Hide/show parts of the UI depending on the board size."""
+        if not self.adaptive_ui.get():
+            return
+        thresholds_lb_lu = (22, 17, 13, 9)
+        thresholds_lb_su = (14, 11, 8, 5)
+        thresholds_sb_lu = (43, 34, 26, 17)
+        thresholds_sb_su = (27, 21, 16, 9)
+        bs = self.board_scale.get()
+        us = self.ui_scale.get()
+        if bs == self.LARGE_SCALE and us == self.LARGE_SCALE:
+            thresholds = thresholds_lb_lu
+        elif bs == self.LARGE_SCALE and us == self.SMALL_SCALE:
+            thresholds = thresholds_lb_su
+        elif bs == self.SMALL_SCALE and us == self.LARGE_SCALE:
+            thresholds = thresholds_sb_lu
+        elif bs == self.SMALL_SCALE and us == self.SMALL_SCALE:
+            thresholds = thresholds_sb_su
+
+        curr_columns = self.columns.get()
+        if curr_columns < thresholds[0]:
+            self.controls_frame.grid_remove()
+            self.menu_frame.grid_columnconfigure(5, weight=0)
+        else:
+            self.controls_frame.grid()
+            self.menu_frame.grid_columnconfigure(5, weight=1)
+        if curr_columns < thresholds[1]:
+            self.diff_frame.grid_remove()
+            self.menu_frame.grid_columnconfigure(4, weight=0)
+        else:
+            self.diff_frame.grid()
+            self.menu_frame.grid_columnconfigure(4, weight=1)
+        if curr_columns < thresholds[2]:
+            self.presets_frame.grid_remove()
+            self.menu_frame.grid_columnconfigure(0, weight=0)
+        else:
+            self.presets_frame.grid()
+            self.menu_frame.grid_columnconfigure(0, weight=1)
+        if curr_columns < thresholds[3]:
+            self.leaderboard_button.grid_remove()
+        else:
+            self.leaderboard_button.grid()
+
+    def left_mouse_press_handler(self, event: tk.Event) -> None:
+        """Handle mouse press events in the board.
 
         Args:
-            difficulty: The new difficulty to apply.
-            btn_pressed: The button pressed corresponding to the difficulty.
-
+            event: Tkinter event.
         """
-        GameControl.difficulty = difficulty
-        for diff_btn in WindowControl.diff_frame.grid_slaves():
-            if isinstance(diff_btn, tk.Button):
-                diff_btn.config(relief=tk.RAISED, bg=Constants.DEFAULT_COLOUR)
-        btn_pressed.config(relief=tk.SUNKEN, bg=Constants.BACKGROUND_COLOUR)
+        square: BoardSquare = event.widget
+        if self.state is self.State.DRAW:
+            self.square_toggle_enabled(square)
+            self.draw_history_step.append(square)
+        elif self.state is self.State.SWEEP:
+            if self.click_mode in (self.ClickMode.UNCOVER, self.ClickMode.FLAGLESS):
+                if not square.enabled or square.flag_count:
+                    return
+                self.uncover_square(square)
+                if square.mine_count:
+                    return
+                if square.value == 0:
+                    self.chord(square)
+                if self.squares_cleared == self.squares_to_win:
+                    self.game_won()
+            elif self.click_mode is self.ClickMode.FLAG:
+                self.add_flag(square)
 
-    @staticmethod
-    def fill_board():
-        """Make all squares enabled."""
-        for sq in WindowControl.board_frame.grid_slaves():
-            if not sq.enabled:
-                sq.toggle_enable()
-                WindowControl.draw_history_step.append(sq)
-        WindowControl.inc_history()
+    def right_mouse_press_handler(self, event: tk.Event) -> None:
+        """Handle mouse press events in the board.
 
-    @staticmethod
-    def clear_board():
-        """Make all squares disabled."""
-        for sq in WindowControl.board_frame.grid_slaves():
-            if sq.enabled:
-                sq.toggle_enable()
-                WindowControl.draw_history_step.append(sq)
-        WindowControl.inc_history()
+        Args:
+            event: Tkinter event.
+        """
+        square: BoardSquare = event.widget
+        if self.state is self.State.SWEEP:
+            if self.click_mode is self.ClickMode.UNCOVER:
+                if not self.multimine.get():
+                    if square.flag_count:
+                        self.remove_flag(square)
+                    else:
+                        self.add_flag(square)
+            elif self.click_mode is self.ClickMode.FLAG:
+                self.remove_flag(square)
 
-    @staticmethod
-    def switch_mode():
-        """Switch the effect clicking has a square during the game."""
-        if GameControl.click_mode is ClickMode.UNCOVER:
-            GameControl.click_mode = ClickMode.FLAG
-            WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[18])
-            for sq in WindowControl.board_frame.grid_slaves():
-                if Options.multimines:
-                    sq.bind('<Button-1>', lambda event, square=sq: square.add_flag())
-                    sq.bind('<Button-3>', lambda event, square=sq: square.remove_flag())
-                    sq.bind('<Double-Button-1>', lambda event, square=sq: square.add_flag(), add='+')
-                else:
-                    sq.bind('<Button-1>', lambda event, square=sq: square.flag())
+    def mouse_release_handler(self, event: tk.Event) -> None:
+        """Handle mouse release events in the board.
+
+        Args:
+            event: Tkinter event.
+        """
+        if self.state is self.State.DRAW:
+            self.inc_history()
+
+    def double_mouse_handler(self, event: tk.Event) -> None:
+        """Handle double mouse press events in the board.
+
+        Args:
+            event: Tkinter event.
+        """
+        square: BoardSquare = event.widget
+        if self.state is self.State.DRAW:
+            self.square_toggle_enabled(square)
+            self.draw_history_step.append(square)
+        elif self.state is not self.State.PAUSE and not square.covered:
+            flags_around = 0
+            for neighbour in square.neighbours.values():
+                if neighbour:
+                    flags_around += neighbour.flag_count
+            if flags_around == square.value:
+                self.chord(square, force=True)
+            if self.squares_cleared == self.squares_to_win:
+                self.game_won()
+        elif self.state is self.State.SWEEP and self.click_mode is self.ClickMode.FLAG:
+            self.add_flag(square)
+
+    def mouse_motion_handler(self, event: tk.Event) -> None:
+        """Handle mouse motion events in the board.
+
+        Args:
+            event: Tkinter event.
+        """
+        if self.state is self.State.DRAW:
+            initial_square: BoardSquare = event.widget
+            x = (
+                event.x_root - initial_square.master.winfo_rootx()
+            ) // self.board_square_size_px
+            y = (
+                event.y_root - initial_square.master.winfo_rooty()
+            ) // self.board_square_size_px
+            if y in range(self.rows.get()) and x in range(self.columns.get()):
+                square = self.board_frame.grid_slaves(row=y, column=x)[0]
+                assert isinstance(square, BoardSquare)
+                if square.enabled != initial_square.enabled:
+                    self.square_toggle_enabled(square)
+                    self.draw_history_step.append(square)
+
+    def inc_history(self) -> None:
+        """Add the current history step to the history."""
+        self.draw_history.append(self.draw_history_step.copy())
+        if (
+            self.draw_history_buffer
+            and self.draw_history_step == self.draw_history_buffer[-1]
+        ):
+            self.draw_history_buffer.pop(-1)
         else:
-            GameControl.click_mode = ClickMode.UNCOVER
-            WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
-            for sq in WindowControl.board_frame.grid_slaves():
-                sq.bind('<Button-1>', lambda event, square=sq: square.uncover())
-                if Options.multimines:
-                    sq.unbind('<Button-3>')
-                    sq.unbind('<Double-Button-1>')
-                    sq.bind('<Double-Button-1>', lambda event, square=sq: square.chord())
+            self.draw_history_buffer.clear()
+        self.draw_history_step.clear()
 
-    @staticmethod
-    def compress_board(as_RLE):
+    def undo_history(self) -> None:
+        """Move to the previous point in history."""
+        if self.state is not self.State.DRAW:
+            return
+        if not self.draw_history:
+            return
+        step = self.draw_history.pop(-1)
+        self.draw_history_buffer.append(step)
+        for square in step:
+            self.square_toggle_enabled(square)
+
+    def redo_history(self) -> None:
+        """Move to the next point in the history buffer."""
+        if self.state is not self.State.DRAW:
+            return
+        if not self.draw_history_buffer:
+            return
+        step = self.draw_history_buffer.pop(-1)
+        self.draw_history.append(step)
+        for square in step:
+            self.square_toggle_enabled(square)
+
+    def clear_history(self) -> None:
+        """Clear all the drawing history data."""
+        self.draw_history.clear()
+        self.draw_history_step.clear()
+        self.draw_history_buffer.clear()
+
+    def compress_board(self) -> list[str]:
         """Compress the current board to its smallest possible form.
 
-        Args:
-            as_RLE (bool): Return the compressed board as an RLE encoded string instead of bit strings.
-
         Returns:
-            list[str]: A list of bit strings representing a game board, if as_RLE is false.
-            str: Run length encoded string representing a game board, if RLE is true.
-
+            A list of bit strings representing a game board.
         """
-        # Keep track of the leftmost enabled square. Set to the right side of the field
-        leftmost = Options.cols - 1
-        # Will be the final bit mapping of the board
-        board_bits = []
-        # A flag for detecting when the first row with an enabled square is hit
+        leftmost = self.columns.get() - 1
+        board_bits: list[str] = []
         reached_content = False
-        # Iterate over the number rows of the field
-        for row in range(Options.rows):
-            # Define an empty string that will represent the bits in a row
+        for row in range(self.rows.get()):
             bit_row = ''
-            # Iterate over the number of columns in the field
-            for col in range(Options.cols):
-                # Get the square at the current position
-                square = WindowControl.board_frame.grid_slaves(row=row, column=col)[0]
-                # Set the next bit in the row to be 1 if the square is enabled and 0 if it is not
+            for col in range(self.columns.get()):
+                square = self.board_frame.grid_slaves(row=row, column=col)[0]
+                assert isinstance(square, BoardSquare)
                 bit_row += '1' if square.enabled else '0'
-            # If the bit row contains 1
             if '1' in bit_row:
-                # Get the index of the first and last 1 in the bit row
                 leftmost_index = bit_row.index('1')
                 rightmost_index = bit_row.rindex('1') + 1
-                # Set the leftmost index to the minimum of the current and the left index just calculated
                 leftmost = min(leftmost_index, leftmost)
-                # Set the flag that we've reached a row with content
                 reached_content = True
-                # Append the bit row from the beginning to the rightmost index. This trims off all the ending 0 in the bit row
                 board_bits.append(bit_row[:rightmost_index])
-            # Otherwise, if the bit row has no 1 but is in the content of the board
             elif '1' not in bit_row and reached_content:
-                # Set the row to be 0 to represent the empty row in the middle of the field
                 board_bits.append('0')
-        # Get the index of the last row of content. Set to the bottom of the field
         last_content_index = len(board_bits)
-        # Starting from the bottom, loop over the rows of the board
-        for i, row in enumerate(reversed(board_bits)):
-            # When a row is hit that has content, all the empty rows at the bottom have been iterated through
-            if '1' in row:
-                # So set the index of the last row of content to this spot and exit the loop
+        for i, bit_row in enumerate(reversed(board_bits)):
+            if '1' in bit_row:
                 last_content_index -= i
                 break
-        # Trim the trailing rows of 0 off the end
         board_bits = board_bits[:last_content_index]
-        # Go through the rows of the board
-        for i, row in enumerate(board_bits):
-            # If the row isn't a filler empty row in the middle of the field
-            if row != '0':
-                # Trim the bigging of the row from the index of the leftmost enabled square
-                board_bits[i] = row[leftmost:]
-        # At this point the board is saved as rows of bits that has been trimmed down to the smallest possible dimensions of the board
-        if as_RLE:
-            board_txt = 'N'.join(board_bits).replace('1', 'E').replace('0', 'D')
-            board_rle = ''.join(str(len(list(g)))+k for k, g in groupby(board_txt))
-            return board_rle
+        for i, bit_row in enumerate(board_bits):
+            if bit_row != '0':
+                board_bits[i] = bit_row[leftmost:]
         return board_bits
 
-    @staticmethod
-    def decompress_board_textually(rle_compressed_board):
-        """Decompress a running length encoded board back into a list of bit strings.
-
-        Args:
-            rle_compressed_board (str): Run length encoded board.
+    def compress_board_rle(self) -> str:
+        """Compress the current board to its smallest possible form.
 
         Returns:
-            list[str]: A list of binary strings representing a game board.
-
+            Run length encoded string representing a game board.
         """
-        decompressed_board = ''
-        current_num = ''
-        for char in rle_compressed_board:
-            if char.isalpha():
-                decompressed_board += char * int(current_num)
-                current_num = ''
-            else:
-                current_num += char
-        decompressed_board = decompressed_board.replace('E', '1').replace('D', '0').split('N')
-        return decompressed_board
+        board_bits = self.compress_board()
+        board_txt = 'N'.join(board_bits).replace('1', 'E').replace('0', 'D')
+        board_rle = ''.join(str(len(list(g))) + k for k, g in groupby(board_txt))
+        return board_rle
 
-    @staticmethod
-    def save_board():
-        """Save the current board to a file."""
-        compressed_board = GameControl.compress_board(as_RLE=False)
-        board_file = filedialog.asksaveasfilename(
-            initialdir=Constants.SAVE_LOAD_DIR, title='Save Board',
-            filetypes=Constants.FILE_TYPE, defaultextension=Constants.FILE_EXTENSION
+    @cached_property
+    def get_menu_buttons(self) -> list[tk.Widget]:
+        """Get all the buttons present in the menu."""
+        return list(
+            chain(
+                self.presets_frame.grid_slaves(),
+                self.mswpr_frame.grid_slaves(),
+                (
+                    widget
+                    for widget in self.diff_frame.grid_slaves()
+                    if not isinstance(widget, ttk.Label)
+                ),
+                self.controls_frame.grid_slaves(),
+            )
         )
-        if not board_file:
-            return
-        if not board_file.endswith(Constants.FILE_EXTENSION):
-            WindowControl.dialogue_open = True
-            WindowControl.dialogue_box(
-                title='Extension Error',
-                prompt=f'Invalid extension for FreeForm Minesweeper board ({"".join(board_file.partition(".")[1:])}).',
-                format=DialogueType.MESSAGE
-            )
-            WindowControl.dialogue_open = False
-            return
-        try:
-            with open(board_file, 'w') as board_save_file:
-                board_save_file.write('\n'.join(compressed_board))
-                board_save_file.write('\n')
-        except Exception:
-            WindowControl.dialogue_open = True
-            WindowControl.dialogue_box(
-                title='Saving Error',
-                prompt='Was not able to save the file.',
-                format=DialogueType.MESSAGE
-            )
-            WindowControl.dialogue_open = False
 
-    @staticmethod
-    def load_board(filename=None):
+    def update_timer(self) -> None:
+        """Update timer widgets."""
+        seconds = list(str(int(self.time_elapsed)).zfill(3))
+        for number in self.timer_frame.grid_slaves():
+            assert isinstance(number, ttk.Label)
+            number.config(
+                image=self.ih.lookup(
+                    self.sevseg_size,
+                    self.theme,
+                    self.ih.SEVSEG,
+                    seconds.pop(),
+                )
+            )
+
+    def reset_timer(self) -> None:
+        """Reset timer widgets."""
+        for number in self.timer_frame.grid_slaves():
+            assert isinstance(number, ttk.Label)
+            number.config(
+                image=self.ih.lookup(
+                    self.sevseg_size,
+                    self.theme,
+                    self.ih.SEVSEG,
+                    '0',
+                ),
+            )
+
+    def update_flag_counter(self) -> None:
+        """Update flag widgets."""
+        flags = list(str(self.num_mines - self.flags_placed).zfill(3))
+        for number in self.flags_frame.grid_slaves():
+            assert isinstance(number, ttk.Label)
+            number.config(
+                image=self.ih.lookup(
+                    self.sevseg_size,
+                    self.theme,
+                    self.ih.SEVSEG,
+                    flags.pop(),
+                )
+            )
+
+    def reset_flag_counter(self) -> None:
+        """Reset flag widgets."""
+        for number in self.flags_frame.grid_slaves():
+            assert isinstance(number, ttk.Label)
+            number.config(
+                image=self.ih.lookup(
+                    self.sevseg_size,
+                    self.theme,
+                    self.ih.SEVSEG,
+                    '0',
+                ),
+            )
+
+    # Gameplay methods
+
+    def square_toggle_enabled(self, square: BoardSquare) -> None:
+        """Toggle a square's enabled status and update its image.
+
+        Args:
+            square: Square to toggle.
+        """
+        square.toggle_enable()
+        if square.enabled:
+            square.image = self.ih.lookup(
+                self.board_square_size,
+                self.theme,
+                self.ih.BOARD,
+                'covered',
+            )
+        else:
+            square.image = self.ih.lookup(
+                self.board_square_size,
+                self.theme,
+                self.ih.BOARD,
+                'unlocked',
+            )
+
+    def uncover_square(self, square: BoardSquare) -> None:
+        """Uncover a square and update its image.
+
+        Args:
+            square: Square to uncover.
+        """
+        if square.mine_count and not square.flag_count:
+            if self.grace_rule.get() and self.squares_cleared == 0:
+                self.new_game()
+                self.uncover_square(square)
+                return
+            square.image = self.ih.lookup(
+                self.board_square_size,
+                self.theme,
+                self.ih.BOARD,
+                f'mine_{square.mine_count}_explode',
+            )
+            square.uncover()
+            self.game_lost()
+        elif square.covered and not square.flag_count:
+            square.calculate_value()
+            square.uncover()
+            square.image = self.ih.lookup(
+                self.board_square_size,
+                self.theme,
+                self.ih.BOARD,
+                str(square.value),
+            )
+            self.squares_cleared += 1
+
+    def chord(self, square: BoardSquare, force: bool = False) -> None:
+        """Chord a square.
+
+        Args:
+            square: The square to chord.
+            force: Force chording even if the clicked square is not 0.
+                This only applied to the clicked square, not any neighbours.
+                Defaults to False.
+        """
+        chord_q = {square}
+        while chord_q:
+            curr_square = chord_q.pop()
+            self.uncover_square(curr_square)
+            if curr_square.value == 0 or force:
+                force = False
+                for n_sq in curr_square.neighbours.values():
+                    if n_sq and n_sq.covered:
+                        chord_q.add(n_sq)
+
+    def link_squares_neighbours(self, square: BoardSquare) -> None:
+        """Link a square to its eight potential neighbours.
+
+        Args:
+            square: The square being given neighbours.
+        """
+        dirs = square.directions
+        square_row, square_col = square.position
+        k = 0
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                if i == j == 0:
+                    continue
+                curr_direction = dirs[k]
+                k += 1
+                check_x = i + square_row
+                check_y = j + square_col
+                if check_x in range(self.rows.get()) and check_y in range(
+                    self.columns.get()
+                ):
+                    child_widget = self.board_frame.grid_slaves(
+                        row=check_x, column=check_y
+                    )[0]
+                    if isinstance(child_widget, BoardSquare) and child_widget.enabled:
+                        square.neighbours[curr_direction] = child_widget
+
+    def toggle_click_mode(self):
+        """Toggle the clicking mode of the game."""
+        if self.state is self.State.DRAW:
+            return
+        if self.click_mode is self.ClickMode.FLAGLESS:
+            return
+        if self.click_mode is self.ClickMode.UNCOVER:
+            self.click_mode = self.ClickMode.FLAG
+            self.mode_switch_button.config(
+                image=self.ih.lookup(
+                    self.ui_square_size,
+                    self.theme,
+                    self.ih.UI,
+                    'flag',
+                )
+            )
+        elif self.click_mode is self.ClickMode.FLAG:
+            self.click_mode = self.ClickMode.UNCOVER
+            self.mode_switch_button.config(
+                image=self.ih.lookup(
+                    self.ui_square_size,
+                    self.theme,
+                    self.ih.UI,
+                    'uncover',
+                )
+            )
+
+    def fill_board(self) -> None:
+        """Make all squares enabled."""
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            if not square.enabled:
+                self.square_toggle_enabled(square)
+                self.draw_history_step.append(square)
+        self.inc_history()
+
+    def clear_board(self) -> None:
+        """Make all squares disabled."""
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            if square.enabled:
+                self.square_toggle_enabled(square)
+                self.draw_history_step.append(square)
+        self.inc_history()
+
+    def invert_board(self) -> None:
+        """Toggle all the squares on the board between enabled and disabled."""
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            self.square_toggle_enabled(square)
+            self.draw_history_step.append(square)
+        self.inc_history()
+
+    def load_board(
+        self,
+        filename: str | None = None,
+        difficulty: float | None = None,
+    ) -> None:
         """Load an external board into the game.
 
         Args:
-            filename (str, optional): Name of the board file to load. Defaults to None.
-
+            filename: Name of the board file to load.
+            difficulty: Associated game difficulty for board loaded.
         """
-        board_file = filename or filedialog.askopenfilename(initialdir=Constants.SAVE_LOAD_DIR, title='Open Board', filetypes=Constants.FILE_TYPE)
+        board_file = filename or filedialog.askopenfilename(
+            initialdir=self.SAVE_LOAD_DIR, title='Open Board', filetypes=self.FILE_TYPE
+        )
         if not board_file:
             return
         try:
             with open(board_file, 'r') as board_load_file:
                 board_bits = [line.strip() for line in board_load_file.readlines()]
         except Exception:
-            WindowControl.dialogue_open = True
-            WindowControl.dialogue_box(
-                title='Opening Error',
-                prompt='Was not able to open the file.',
-                format=DialogueType.MESSAGE
+            AcknowledgementDialogue(
+                self.game_root,
+                'Was not able to open the file.',
             )
-            WindowControl.dialogue_open = False
             return
-        if len(board_bits) > Options.rows or len(max(board_bits, key=len)) > Options.cols:
-            WindowControl.dialogue_open = True
-            WindowControl.dialogue_box(
-                title='Loading Error',
-                prompt='Board was too large to be loaded properly.',
-                format=DialogueType.MESSAGE
+        if (
+            len(board_bits) > self.rows.get()
+            or len(max(board_bits, key=len)) > self.columns.get()
+        ):
+            AcknowledgementDialogue(
+                self.game_root,
+                'Board was too large to be loaded properly',
             )
-            WindowControl.dialogue_open = False
             return
-        GameControl.clear_board()
+        self.clear_board()
         for curr_row, bit_row in enumerate(board_bits):
             for curr_col, bit in enumerate(bit_row):
                 if bit == '1':
-                    WindowControl.board_frame.grid_slaves(row=curr_row, column=curr_col)[0].toggle_enable()
-        WindowControl.clear_history()
+                    square = self.board_frame.grid_slaves(
+                        row=curr_row, column=curr_col
+                    )[0]
+                    assert isinstance(square, BoardSquare)
+                    self.square_toggle_enabled(square)
+        self.clear_history()
+        if difficulty:
+            self.difficulty.set(difficulty)
 
-    @staticmethod
-    def invert_board():
-        """Toggle all the squares on the board betwixt enabled and disabled."""
-        for sq in WindowControl.board_frame.grid_slaves():
-            sq.toggle_enable()
-            WindowControl.draw_history_step.append(sq)
-        WindowControl.inc_history()
-
-    @staticmethod
-    def save_time_to_file(filename=Constants.LEADERBOARD_FILENAME):
-        """Save the completion time for the current board to the leaderboard file.
-
-        Args:
-            filename (str, optional): File path to save time to. Defaults to Constants.LEADERBOARD_FILENAME.
-
-        """
+    def save_board(self) -> None:
+        """Save the current board to a file."""
+        compressed_board = self.compress_board()
+        board_file = filedialog.asksaveasfilename(
+            initialdir=self.SAVE_LOAD_DIR,
+            title='Save Board',
+            filetypes=self.FILE_TYPE,
+            defaultextension=self.FILE_EXTENSION,
+        )
+        if not board_file:
+            return
+        if not board_file.endswith(self.FILE_EXTENSION):
+            AcknowledgementDialogue(
+                self.game_root,
+                f'Invalid extension for FreeForm Minesweeper board ({PurePath(board_file).suffix}).',
+            )
+            return
         try:
-            with open(filename, newline='') as read_fp:
-                reader = csv.DictReader(read_fp)
-                current_leaderboard = list(reader)
-                fieldnames = reader.fieldnames
-        except FileNotFoundError:
-            with open(filename, newline='', mode='w') as create_fp:
-                current_leaderboard = []
-                fieldnames = ['BoardID', 'Player', 'Board', 'Time', 'MultiMode', 'Date']
-        try:
-            board_id = GameControl.compress_board(as_RLE=True)
-        except tk.TclError:
-            return
+            with open(board_file, 'w') as board_save_file:
+                board_save_file.write('\n'.join(compressed_board))
+                board_save_file.write('\n')
+        except Exception:
+            AcknowledgementDialogue(
+                self.game_root,
+                'Was not able to save file',
+            )
 
-        board_name = tk.StringVar(value='')
-        player_name = tk.StringVar(value='')
-        status = tk.StringVar(value='None')
-        WindowControl.leaderboard_entry_window(
-            player_name,
-            board_name,
-            status,
-            (current_leaderboard, board_id)
-        )
+    def place_mines(self, enabled_squares: list[BoardSquare]) -> None:
+        """Place mines in the board.
 
-        if status.get().startswith('Failed:'):
-            error_msg = status.get().split(':')[1]
-            try:
-                WindowControl.game_root.state()
-                WindowControl.dialogue_open = True
-                WindowControl.dialogue_box(
-                    title='FFM Leaderboard Error',
-                    prompt=f'Failed to save time to leaderboard.\n{error_msg}',
-                    format=DialogueType.MESSAGE
-                )
-                WindowControl.dialogue_open = False
-            except:
-                pass
-            return
+        Args:
+            enabled_squares: Enabled squares.
+        """
+        num_enabled_squares = len(enabled_squares)
 
-        player_name = player_name.get()
-        board_name = board_name.get()
+        local_difficulty = self.difficulty.get()
+        playing_multimine = self.multimine.get()
+        multimine_proportion = self.multimine_likelihood.get()
 
-        # Layout of CSV for storing records
-        # ID, player name, board name, time, multimines, sq inc, mine inc, date
-        new_entry = dict(zip(fieldnames, [
-            board_id,
-            player_name,
-            board_name,
-            f'{int(GameControl.seconds_elapsed)}',
-            f'{int(Options.multimines)}',
-            date.today().strftime('%m/%d/%y')
-        ]))
+        if playing_multimine:
+            local_difficulty += self.multimine_diff_inc.get()
+        self.num_mines = min(floor(num_enabled_squares * local_difficulty), 999)
+        mines_to_place = self.num_mines
 
-        current_leaderboard.append(new_entry)
-        with open(filename, 'w', newline='') as write_fp:
-            writer = csv.DictWriter(write_fp, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(current_leaderboard)
-
-
-class BoardSquare(tk.Label):
-    """A toggable square used in playing Minesweeper.
-
-    Args:
-        master (tk.Widget): Parent widget.
-        size (int): Dimensions, in pixels.
-        tk_image (tk.PhotoImage): Image displayed in square.
-
-    Attributes:
-        master (tk.Widget): Parent widget
-        image (tk.PhotoImage): Image displayed in square.
-        uncovered (bool): Flag for if the square has been uncovered.
-        flagged (bool): Flag for if the square has been flagged.
-        enabled (bool): Flag if the square is enabled to use in game.
-        num_flags (int): Number of flags on the square.
-        value (int): Number in the square.
-        directions (tuple[str, str, str, str, str, str, str, str]): 8 main directions.
-        neighbours (dict[str, BoardSquare]): Neighbouring squares, in each of the 8 directions.
-
-    """
-    def __init__(self, master, size, tk_image):
-        super().__init__(master, height=size, width=size, im=tk_image, bd=0)
-        self.master = master
-        self.image = tk_image
-        self.uncovered = False
-        self.flagged = False
-        self.enabled = True
-        self.num_flags = 0
-        self.value = 0
-        self.directions = (tk.NW, tk.N, tk.NE, tk.W, tk.E, tk.SW, tk.S, tk.SE)
-        self.neighbours = dict.fromkeys(self.directions)
-
-    def link_to_neighbours(self):
-        """Find and store all neighbouring squares."""
-        grid_x = self.grid_info()['row']
-        grid_y = self.grid_info()['column']
-        directions = list(self.directions)
-        for i in range(-1, 2):
-            for j in range(-1, 2):
-                if not i and not j:
-                    continue
-                curr_direction = directions.pop(0)
-                check_x = i + grid_x
-                check_y = j + grid_y
-                if check_x >= 0 and check_y >= 0:
-                    try:
-                        child_widget = self.master.grid_slaves(row=check_x, column=check_y)[0]
-                    except IndexError:
-                        pass
-                    else:
-                        if isinstance(child_widget, BoardSquare) and child_widget.enabled:
-                            self.neighbours[curr_direction] = child_widget
-
-    def uncover(self):
-        """Uncover the square if allowed and check if that results in thw game being won."""
-        if not self.enabled or GameControl.game_state is GameState.DONE:
-            return
-        if not self.uncovered and not self.flagged:
-            if self.value > -1:
-                self.uncovered = True
-                GameControl.squares_uncovered += 1
-                mines_around = 0
-                for neighbour in self.neighbours.values():
-                    if neighbour is not None and neighbour.value <= -1:
-                        mines_around -= neighbour.value
-                self.value = mines_around
-                if mines_around < 9:
-                    self.image = Constants.BOARD_IMAGES[self.value]
-                else:
-                    self.image = Constants.EXTENDED_BOARD_IMAGES[self.value - 9]
-                self.config(im=self.image)
-                if not self.value:
-                    for neighbour in self.neighbours.values():
-                        if neighbour is not None and not neighbour.flagged:
-                            neighbour.uncover()
-            else:
-                if Options.grace_rule and GameControl.squares_uncovered == 0:
-                    GameControl.game_state = GameState.DONE
-                    GameControl.new_game()
-                    self.uncover()
-                    return
-                if GameControl.game_state is GameState.PLAYING:
-                    GameControl.has_lost()
-                if self.value == -1:
-                    self.image = Constants.BOARD_IMAGES[10]
-                elif self.value < -1:
-                    self.image = Constants.EXTENDED_BOARD_IMAGES[-self.value + 34]
-                self.config(im=self.image)
-        GameControl.check_win()
-
-    def flag(self):  # For normal gameplay
-        """Toggle a flag on the square, and update the counter."""
-        if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
-            return
-        if not self.flagged and GameControl.flags_placed < GameControl.num_mines:
-            self.flagged = not self.flagged
-            self.num_flags = 1
-            self.image = Constants.BOARD_IMAGES[11]
-            self.config(im=self.image)
-            GameControl.flags_placed += 1
-        elif self.flagged:
-            self.flagged = not self.flagged
-            self.num_flags = 0
-            self.image = Constants.BOARD_IMAGES[20]
-            self.config(im=self.image)
-            GameControl.flags_placed -= 1
-        WindowControl.update_flag_counter()
-
-    def add_flag(self):  # For multimine
-        """Add a flag to the square, and update the counter."""
-        if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
-            return
-        if self.num_flags < 5 and GameControl.flags_placed < GameControl.num_mines:
-            self.num_flags += 1
-            self.flagged = True
-            GameControl.flags_placed += 1
-            if self.num_flags == 1:
-                self.image = Constants.BOARD_IMAGES[11]
-            else:
-                self.image = Constants.EXTENDED_BOARD_IMAGES[self.num_flags + 38]
-            self.config(im=self.image)
-        WindowControl.update_flag_counter()
-
-    def remove_flag(self):  # For multimine
-        """Remove a flag from the square, and update the counter."""
-        if not self.enabled or self.uncovered or GameControl.game_state is GameState.DONE:
-            return
-        if self.num_flags > 0:
-            self.num_flags -= 1
-            GameControl.flags_placed -= 1
-            if self.num_flags == 1:
-                self.image = Constants.BOARD_IMAGES[11]
-            elif self.num_flags == 0:
-                self.image = Constants.BOARD_IMAGES[20]
-                self.flagged = False
-            else:
-                self.image = Constants.EXTENDED_BOARD_IMAGES[self.num_flags + 38]
-            self.config(im=self.image)
-        WindowControl.update_flag_counter()
-
-    def chord(self):
-        """Chord the square (click all the squares around it if appropriate)."""
-        if not self.enabled or GameControl.game_state is GameState.DONE:
-            return
-        if self.uncovered and not self.flagged:
-            flags_around = 0
-            for neighbour in self.neighbours.values():
-                if neighbour is not None and neighbour.flagged:
-                    flags_around += neighbour.num_flags
-            if flags_around == self.value:
-                for neighbour in self.neighbours.values():
-                    if neighbour is not None and not neighbour.flagged:
-                        neighbour.uncover()
-
-    def toggle_enable(self):
-        """Toggle square between enabled and disabled."""
-        if self.enabled:
-            self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
+        if playing_multimine:
+            spread = (
+                self.mine_spread.get()
+                * (self.num_mines / num_enabled_squares)
+                * (1 - multimine_proportion)
+                / (1 - pow(multimine_proportion, 5))
+            )
+            squares_with_mines = sample(
+                enabled_squares,
+                k=floor(num_enabled_squares * spread),
+            )
         else:
-            self.config(im=self.image)
-        self.enabled = not self.enabled
-
-    def lock(self):
-        """Lock the square so it can't be toggled."""
-        if not self.enabled:
-            self.config(im=Constants.LOCKED_BLACK_SQUARE)
-
-    def unlock(self):
-        """Unlock the square so it can be toggled."""
-        if not self.enabled:
-            self.config(im=Constants.UNLOCKED_BLACK_SQUARE)
-
-    def reset(self):
-        """Reset the square back to base initialization."""
-        self.image = Constants.BOARD_IMAGES[20]
-        self.config(im=self.image)
-        self.uncovered = False
-        self.flagged = False
-        self.num_flags = 0
-        self.enabled = True
-        self.value = 0
-        self.neighbours = dict.fromkeys(self.directions)
-
-
-class WindowControl:
-    """Utility class containing the window objects and related functions.
-
-    Attributes:
-        dialogue_open (bool): Flag if a dialogue is open so multiple are not created and stacked.
-        draw_history (list[list[BoardSquare]]): History stack used when drawing boards.
-        draw_history_buffer (list[list[BoardSquare]]): Buffer for the history for undoing and redoing.
-        draw_history_step (list[BoardSquare]): Intermediate history to track compound drawing actions.
-        hidden_root (tk.Tk): Absolute parent of the program. Only used for handling game close.
-        game_root (tk.Toplevel): Main window of the program.
-        main_frame (tk.Frame): Primary frame all other widgets reside in.
-        menu_frame (tk.Frame): Frame all control widgets reside in.
-        board_frame (tk.Frame): Frame all squares of the board reside in.
-        mswpr_frame (tk.Frame): Frame to group various game widgets.
-        presets_frame (tk.Frame): Frame to group preset widgets.
-        diff_frame (tk.Frame): Frame to group difficulty widgets.
-        timer_frame (tk.Frame): Frame to group timer widgets.
-        flags_frame (tk.Frame): Frame to group flag widgets.
-        controls_frame (tk.Frame): Frame to group control widgets.
-        leaderboard_frame (tk.Frame): Frame to group leaderboard widgets.
-        new_game_button (tk.Label): Game reset button.
-        mode_switch_button (tk.Label): Click mode switch button.
-        settings_button (tk.Button): Settings button.
-        play_button (tk.Button): Play game button.
-        stop_button (tk.Button): Stop game button.
-
-    """
-    dialogue_open = False
-
-    draw_history = []
-    draw_history_buffer = []
-    draw_history_step = []
-
-    hidden_root = tk.Tk()
-    game_root = tk.Toplevel(class_='FreeForm Minesweeper')
-    main_frame = tk.Frame(
-        game_root, width=Options.window_width,
-        height=Options.board_height + Constants.SEGMENT_HEIGHT + 4 * 5, bg='black'
-    )
-    menu_frame = tk.Frame(
-        main_frame, width=Options.window_width, height=Constants.SEGMENT_HEIGHT + 4 * 5,
-        bg=Constants.BACKGROUND_COLOUR
-    )
-    board_frame = tk.Frame(
-        main_frame, width=Options.window_width, height=Options.board_height,
-        bg=Constants.BACKGROUND_COLOUR
-    )
-
-    mswpr_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-    presets_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-    diff_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-    timer_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-    flags_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-    controls_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-    leaderboard_frame = tk.Frame(menu_frame, bg=Constants.BACKGROUND_COLOUR)
-
-    leaderboard_button = tk.Button(
-        leaderboard_frame,
-        width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
-        bd=0, highlightthickness=0,
-        bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
-    )
-    new_game_button = tk.Label(
-        mswpr_frame,
-        width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
-        bd=0, highlightthickness=0,
-        bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
-    )
-    mode_switch_button = tk.Label(
-        mswpr_frame,
-        width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
-        bd=0, highlightthickness=0,
-        bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
-    )
-    settings_button = tk.Button(
-        mswpr_frame,
-        width=Constants.BOARD_SQUARE_SIZE, height=Constants.BOARD_SQUARE_SIZE,
-        bd=0, highlightthickness=0,
-        bg=Constants.BACKGROUND_COLOUR, activebackground=Constants.BACKGROUND_COLOUR
-    )
-    play_button = tk.Button(mswpr_frame, text='Play', width=5, command=GameControl.play_game)
-    stop_button = tk.Button(mswpr_frame, text='Stop', width=5, command=GameControl.stop_game)
-
-    @staticmethod
-    def init_window():
-        """Initialize window widgets."""
-        WindowControl.hidden_root.withdraw()
-        WindowControl.game_root.resizable(0, 0)
-        WindowControl.game_root.title('FreeForm Minesweeper')
-        WindowControl.game_root.protocol('WM_DELETE_WINDOW', WindowControl.hidden_root.destroy)
-        WindowControl.game_root.bind('<Control-i>', lambda event: GameControl.invert_board())
-        WindowControl.main_frame.grid_propagate(0)
-        WindowControl.menu_frame.grid_propagate(0)
-        WindowControl.board_frame.grid_propagate(0)
-        for i in range(7):
-            WindowControl.menu_frame.grid_columnconfigure(i, weight=1)
-        WindowControl.menu_frame.grid(row=0, column=0, sticky=tk.NSEW)
-        WindowControl.board_frame.grid(row=1, column=0, sticky=tk.NSEW)
-        WindowControl.main_frame.grid(row=2, column=0, sticky=tk.NSEW)
-
-    @staticmethod
-    def init_board():
-        """Initialize board widgets."""
-        for i in range(Options.rows):
-            WindowControl.board_frame.grid_rowconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
-        for i in range(Options.cols):
-            WindowControl.board_frame.grid_columnconfigure(i, minsize=Constants.BOARD_SQUARE_SIZE, weight=1)
-        for x in range(Options.rows):
-            for y in range(Options.cols):
-                sq = BoardSquare(WindowControl.board_frame, Constants.BOARD_SQUARE_SIZE, Constants.BOARD_IMAGES[20])
-                sq.toggle_enable()
-                sq.bind('<Button-1>',
-                    lambda event, square=sq: (
-                        square.toggle_enable(),
-                        WindowControl.draw_history_step.append(square)
-                    )
-                )
-                sq.bind('<B1-Motion>', lambda event, square=sq: WindowControl.drag_enable_toggle(event, square))
-                sq.bind('<ButtonRelease-1>', lambda event: WindowControl.inc_history())
-                sq.grid(row=x, column=y, sticky=tk.NSEW)
-        WindowControl.game_root.bind('<Control-KeyPress-z>', lambda event: WindowControl.undo_history())
-        WindowControl.game_root.bind('<Control-Shift-KeyPress-Z>', lambda event: WindowControl.redo_history())
-
-    @staticmethod
-    def init_menu():
-        """Initialize menu widgets."""
-        preset_easy = tk.Button(
-            WindowControl.presets_frame, text='Easy', font=Constants.FONT, width=6,
-            command=lambda: GameControl.change_difficulty(Difficulty.EASY, diff_1) or GameControl.load_board('presets/easy.ffmnswpr')
-        )
-        preset_medium = tk.Button(
-            WindowControl.presets_frame, text='Medium', font=Constants.FONT, width=6,
-            command=lambda: GameControl.change_difficulty(Difficulty.MEDIUM, diff_2) or GameControl.load_board('presets/medium.ffmnswpr')
-        )
-        preset_hard = tk.Button(
-            WindowControl.presets_frame, text='Hard', font=Constants.FONT, width=6,
-            command=lambda: GameControl.change_difficulty(Difficulty.HARD, diff_3) or GameControl.load_board('presets/hard.ffmnswpr')
-        )
-        preset_expert = tk.Button(
-            WindowControl.presets_frame, text='Expert', font=Constants.FONT, width=6,
-            command=lambda: GameControl.change_difficulty(Difficulty.EXPERT, diff_4) or GameControl.load_board('presets/expert.ffmnswpr')
-        )
-        preset_easy.grid(row=0, column=0, sticky=tk.NSEW)
-        preset_medium.grid(row=0, column=1, sticky=tk.NSEW)
-        preset_hard.grid(row=1, column=0, sticky=tk.NSEW)
-        preset_expert.grid(row=1, column=1, sticky=tk.NSEW)
-        WindowControl.presets_frame.grid(row=0, column=0)
-
-        flag_left = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        flag_mid = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        flag_right = tk.Label(WindowControl.flags_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        flag_left.grid(row=0, column=0, sticky=tk.NSEW)
-        flag_mid.grid(row=0, column=1, sticky=tk.NSEW)
-        flag_right.grid(row=0, column=2, sticky=tk.NSEW)
-        WindowControl.flags_frame.grid(row=0, column=1)
-
-        WindowControl.play_button['font'] = Constants.FONT
-        WindowControl.stop_button['font'] = Constants.FONT
-
-        WindowControl.mode_switch_button.config(im=Constants.BOARD_IMAGES[17])
-        WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[13])
-        WindowControl.settings_button.config(im=Constants.BOARD_IMAGES[19], command=WindowControl.settings_window)
-        WindowControl.mode_switch_button.grid(row=0, column=0, sticky=tk.NSEW)
-        WindowControl.new_game_button.grid(row=0, column=1, padx=5, pady=3, sticky=tk.NSEW)
-        WindowControl.settings_button.grid(row=0, column=2, sticky=tk.NSEW)
-        WindowControl.play_button.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW)
-        WindowControl.mswpr_frame.grid(row=0, column=2)
-
-        timer_left = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        timer_mid = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        timer_right = tk.Label(WindowControl.timer_frame, width=Constants.SEGMENT_WIDTH, height=Constants.SEGMENT_HEIGHT, bd=0, im=Constants.SEVSEG_IMAGES[0])
-        timer_left.grid(row=0, column=0, sticky=tk.NSEW)
-        timer_mid.grid(row=0, column=1, sticky=tk.NSEW)
-        timer_right.grid(row=0, column=2, sticky=tk.NSEW)
-        WindowControl.timer_frame.grid(row=0, column=3)
-
-        diff_label = tk.Label(WindowControl.diff_frame, text='Difficulty', font=Constants.FONT, bg=Constants.BACKGROUND_COLOUR)
-        diff_1 = tk.Button(
-            WindowControl.diff_frame, text='1', font=Constants.FONT,
-            command=lambda diff=Difficulty.EASY: GameControl.change_difficulty(diff, diff_1)
-        )
-        diff_2 = tk.Button(
-            WindowControl.diff_frame, text='2', font=Constants.FONT,
-            command=lambda diff=Difficulty.MEDIUM: GameControl.change_difficulty(diff, diff_2)
-        )
-        diff_3 = tk.Button(
-            WindowControl.diff_frame, text='3', font=Constants.FONT,
-            command=lambda diff=Difficulty.HARD: GameControl.change_difficulty(diff, diff_3)
-        )
-        diff_4 = tk.Button(
-            WindowControl.diff_frame, text='4', font=Constants.FONT,
-            command=lambda diff=Difficulty.EXPERT: GameControl.change_difficulty(diff, diff_4)
-        )
-        diff_label.grid(row=0, column=1, columnspan=4, sticky=tk.NSEW)
-        diff_1.grid(row=1, column=1, sticky=tk.NSEW)
-        diff_2.grid(row=1, column=2, sticky=tk.NSEW)
-        diff_3.grid(row=1, column=3, sticky=tk.NSEW)
-        diff_4.grid(row=1, column=4, sticky=tk.NSEW)
-        WindowControl.diff_frame.grid(row=0, column=4)
-
-        fill_button = tk.Button(WindowControl.controls_frame, text='Fill', font=Constants.FONT, width=5, command=GameControl.fill_board)
-        clear_button = tk.Button(WindowControl.controls_frame, text='Clear', font=Constants.FONT, width=5, command=GameControl.clear_board)
-        save_board_button = tk.Button(WindowControl.controls_frame, text='Save', font=Constants.FONT, width=5, command=lambda: GameControl.save_board())
-        load_board_button = tk.Button(WindowControl.controls_frame, text='Load', font=Constants.FONT, width=5, command=lambda: GameControl.load_board())
-
-        WindowControl.leaderboard_button.config(im=Constants.LEADERBOARD_ICON_PNG, command=WindowControl.leaderboard_view_window)
-        WindowControl.leaderboard_button.grid(row=0, column=0)
-        WindowControl.leaderboard_frame.grid(row=0, column=5)
-
-        fill_button.grid(row=0, column=1, sticky=tk.NSEW)
-        clear_button.grid(row=1, column=1, sticky=tk.NSEW)
-        save_board_button.grid(row=0, column=2, sticky=tk.NSEW)
-        load_board_button.grid(row=1, column=2, sticky=tk.NSEW)
-        WindowControl.controls_frame.grid(row=0, column=6)
-
-    @staticmethod
-    def init_dialogue_customization():
-        """Customize existing dialogue boxes and add a dialogue box to WindowControl."""
-        def __init__(self, title, prompt,
-                    format=DialogueType.ENTRY, initialvalue=None,
-                    minvalue=None, maxvalue=None,
-                    parent=None):
-            self.prompt = prompt
-            self.minvalue = minvalue
-            self.maxvalue = maxvalue
-            self.initialvalue = initialvalue
-            self.format = format
-            simpledialog.Dialog.__init__(self, parent, title)
-
-        def body(self, master):
-
-            w = tk.Label(master, text=self.prompt, justify=tk.LEFT, font=Constants.FONT_BIG)
-            w.grid(row=0, padx=5, sticky=tk.W)
-
-
-            self.entry = tk.Entry(master, name='entry', font=Constants.FONT_BIG)
-            if self.format is not DialogueType.ENTRY:
-                return w
-
-            self.entry.grid(row=1, padx=5, sticky=tk.W+tk.E)
-            if self.initialvalue is not None:
-                self.entry.insert(0, self.initialvalue)
-                self.entry.select_range(0, tk.END)
-
-            return self.entry
-
-        def buttonbox(self):
-            box = tk.Frame(self)
-            match (self.format):
-                case DialogueType.ASK:
-                    b1_text = 'Yes'
-                    b2_text = 'No'
-                case DialogueType.MESSAGE:
-                    b1_text = 'Ok'
-                    b2_text = None
-                case DialogueType.ENTRY:
-                    b1_text = 'Ok'
-                    b2_text = 'Cancel'
-
-            b1 = tk.Button(box, text=b1_text, width=5, command=self.ok, default=tk.ACTIVE, font=Constants.FONT)
-            if b1_text is not None:
-                b1.grid(column=0, row=0)
-            b2 = tk.Button(box, text=b2_text, width=5, command=self.cancel, font=Constants.FONT)
-            if b2_text is not None:
-                b2.grid(column=1, row=0)
-
-            # self.bind('<Return>', self.ok)
-            self.bind('<Escape>', self.cancel)
-
-            box.pack()
-
-        simpledialog._QueryDialog.__init__ = __init__
-        simpledialog._QueryDialog.body = body
-        simpledialog._QueryDialog.buttonbox = buttonbox
-        def ask(title, prompt, **kw):
-            query = simpledialog._QueryString(title, prompt, **kw)
-            outcome = query.result
-            if query.format is DialogueType.ENTRY:
-                return outcome
-            else:
-                return outcome is not None
-        setattr(WindowControl, 'dialogue_box', ask)
-
-    @staticmethod
-    def update_timer():
-        """Update timer widgets."""
-        if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING and not GameControl.on_hold:
-            seconds = list(str(int(GameControl.seconds_elapsed)).zfill(3))
-            for number in WindowControl.timer_frame.grid_slaves():
-                number.config(im=Constants.SEVSEG_IMAGES[int(seconds.pop())])
-
-    @staticmethod
-    def reset_timer():
-        """Reset timer widgets."""
-        for number in WindowControl.timer_frame.grid_slaves():
-            number.config(im=Constants.SEVSEG_IMAGES[0])
-
-    @staticmethod
-    def update_flag_counter():
-        """Update flag widgets."""
-        flags = GameControl.num_mines - GameControl.flags_placed
-        value_container = list(str(flags).zfill(3))
-        for number in WindowControl.flags_frame.grid_slaves():
-            number.config(im=Constants.SEVSEG_IMAGES[int(value_container.pop())])
-
-    @staticmethod
-    def reset_flag_counter():
-        """Reset flag widgets."""
-        for number in WindowControl.flags_frame.grid_slaves():
-            number.config(im=Constants.SEVSEG_IMAGES[0])
-
-    @staticmethod
-    def inc_history():
-        """Add the current history step to the history and check against the buffer."""
-        WindowControl.draw_history.append(WindowControl.draw_history_step.copy())
-        if WindowControl.draw_history_buffer and WindowControl.draw_history_step == WindowControl.draw_history_buffer[-1]:
-            WindowControl.draw_history_buffer.pop(-1)
-        else:
-            WindowControl.draw_history_buffer.clear()
-        WindowControl.draw_history_step.clear()
-
-    @staticmethod
-    def undo_history():
-        """Move to the previous point in history and add the current point to the buffer."""
-        if not WindowControl.draw_history:
-            return
-        step = WindowControl.draw_history.pop(-1)
-        WindowControl.draw_history_buffer.append(step)
-        for square in step:
-            square.toggle_enable()
-
-    @staticmethod
-    def redo_history():
-        """Move to the next point in the history buffer and add the buffer to the history."""
-        if not WindowControl.draw_history_buffer:
-            return
-        step = WindowControl.draw_history_buffer.pop(-1)
-        WindowControl.draw_history.append(step)
-        for square in step:
-            square.toggle_enable()
-
-    @staticmethod
-    def clear_history():
-        """Clear all the drawing history data."""
-        WindowControl.draw_history.clear()
-        WindowControl.draw_history_step.clear()
-        WindowControl.draw_history_buffer.clear()
-
-    @staticmethod
-    def drag_enable_toggle(event, initial_square):
-        """Turn all squares under the mouse to a state based on an initial square while dragging.
-
-        Args:
-            event (tk.Event): Mouse motion event.
-            initial_square (BoardSquare): The initial square the dragging began on.
-
-        """
-        x = (event.x_root - initial_square.master.winfo_rootx()) // Constants.BOARD_SQUARE_SIZE
-        y = (event.y_root - initial_square.master.winfo_rooty()) // Constants.BOARD_SQUARE_SIZE
-        GameControl.drag_mode = initial_square.enabled
-        if x in range(Options.rows) and y in range(Options.cols):
-            try:
-                square = WindowControl.board_frame.grid_slaves(row=y, column=x)[0]
-            except IndexError:
-                return
-            else:
-                if square.enabled is not GameControl.drag_mode:
-                    square.toggle_enable()
-                    WindowControl.draw_history_step.append(square)
-
-    @staticmethod
-    def lock_controls():
-        """Lock the controls for the game."""
-        WindowControl.settings_button.config(state=tk.DISABLED)
-        WindowControl.play_button.config(state=tk.DISABLED)
-        WindowControl.stop_button.config(state=tk.DISABLED)
-        WindowControl.leaderboard_button.config(state=tk.DISABLED)
-        WindowControl.new_game_button.unbind('<ButtonPress-1>')
-        WindowControl.new_game_button.unbind('<ButtonRelease-1>')
-
-    @staticmethod
-    def unlock_controls():
-        """Unlock the controls for the game."""
-        WindowControl.settings_button.config(state=tk.NORMAL)
-        WindowControl.play_button.config(state=tk.NORMAL)
-        WindowControl.stop_button.config(state=tk.NORMAL)
-        WindowControl.leaderboard_button.config(state=tk.NORMAL)
-        WindowControl.new_game_button.bind('<ButtonPress-1>', lambda event: WindowControl.new_game_button.config(im=Constants.BOARD_IMAGES[14]))
-        WindowControl.new_game_button.bind('<ButtonRelease-1>', lambda event: GameControl.new_game())
-
-    @staticmethod
-    def create_new_toplevel(title, class_, resizable, icon_ico, icon_png):
-        """Create a new Toplevel/popup window with attributes.
-
-        Args:
-            title (str): Title of the window.
-            class_ (str): WM Class of the window.
-            resizable (tuple[int, int]): X and Y resizability of the window.
-            icon_ico: ICO for window icon.
-            icon_png: PNG for window icon.
-
-        Returns:
-            tk.Toplevel: Window created.
-            function: Default function to be bound to the Toplevel's destruction. No parameters. Returns None.
-
-        """
-        WindowControl.lock_controls()
-        toplevel_root = tk.Toplevel(class_=class_)
-        toplevel_root.title(title)
-        toplevel_root.resizable(*resizable)
-        if MetaData.platform == 'Windows':
-            toplevel_root.iconbitmap(icon_ico)
-        elif MetaData.platform == 'Linux':
-            toplevel_root.iconphoto(False, icon_png)
-
-        def toplevel_root_close():
-            try:
-                WindowControl.unlock_controls()
-            except tk.TclError:
-                pass
-
-        toplevel_root.bind('<Escape>', lambda event: toplevel_root.destroy())
-        return (toplevel_root, toplevel_root_close)
-
-    @staticmethod
-    def settings_window():
-        """Create and display the settings window."""
-        settings_root, settings_root_close = WindowControl.create_new_toplevel(
-            'FreeForm Minesweeper Options',
-            'FFM Options',
-            (0, 0),
-            Constants.SETTINGS_ICON_ICO,
-            Constants.SETTINGS_ICON_PNG
-        )
-        settings_root.bind('<Destroy>', lambda event: settings_root_close())
-
-        options_label = tk.Label(settings_root, text='Game Options', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
-        options_label.grid(row=0, column=0, pady=5)
-
-        grace_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        gracerule = tk.BooleanVar(settings_root, Options.grace_rule)
-        grace_label = tk.Label(grace_frame, text='Grace Rule', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
-        grace_on_choice = tk.Radiobutton(
-            grace_frame, text='On', font=Constants.FONT_BIG, variable=gracerule,
-            value=True, bg=Constants.DEFAULT_COLOUR, bd=0
-        )
-        grace_off_choice = tk.Radiobutton(
-            grace_frame, text='Off', font=Constants.FONT_BIG, variable=gracerule,
-            value=False, bg=Constants.DEFAULT_COLOUR, bd=0
-        )
-        grace_label.pack(anchor=tk.W)
-        grace_on_choice.pack(anchor=tk.W)
-        grace_off_choice.pack(anchor=tk.W)
-        grace_frame.grid(row=1, column=0, sticky=tk.W, pady=5)
-
-        multimode = tk.BooleanVar(settings_root, Options.multimines)
-        multi_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        multi_label = tk.Label(multi_frame, text='GameMode', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
-        normal_choice = tk.Radiobutton(
-            multi_frame, text='Normal Mode', font=Constants.FONT_BIG, variable=multimode,
-            value=False, bg=Constants.DEFAULT_COLOUR, bd=0
-        )
-        multi_choice = tk.Radiobutton(
-            multi_frame, text='MultiMine Mode', font=Constants.FONT_BIG, variable=multimode,
-            value=True, bg=Constants.DEFAULT_COLOUR, bd=0
-        )
-        multi_label.pack(anchor=tk.W)
-        normal_choice.pack(anchor=tk.W)
-        multi_choice.pack(anchor=tk.W)
-        multi_frame.grid(row=2, column=0, sticky=tk.W, pady=5)
-
-        mines = tk.DoubleVar(settings_root, Options.multimine_mine_inc)
-        mines_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        mines_label = tk.Label(mines_frame, text='MultiMine Mine Increase', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
-        mines_slider = tk.Scale(
-            mines_frame, variable=mines, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
-            resolution=0.01, from_=0.0, to=0.6, length=300, bd=0
-        )
-        mines_label.pack(anchor=tk.W)
-        mines_slider.pack()
-        mines_frame.grid(row=3, column=0, sticky=tk.W, pady=5)
-
-        density = tk.DoubleVar(settings_root, Options.multimine_sq_inc)
-        density_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        density_label = tk.Label(density_frame, text='MultiMine Probability', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
-        density_slider = tk.Scale(
-            density_frame, variable=density, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
-            resolution=0.01, from_=0.1, to=0.9, length=300, bd=0
-        )
-        density_label.pack(anchor=tk.W)
-        density_slider.pack()
-        density_frame.grid(row=4, column=0, sticky=tk.W, pady=5)
-
-        flagless = tk.BooleanVar(settings_root, Options.flagless)
-        flagless_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        flagless_label = tk.Label(flagless_frame, text='Flagless', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
-        flagless_on_choice = tk.Radiobutton(
-            flagless_frame, text='Off', font=Constants.FONT_BIG, variable=flagless,
-            value=False, bg=Constants.DEFAULT_COLOUR, bd=0
-        )
-        flagless_off_choice = tk.Radiobutton(
-            flagless_frame, text='On', font=Constants.FONT_BIG, variable=flagless,
-            value=True, bg=Constants.DEFAULT_COLOUR, bd=0
-        )
-        flagless_label.pack(anchor=tk.W)
-        flagless_off_choice.pack(anchor=tk.W)
-        flagless_on_choice.pack(anchor=tk.W)
-        flagless_frame.grid(row=5, column=0, sticky=tk.W, pady=5)
-
-        rows = tk.IntVar(settings_root, Options.rows)
-        rows_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        rows_label = tk.Label(rows_frame, text='Rows', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
-        rows_slider = tk.Scale(
-            rows_frame, variable=rows, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
-            resolution=1, from_=Constants.MIN_ROWS, to=Constants.MAX_ROWS, length=300, bd=0
-        )
-        rows_label.pack(anchor=tk.W)
-        rows_slider.pack()
-        rows_frame.grid(row=6, column=0, sticky=tk.W, pady=5)
-
-        columns = tk.IntVar(settings_root, Options.cols)
-        columns_frame = tk.Frame(settings_root, bg=Constants.DEFAULT_COLOUR)
-        columns_label = tk.Label(rows_frame, text='Columns', font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR)
-        columns_slider = tk.Scale(
-            rows_frame, variable=columns, orient=tk.HORIZONTAL, font=Constants.FONT_BIG, bg=Constants.DEFAULT_COLOUR,
-            resolution=1, from_=Constants.MIN_COLUMNS, to=Constants.MAX_COLUMNS, length=300, bd=0
-        )
-        columns_label.pack(anchor=tk.W)
-        columns_slider.pack()
-        columns_frame.grid(row=6, column=0, sticky=tk.W, pady=5)
-
-        def submit_vars():
-            """Save options to the Options container class, and close the window."""
-            Options.grace_rule = gracerule.get()
-            Options.multimines = multimode.get()
-            Options.multimine_mine_inc = mines.get()
-            Options.flagless = flagless.get()
-            Options.multimine_sq_inc = density.get()
-            if rows.get() != Options.rows:
-                Options.board_height = Constants.BOARD_SQUARE_SIZE * rows.get()
-                Options.window_height = Options.board_height + Constants.SEGMENT_HEIGHT + 4 * 5
-                WindowControl.main_frame.config(height=Options.window_height)
-                WindowControl.board_frame.config(height=Options.board_height)
-            if columns.get() != Options.cols:
-                Options.window_width = Constants.BOARD_SQUARE_SIZE * columns.get()
-                WindowControl.main_frame.config(width=Options.window_width)
-                WindowControl.menu_frame.config(width=Options.window_width)
-                WindowControl.board_frame.config(width=Options.window_width)
-            if rows.get() != Options.rows or columns.get() != Options.cols:
-                Options.rows = rows.get()
-                Options.cols = columns.get()
-                WindowControl.game_root.geometry(f'{Options.window_width}x{Options.window_height}')
-                for sq in WindowControl.board_frame.grid_slaves():
-                    sq.destroy()
-                WindowControl.init_board()
-            settings_root.destroy()
-
-        submit_button = tk.Button(settings_root, text='Apply Settings', font=Constants.FONT, command=submit_vars)
-        submit_button.grid(row=7, column=0, pady=5)
-
-    @staticmethod
-    def leaderboard_entry_window(player_var, board_var, status_flag, leaderboard_info):
-        """Create and display the leaderboard entry window to accept new times.
-
-        Args:
-            player_var (tk.StringVar): String variable tracking the name of the player.
-            board_var (tk.StringVar): String variable tracking the name of the board the player provides.
-            status_flag (tk.StringVar): String variable tracking the status of submitting a leaderboard entry.
-            leaderboard_info (tuple): Tuple containing the current leaderboard and the ID of the current board.
-
-        """
-        leaderboard, board_id = leaderboard_info
-        boards_with_id = [board for board in leaderboard if board['BoardID'] == board_id]
-        submitting = False
-
-        def save_time_root_close():
-            """Handler for leaderboard entry window closing."""
-            try:
-                WindowControl.lock_controls()
-            except tk.TclError:
-                status_flag.set('Failed:Main window destroyed')
-            else:
-                WindowControl.unlock_controls()
-                WindowControl.leaderboard_button.config(state=tk.DISABLED)
-                if status_flag.get() != 'Success':
-                    status_flag.set('Failed:Leaderboard Entry window destroyed')
-
-        def submit_name_player():
-            """Validate user inputted names and close window if they satisfy requirements."""
-            nonlocal submitting
-            submitting = True
-            board_var.set(board_var.get().upper())
-            player_var.set(player_var.get().upper())
-            submitting = False
-            if not board_var.get() or not player_var.get():
-                WindowControl.dialogue_open = True
-                WindowControl.dialogue_box(
-                    title='Save to Leaderboard Error',
-                    prompt='Names entered cannot be blank',
-                    format=DialogueType.MESSAGE
-                )
-                WindowControl.dialogue_open = False
-                return
-            if not (board_var.get().isalpha() and player_var.get().isalpha()):
-                WindowControl.dialogue_open = True
-                WindowControl.dialogue_box(
-                    title='Save to Leaderboard Error',
-                    prompt='Names entered can only contain letters [A-Z]',
-                    format=DialogueType.MESSAGE
-                )
-                WindowControl.dialogue_open = False
-                return
-            for entry in leaderboard:
-                if entry['Player'] == player_var.get() and entry['Board'] == board_var.get():
-                    WindowControl.dialogue_open = True
-                    WindowControl.dialogue_box(
-                        title='FFM Leaderboard Error',
-                        prompt='Board names must be unique for a player',
-                        format=DialogueType.MESSAGE
-                    )
-                    WindowControl.dialogue_open = False
-                    return
-            status_flag.set('Success')
-            save_time_root.destroy()
-
-        def autofill_board_name():
-            """Autofill the name in the board entry based on the current board and player."""
-            board_for_player = [
-                board['Board']
-                for board in boards_with_id
-                if board['Player'] == player_var.get().upper() and
-                int(board['MultiMode']) == Options.multimines
-            ]
-            if board_for_player:
-                board_var.set(board_for_player[0])
-                name_entry.config(state=tk.DISABLED)
-            elif not submitting:
-                name_entry.config(state=tk.NORMAL)
-                name_entry.delete(0, tk.END)
-
-        player_var.trace_add('write', lambda *_: autofill_board_name())
-
-        save_time_root, _ = WindowControl.create_new_toplevel(
-            'Save to Leaderboard',
-            'FFM Leaderboard',
-            (0, 0),
-            Constants.LEADERBOARD_ICON_ICO,
-            Constants.LEADERBOARD_ICON_PNG
-        )
-        save_time_root.bind('<Destroy>', lambda event: save_time_root_close())
-
-        save_time_frame = tk.Frame(save_time_root, bg=Constants.BACKGROUND_COLOUR, width=400, height=200 if not Options.multimines else 250)
-        save_time_frame.grid_propagate(False)
-        save_time_frame.grid_columnconfigure(0, weight=1)
-        save_time_frame.grid_rowconfigure(8, weight=1)
-
-        time_label = tk.Label(save_time_frame, text=f'Your time was: {int(GameControl.seconds_elapsed)} seconds.', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        player_label = tk.Label(save_time_frame, text='Player Name', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        player_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var)
-        name_label = tk.Label(save_time_frame, text='Name This Board', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-        name_entry = tk.Entry(save_time_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=board_var)
-        save_button = tk.Button(save_time_frame, text='Save Time', font=Constants.FONT_BIG, command=submit_name_player)
-
-        if Options.multimines:
-            multimine_label = tk.Label(save_time_frame, text='You played on multimine mode', font=Constants.FONT_BIG, bg=Constants.BACKGROUND_COLOUR)
-            multimine_label.grid(row=5, column=0, pady=6)
-
-        time_label.grid(row=0, column=0, pady=6)
-        player_label.grid(row=1, column=0)
-        player_entry.grid(row=2, column=0)
-        name_label.grid(row=3, column=0)
-        name_entry.grid(row=4, column=0)
-        save_button.grid(row=8, column=0)
-        save_time_frame.grid(row=0, column=0)
-
-        player_entry.focus()
-        player_entry.bind('<Control-KeyRelease-a>', lambda event: player_entry.select_range(0, tk.END))
-        name_entry.bind('<Control-KeyRelease-a>', lambda event: name_entry.select_range(0, tk.END))
-        save_time_root.bind('<Return>', lambda event: submit_name_player())
-        save_button.wait_variable(status_flag)
-
-    @staticmethod
-    def leaderboard_view_window(leaderboard_file=Constants.LEADERBOARD_FILENAME):
-        """Create and display window to view leaderboard in.
-
-         Args:
-            leaderboard_info (str, optional): The current leaderboard file path.
-                                              Defaults to Constants.LEADERBOARD_FILENAME.
-
-        """
-        MAX_WIDTH = 400
-        NOTEBOOK_HEIGHT = 132 + Constants.FONT_BIG.metrics('linespace')
-        player_var = tk.StringVar()
-        notebook_pages = []
-        selected_page_index = 0
-        canvas_right_clicked = None
-        canvas_right_clicked_time_id = None
-
-        with open(leaderboard_file, 'r', newline='') as fp:
-            reader = csv.DictReader(fp)
-            current_leaderboard = list(reader)
-            fieldnames = reader.fieldnames
-
-        def update_leaderboard():
-            """Write the current local leaderboard to disk."""
-            with open(leaderboard_file, 'w', newline='') as write_fp:
-                writer = csv.DictWriter(write_fp, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(current_leaderboard)
-
-        def rename_player():
-            """Rename a player in the leaderboard."""
-            new_player_name = simpledialog.askstring(
-                'FFMS Player Name Change',
-                'Enter New Name [A-Z]',
-                parent=leaderboard_view_root
-            )
-            if new_player_name is None:
-                return
-            if not new_player_name.isalpha():
-                WindowControl.dialogue_open = True
-                WindowControl.dialogue_box(
-                    title='FFM Leaderboard Error',
-                    prompt='Names entered can only contain letters [A-Z]',
-                    format=DialogueType.MESSAGE
-                )
-                WindowControl.dialogue_open = False
-                return
-            new_player_name = new_player_name.upper()
-            if new_player_name:
-                old_player_name = player_var.get().upper()
-                for entry in current_leaderboard:
-                    if entry['Player'] == new_player_name:
-                        WindowControl.dialogue_open = True
-                        WindowControl.dialogue_box(
-                            title='FFM Leaderboard Error',
-                            prompt='Player names already exists',
-                            format=DialogueType.MESSAGE
-                        )
-                        WindowControl.dialogue_open = False
-                        return
-                for entry in current_leaderboard:
-                    if entry['Player'] == old_player_name:
-                        break
-                else:
-                    WindowControl.dialogue_open = True
-                    WindowControl.dialogue_box(
-                        title='FFM Leaderboard Error',
-                        prompt='Player cannot be renamed.\nPlayer does not exist',
-                        format=DialogueType.MESSAGE
-                    )
-                    WindowControl.dialogue_open = False
-                    return
-                for entry in current_leaderboard:
-                    if entry['Player'] == old_player_name:
-                        entry['Player'] = new_player_name
-                player_var.set(new_player_name)
-                update_leaderboard()
-
-        def rename_board():
-            """Rename a board in the leaderboard."""
-            new_board_name = simpledialog.askstring(
-                'FFMS Board Name Change',
-                'Enter New Name [A-Z]',
-                parent=leaderboard_view_root
-            )
-            if new_board_name is None:
-                return
-            if not new_board_name.isalpha():
-                WindowControl.dialogue_open = True
-                WindowControl.dialogue_box(
-                    title='FFM Leaderboard Error',
-                    prompt='Names entered can only contain letters [A-Z]',
-                    format=DialogueType.MESSAGE
-                )
-                WindowControl.dialogue_open = False
-                return
-            new_board_name = new_board_name.upper()
-            if new_board_name:
-                nb = notebook_pages[selected_page_index]
-                old_board_name = nb.tab(nb.select(), 'text').upper()
-                player = player_var.get().upper()
-                for entry in current_leaderboard:
-                    if entry['Player'] == player and entry['Board'] == new_board_name and entry['Board'] != old_board_name:
-                        WindowControl.dialogue_open = True
-                        WindowControl.dialogue_box(
-                            title='FFM Leaderboard Error',
-                            prompt='Board names must be unique for a player',
-                            format=DialogueType.MESSAGE
-                        )
-                        WindowControl.dialogue_open = False
-                        return
-                for entry in current_leaderboard:
-                    if entry['Board'] == old_board_name and entry['Player'] == player:
-                        entry['Board'] = new_board_name
-                display_boards_from_player()
-                update_leaderboard()
-
-        def delete_board():
-            """Delete all a boards times from a player."""
-            nonlocal current_leaderboard, selected_page_index
-            sure = WindowControl.dialogue_box(
-                title='FFMS Leaderboard Deletion',
-                prompt='Are you sure you wish to delete\n all of this board\'s entries?',
-                format=DialogueType.ASK,
-                parent=leaderboard_view_root
-            )
-            if sure is None:
-                return
-            nb = notebook_pages[selected_page_index]
-            tab_text = nb.tab(nb.select(), 'text').upper()
-            current_leaderboard = [
-                entry for entry in current_leaderboard
-                if entry['Player'] != player_var.get().upper() or entry['Board'] != tab_text
-            ]
-            selected_page_index = 0
-            display_boards_from_player()
-            update_leaderboard()
-
-        def delete_time():
-            """Delete a single time from a player."""
-            sure = WindowControl.dialogue_box(
-                title='FFMS Leaderboard Deletion',
-                prompt='Are you sure you wish to delete this entry?',
-                format=DialogueType.ASK,
-                parent=leaderboard_view_root
-            )
-            if sure is None:
-                return
-            nb = notebook_pages[selected_page_index]
-            selected_entry_text = canvas_right_clicked.itemcget(canvas_right_clicked_time_id, 'text').split()
-            time = int(selected_entry_text[0])
-            date = selected_entry_text[-1]
-            board = nb.tab(nb.select(), 'text').upper()
-            player = player_var.get().upper()
-            entry_to_remove = None
-            for entry in current_leaderboard:
-                if entry['Player'] == player and entry['Board'] == board and entry['Date'] == date and int(entry['Time']) == time:
-                    entry_to_remove = entry
+            squares_with_mines = sample(enabled_squares, k=self.num_mines)
+        self.squares_to_win = num_enabled_squares - len(squares_with_mines)
+
+        for square in squares_with_mines:
+            square.add_mine()
+            mines_to_place -= 1
+
+        while mines_to_place > 0:
+            batch_size = ceil(len(squares_with_mines) * multimine_proportion)
+            squares_with_mines = squares_with_mines[:batch_size]
+            for square in squares_with_mines:
+                if square.mine_count >= 5:
+                    raise RuntimeError('Ah shit')
+                square.add_mine()
+                mines_to_place -= 1
+                if mines_to_place == 0:
                     break
-            current_leaderboard.remove(entry_to_remove)
-            display_boards_from_player()
-            update_leaderboard()
 
-        def canvas_item_popup(event, canvas, popup):
-            """Create a popup menu on a canvas in response to an event.
+    def add_flag(self, square: BoardSquare) -> None:
+        """Add a flag to a square.
 
-            Args:
-                event (tk.Event): Event causing the popup to occur.
-                canvas (tk.Canvas): Canvas receiving the event.
-                popup (tk.Menu): Menu to display as a popup.
+        Args:
+            square: Square being flagged.
+        """
+        if not square.enabled or not square.covered:
+            return
+        if square.flag_count < self.max_flags and self.flags_placed < self.num_mines:
+            square.add_flag()
+            square.image = self.ih.lookup(
+                self.board_square_size,
+                self.theme,
+                self.ih.BOARD,
+                f'flag_{square.flag_count}',
+            )
+            self.flags_placed += 1
+            self.update_flag_counter()
 
-            """
-            nonlocal canvas_right_clicked, canvas_right_clicked_time_id
-            try:
-                canvas_item_id = event.widget.find_withtag('current')[0]
-            except IndexError:
-                return
-            canvas_right_clicked = canvas
-            canvas_right_clicked_time_id = canvas_item_id
-            WindowControl.make_popup_menu(event, popup)
+    def remove_flag(self, square: BoardSquare) -> None:
+        """Remove a flag from a square.
 
-        def display_boards_from_player():
-            """Display the boards from a player in a paginated notebook."""
-            nonlocal selected_page_index
-            boards = [entry for entry in current_leaderboard if entry['Player'] == player_var.get().upper()]
-            page_left_btn.grid_remove()
-            page_right_btn.grid_remove()
-            if not boards and notebook_pages and isinstance(notebook_pages[0], tk.Label):
-                return
-            for page in notebook_pages:
-                page.destroy()
-
-            current_width = 0
-            selected_page_index = 0
-            current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
-            notebook_pages.clear()
-
-            ids_covered = {}
-            for board in boards:
-                current_board_id = board['BoardID']
-                current_multimode = board['MultiMode']
-                if current_board_id in ids_covered and ids_covered[current_board_id] == current_multimode:
-                    continue
-                tab_text = board['Board']
-                current_width += max(Constants.FONT_BIG.measure(tab_text) + 8, 23)
-                if current_width >= MAX_WIDTH:
-                    notebook_pages.append(current_notebook_page)
-                    current_notebook_page = ttk.Notebook(leaderboard_view_frame, width=MAX_WIDTH, height=NOTEBOOK_HEIGHT)
-                    current_width = 0
-
-                entry_frame = tk.Frame(current_notebook_page, height=NOTEBOOK_HEIGHT, width=MAX_WIDTH)
-                thumbnail_tk = ImageTk.PhotoImage(image=WindowControl.generate_board_thumbnail(current_board_id))
-                entry_thumbnail_label = tk.Label(entry_frame, height=128, width=128, im=thumbnail_tk)
-                entry_thumbnail_label.image = thumbnail_tk
-
-                multimode_label = tk.Label(entry_frame, font=Constants.FONT_BIG, text='Normal Mode')
-                if current_multimode == '1':
-                    multimode_label.config(text='MultiMine Mode')
-                times_canvas = tk.Canvas(entry_frame, width=MAX_WIDTH - 128 - 20, height=128)
-                times_scrollbar = tk.Scrollbar(entry_frame, orient=tk.VERTICAL, width=16, command=times_canvas.yview)
-
-                times = [
-                    board for board in boards
-                    if board['BoardID'] == current_board_id and
-                    board['MultiMode'] == current_multimode
-                ]
-
-                TEXT_HEIGHT = Constants.FONT_BIG.cget('size') + 10
-                for i, time in enumerate(sorted(times, key=lambda time: int(time['Time']))):
-                    time_text = f'{time["Time"]:0>3} seconds  {time["Date"]}'
-                    times_canvas.create_text(
-                        0, TEXT_HEIGHT * i,
-                        text=time_text, font=Constants.FONT_BIG,
-                        tags='entry_text',
-                        activefill='#444444'
-                    )
-
-                times_canvas.config(yscrollcommand=times_scrollbar.set, scrollregion=times_canvas.bbox(tk.ALL))
-                if TEXT_HEIGHT * len(times) > NOTEBOOK_HEIGHT:
-                    times_scrollbar.grid(row=1, column=2, sticky=tk.N+tk.S)
-                    times_canvas.yview_moveto('0.0')
-
-                multimode_label.grid(row=0, column=1)
-                times_canvas.grid(row=1, column=1)
-                entry_thumbnail_label.grid(row=0, column=0, rowspan=2, sticky=tk.N)
-                current_notebook_page.add(entry_frame, text=tab_text)
-                ids_covered[current_board_id] = current_multimode
-                current_notebook_page.bind(
-                    '<Button-3>',
-                    lambda event, current_notebook_page=current_notebook_page: WindowControl.menu_on_notebook_tab_click(event, current_notebook_page, notebook_popup_menu)
+        Args:
+            square: Square being unflagged.
+        """
+        if not square.enabled or not square.covered:
+            return
+        if square.flag_count > 0:
+            square.remove_flag()
+            if square.flag_count == 0:
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    'covered',
                 )
-                times_canvas.bind('<Button-3>', lambda event, canvas=times_canvas: canvas_item_popup(event, canvas, time_popup_menu))
-
-            if boards:
-                notebook_pages.append(current_notebook_page)
-            if notebook_pages:
-                page_left_btn.grid(row=3, column=0, sticky=tk.E)
-                page_right_btn.grid(row=3, column=1, sticky=tk.W)
-                for page in notebook_pages:
-                    page.enable_traversal()
             else:
-                notebook_pages.append(tk.Label(leaderboard_view_root, text='No boards for this player', font=Constants.FONT_BIG))
-            notebook_pages[0].grid(row=2, column=0, columnspan=2, pady=(10, 0))
-            change_notebook_page(0)
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    f'flag_{square.flag_count}',
+                )
+            self.flags_placed -= 1
+            self.update_flag_counter()
 
-        def change_notebook_page(step):
-            """Change the displayed notebook in a paginated list of notebooks.
+    def start_game(self) -> None:
+        """Exit drawing state and enter sweeping state."""
+        self.state = self.State.PAUSE
+        squares = self.board_frame.grid_slaves()
+        enabled_squares: list[BoardSquare] = []
+        for square in squares:
+            assert isinstance(square, BoardSquare)
+            if square.enabled:
+                enabled_squares.append(square)
+        if len(enabled_squares) == 0:
+            AcknowledgementDialogue(
+                self.game_root,
+                'Cannot start a game with no active squares.',
+            )
+            self.stop_game()
+            return
 
-            Args:
-                step (int): Amount of pages to move. Negative numbers move left and positive numbers move right.
-
-            """
-            nonlocal selected_page_index
-            if (selected_page_index + step) in range(len(notebook_pages)):
-                notebook_pages[selected_page_index].grid_remove()
-                selected_page_index += step
-                notebook_pages[selected_page_index].grid(row=2, column=0, columnspan=2, pady=(10, 0))
-            if selected_page_index == 0:
-                page_left_btn.config(state=tk.DISABLED)
+        for button in self.get_menu_buttons:
+            assert isinstance(button, ttk.Widget)
+            if button is self.new_game_button:
+                button.state(['!disabled'])
+            elif (
+                button is self.mode_switch_button
+                and self.click_mode is not self.ClickMode.FLAGLESS
+            ):
+                button.state(['!disabled'])
             else:
-                page_left_btn.config(state=tk.NORMAL)
-            if selected_page_index == len(notebook_pages) - 1:
-                page_right_btn.config(state=tk.DISABLED)
+                button.state(['disabled'])
+        self.lock_toolbar()
+        self.play_button.grid_remove()
+        self.stop_button.grid()
+        self.clear_history()
+        for square in squares:
+            assert isinstance(square, BoardSquare)
+            if not square.enabled:
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    'locked',
+                )
             else:
-                page_right_btn.config(state=tk.NORMAL)
+                self.link_squares_neighbours(square)
+        self.place_mines(enabled_squares)
+        if self.click_mode is not self.ClickMode.FLAGLESS:
+            self.update_flag_counter()
+        self.state = self.State.SWEEP
 
-        leaderboard_view_root, leaderboard_view_root_close = WindowControl.create_new_toplevel(
-            'FreeForm Minesweeper Leaderboard',
-            'FFM Leaderboard',
-            (0, 0),
-            Constants.LEADERBOARD_ICON_ICO,
-            Constants.LEADERBOARD_ICON_PNG
+    def new_game(self) -> None:
+        """Start a new game without going back to drawing state."""
+        if self.state is self.State.DRAW:
+            return
+        self.state = self.State.PAUSE
+        self.new_game_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'new',
+            )
         )
-        leaderboard_view_root.bind('<Destroy>', lambda event: leaderboard_view_root_close())
+        enabled_squares: list[BoardSquare] = []
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            if square.enabled:
+                enabled_squares.append(square)
+                square.reset()
+                square.toggle_enable()
+                self.link_squares_neighbours(square)
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    'covered',
+                )
+        self.place_mines(enabled_squares)
+        self.squares_cleared = 0
+        self.flags_placed = 0
+        self.time_elapsed = 0.0
+        self.reset_timer()
+        if self.click_mode is not self.ClickMode.FLAGLESS:
+            self.update_flag_counter()
+        self.state = self.State.SWEEP
 
-        leaderboard_view_frame = tk.Frame(leaderboard_view_root, width=MAX_WIDTH)
-        page_left_btn = tk.Button(
-            leaderboard_view_frame, height=1,
-            text='<<', font=Constants.FONT,
-            command=lambda: change_notebook_page(-1)
+    def stop_game(self) -> None:
+        """Exit sweeping state and enter drawing state."""
+        if self.state is not self.State.PAUSE and self.squares_cleared:
+            a = tk.BooleanVar()
+            YesNoDialogue(
+                self.game_root,
+                question='Are you sure you want to stop playing?',
+                answer=a,
+            )
+            if not a.get():
+                return
+        self.state = self.State.PAUSE
+        for button in self.get_menu_buttons:
+            assert isinstance(button, ttk.Widget)
+            if button in (self.new_game_button, self.mode_switch_button):
+                button.state(['disabled'])
+            else:
+                button.state(['!disabled'])
+        self.unlock_toolbar()
+        self.stop_button.grid_remove()
+        self.play_button.grid()
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            if not square.enabled:
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    'unlocked',
+                )
+            else:
+                square.reset()
+                square.toggle_enable()
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    'covered',
+                )
+        self.squares_cleared = 0
+        self.flags_placed = 0
+        self.squares_to_win = 0
+        self.time_elapsed = 0.0
+        self.reset_timer()
+        self.reset_flag_counter()
+        self.new_game_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'new',
+            )
         )
-        page_right_btn = tk.Button(
-            leaderboard_view_frame, height=1,
-            text='>>', font=Constants.FONT,
-            command=lambda: change_notebook_page(1)
+        if self.click_mode is self.ClickMode.FLAG:
+            self.toggle_click_mode()
+        self.state = self.State.DRAW
+
+    def game_won(self) -> None:
+        """Game over sequence."""
+        self.state = self.State.PAUSE
+        self.new_game_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'win',
+            )
         )
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            if square.enabled and square.covered and not square.flag_count:
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    f'flag_{square.mine_count}',
+                )
+        self.reset_flag_counter()
+        a = tk.BooleanVar()
+        YesNoDialogue(
+            self.game_root,
+            question='Save time to the leaderboard?',
+            answer=a,
+        )
+        if a.get():
+            LeaderboardEntryDialogue(
+                self.game_root,
+                self.compress_board_rle(),
+                int(self.time_elapsed),
+                self.multimine.get(),
+            )
 
-        notebook_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
-        notebook_popup_menu.add_command(label='Rename', command=lambda: rename_board())
-        notebook_popup_menu.add_command(label='Delete', command=lambda: delete_board())
-        notebook_popup_menu.add_separator()
-        notebook_popup_menu.add_command(label='Close')
+    def game_lost(self) -> None:
+        """Game win sequence."""
+        self.state = self.State.PAUSE
+        self.new_game_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.UI,
+                'lose',
+            )
+        )
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            if square.mine_count and not square.flag_count and square.covered:
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    f'mine_{square.mine_count}',
+                )
+            elif square.flag_count and not square.mine_count:
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.BOARD,
+                    f'flag_{square.flag_count}_wrong',
+                )
 
-        time_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
-        time_popup_menu.add_command(label='Delete', command=lambda: delete_time())
-        time_popup_menu.add_separator()
-        time_popup_menu.add_command(label='Close')
-
-        player_entry_popup_menu = tk.Menu(leaderboard_view_root, tearoff=0)
-        player_entry_popup_menu.add_command(label='Rename', command=lambda: rename_player())
-        player_entry_popup_menu.add_separator()
-        player_entry_popup_menu.add_command(label='Close')
-
-        player_label = tk.Label(leaderboard_view_frame, text='Player Name', font=Constants.FONT_BIG)
-        player_entry = tk.Entry(leaderboard_view_frame, exportselection=False, font=Constants.FONT_BIG, textvariable=player_var, width=20)
-
-        s = ttk.Style()
-        s.configure('TNotebook.Tab', font=Constants.FONT_BIG, padding=[0,0])
-        s.configure('TNotebook', tabmargins=[2,2,2,2])
-        display_boards_from_player()
-        change_notebook_page(0)
-        total_height = sum(widget.winfo_reqheight() for widget in leaderboard_view_frame.winfo_children())
-        leaderboard_view_root.minsize(width=MAX_WIDTH + 2, height=total_height)
-        player_label.grid(row=0, column=0, columnspan=2)
-        player_entry.grid(row=1, column=0, columnspan=2, padx=(MAX_WIDTH + 2 - player_entry.winfo_reqwidth())//2)
-        leaderboard_view_frame.grid(row=0, column=0, columnspan=2)
-        player_entry.focus_set()
-        player_entry.bind('<Control-KeyRelease-a>', lambda event: player_entry.select_range(0, tk.END))
-        player_entry.bind('<Button-3>', lambda event: WindowControl.make_popup_menu(event, player_entry_popup_menu))
-        player_var.trace_add('write', lambda *_: display_boards_from_player())
-        player_var.trace_add('write', lambda *_: player_var.set(player_var.get().upper()) if not player_var.get().isupper() else None)
-
-    @staticmethod
-    def generate_board_thumbnail(compressed_board_id):
-        """Generate a black and white image respresenting a board.
-
-        Args:
-            compressed_board_id (list[str]): List of binary strings representing the board.
-                                             Active squares are displayed as white, and inactive as black.
-
-        Returns:
-            PIL.Image: Image generated from board.
-
-        """
-        board_bits = GameControl.decompress_board_textually(compressed_board_id)
-        max_dim_y = len(max(board_bits, key=len))
-        max_dim_x = len(board_bits)
-        overall_max_dim = max(max_dim_y, max_dim_x)
-        if overall_max_dim <= 16:
-            size = 16
-        elif overall_max_dim <= 32:
-            size = 32
-        else:
-            size = 64
-        padding_y = (size - max_dim_y) // 2
-        padding_x = (size - max_dim_x) // 2
-        thumbnail = Image.new(mode='RGBA', size=(size, size), color=(0, 0, 0))
-        for x, bit_row in enumerate(board_bits):
-            for y, bit in enumerate(bit_row):
-                if int(bit):
-                    thumbnail.putpixel((y + padding_y, x + padding_x), (255, 255, 255))
-        thumbnail = thumbnail.resize((128, 128), resample=Image.NEAREST)
-        return thumbnail
-
-    @staticmethod
-    def make_popup_menu(event, menu):
-        """Display a popup menu on the screen at the position of the mouse.
-
-        Args:
-            event (tk.Event): The event causing the menu to occur. Intended to be a (right) mouse click.
-            menu (tk.Menu): Menu to display on the screen.
-
-        """
-        try:
-            root = event.widget.winfo_toplevel()
-            is_over_menu = tk.BooleanVar(master=root, value=True)
-            def close_on_click():
-                if not is_over_menu.get():
-                    menu.unpost()
-                    root.unbind('<Button>', bind_id_button)
-                    root.unbind('<FocusOut>', bind_id_focus)
-            menu.post(event.x_root, event.y_root)
-            menu.bind('<Enter>', lambda event: is_over_menu.set(True))
-            menu.bind('<Leave>', lambda event: is_over_menu.set(False))
-            bind_id_button = root.bind('<Button>', lambda event:close_on_click(), '+')
-            bind_id_focus = root.bind('<FocusOut>', lambda event:close_on_click(), '+')
-        finally:
-            menu.grab_release()
-
-    @staticmethod
-    def menu_on_notebook_tab_click(event, notebook, menu):
-        """Display a popup menu when the active tab of a notebook is clicked.
-
-        Args:
-            event (tk.Event): Event triggering the popup to occur.
-            notebook (ttk.Notebook): The notebook receiving the event.
-            menu (tk.Menu): The popup menu to display.
-        """
-        clicked_tab = notebook.tk.call(notebook._w, 'identify', 'tab', event.x, event.y)
-        active_tab = notebook.index(notebook.select())
-        if clicked_tab == active_tab:
-            WindowControl.make_popup_menu(event, menu)
-
-
-def main():
-    """Initialize all game components and run the mainloop."""
-    WindowControl.init_window()
-    Constants.init_fonts()
-    Constants.init_board_images()
-    Constants.init_sevseg_images()
-    Constants.init_extended_board_images()
-    Constants.init_window_icons()
-    WindowControl.init_dialogue_customization()
-    Constants.DEFAULT_COLOUR = WindowControl.game_root.cget('bg')
-    if MetaData.platform == 'Windows':
-        WindowControl.game_root.iconbitmap(Constants.MAIN_ICON_ICO)
-    elif MetaData.platform == 'Linux':
-        WindowControl.game_root.iconphoto(False, Constants.MAIN_ICON_PNG)
-    WindowControl.init_menu()
-    WindowControl.diff_frame.grid_slaves()[-2].invoke()
-    WindowControl.init_board()
-    if not MetaData.is_release_up_to_date():
-        MetaData.outdated_notice()
-    tkFont.Font(name='TkCaptionFont', exists=True).config(family=Constants.FONT.cget('family'), size=Constants.FONT_BIG.cget('size'))
-    # WindowControl.game_root.bind('y', lambda event: GameControl.save_time_to_file())
-    while True:
-        try:
-            WindowControl.game_root.update_idletasks()
-            WindowControl.game_root.update()
-        except tk.TclError:
-            break
-        else:
-            time.sleep(Constants.MAINLOOP_TIME)
-            if (GameControl.squares_uncovered or GameControl.flags_placed) and GameControl.game_state is GameState.PLAYING:
-                GameControl.seconds_elapsed = min(round(GameControl.seconds_elapsed + Constants.MAINLOOP_TIME, 2), 999)
-                if int(GameControl.seconds_elapsed) == GameControl.seconds_elapsed:
-                    WindowControl.update_timer()
+    def mainloop(self) -> None:
+        """Run the mainloop to play the game."""
+        while True:
+            try:
+                self.game_root.update_idletasks()
+                self.game_root.update()
+            except tk.TclError:
+                return
+            else:
+                sleep(self.MAINLOOP_TIME)
+                if self.state is self.State.SWEEP and (
+                    self.squares_cleared or self.flags_placed
+                ):
+                    self.time_elapsed = min(
+                        round(self.time_elapsed + self.MAINLOOP_TIME, 2), 999
+                    )
+                    if int(self.time_elapsed) == self.time_elapsed:
+                        try:
+                            self.update_timer()
+                        except tk.TclError:
+                            break
 
 
 if __name__ == '__main__':
-    main()
+    ffms = FreeFormMinesweeper()
+    rm = ReleaseManager(ffms.game_root)
+    if not rm.is_release_up_to_date():
+        rm.outdated_notice()
+    ffms.mainloop()
