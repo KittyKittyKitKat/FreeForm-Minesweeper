@@ -30,7 +30,6 @@ from releasemanager import ReleaseManager
 
 # TODO: User set mine spread?
 # TODO: Make better (un)installers. Install in local program dirs
-# TODO: Key binds!
 # TODO: Add colours for everything in ttk style in order to do theming later
 # Look into json for other spec files to load in themes, including default
 # Make the dark theme built in though, I'd say, maybe
@@ -127,6 +126,9 @@ class FreeFormMinesweeper:
         self.adaptive_ui = tk.BooleanVar(value=True)
         self.adaptive_ui.trace_add('write', lambda *_: self.adaptive_ui_trace())
 
+        self.shift_behaviour = tk.StringVar(value='hold')
+        self.shift_behaviour.trace_add('write', lambda *_: self.shift_behaviour_trace())
+
         # Values related to setting the options
         self.theme: Literal['light', 'dark'] = self.ih.LIGHT
         self.board_square_size: Literal['16x16', '32x32'] = self.ih.LG_SQUARE
@@ -157,6 +159,7 @@ class FreeFormMinesweeper:
         self.init_menu()
         self.game_root.update_idletasks()
         self.init_board()
+        self.init_keybinds()
         self.game_root.title('FreeForm Minesweeper')
 
     # Traces and other Setting/Options Functions
@@ -377,6 +380,15 @@ class FreeFormMinesweeper:
                 )
             )
 
+    def shift_behaviour_trace(self) -> None:
+        if self.shift_behaviour.get() == 'hold':
+            self.game_root.bind(
+                '<KeyRelease-Shift_L>',
+                lambda *_: self.toggle_click_mode(),
+            )
+        elif self.shift_behaviour.get() == 'toggle':
+            self.game_root.unbind('<KeyRelease-Shift_L>')
+
     def reset_settings(self) -> None:
         """Reset all game settings to defaults."""
         self.multimine.set(False)
@@ -478,12 +490,8 @@ class FreeFormMinesweeper:
         self.game_root.resizable(False, False)
         self.game_root.title('FreeForm Minesweeper (Loading...)')
         self.game_root.iconname('FreeForm Minesweeper')
-
-        def close():
-            self.game_root.withdraw()
-            self._hidden_root.destroy()
-
-        self.game_root.protocol('WM_DELETE_WINDOW', close)
+        self.game_root.option_add('*tearOff', False)
+        self.game_root.protocol('WM_DELETE_WINDOW', lambda: self.quit_game(False))
         self.game_root.iconphoto(
             False,
             self.ih.lookup(
@@ -493,24 +501,72 @@ class FreeFormMinesweeper:
                 'new',
             ),
         )
-        self.game_root.bind('<KeyPress-Shift_L>', lambda *_: self.toggle_click_mode())
-        self.game_root.bind('<KeyRelease-Shift_L>', lambda *_: self.toggle_click_mode())
-        self.game_root.bind('<Control-KeyPress-z>', lambda *_: self.undo_history())
-        self.game_root.bind(
-            '<Control-Shift-KeyPress-Z>', lambda *_: self.redo_history()
-        )
 
         self.board_frame.grid_propagate(False)
         self.main_frame.grid(row=0, column=0, sticky=tk.NSEW)
         self.menu_frame.grid(row=0, column=0, sticky=tk.NSEW)
         self.board_frame.grid(row=1, column=0, sticky=tk.NSEW)
 
+    def init_keybinds(self) -> None:
+        self.game_root.bind(
+            '<Control-KeyPress-o>',
+            lambda *_: self.load_board(),
+        )
+        self.game_root.bind(
+            '<Control-KeyPress-s>',
+            lambda *_: self.save_board(),
+        )
+        self.game_root.bind(
+            '<Control-KeyPress-s>',
+            lambda *_: self.quit_game(),
+        )
+
+        self.game_root.bind(
+            '<Control-KeyPress-z>',
+            lambda *_: self.undo_history(),
+        )
+        self.game_root.bind(
+            '<Control-Shift-KeyPress-Z>',
+            lambda *_: self.redo_history(),
+        )
+        self.game_root.bind(
+            '<Control-KeyPress-f>',
+            lambda *_: self.fill_board(),
+        )
+        self.game_root.bind(
+            '<Control-KeyPress-x>',
+            lambda *_: self.clear_board(),
+        )
+        self.game_root.bind(
+            '<Control-KeyPress-i>',
+            lambda *_: self.invert_board(),
+        )
+
+        self.game_root.bind(
+            '<KeyPress-Shift_L>',
+            lambda *_: self.toggle_click_mode(),
+        )
+        self.game_root.bind(
+            '<KeyRelease-Shift_L>',
+            lambda *_: self.toggle_click_mode(),
+        )
+
     def init_toolbar(self) -> None:
         self.menubar.config(font=self.SMALL_FONT)
-        file_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
-        file_menu.add_command(label='Load Board', command=self.load_board)
-        file_menu.add_command(label='Save Board', command=self.save_board)
-        presets_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        file_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
+        file_menu.add_command(
+            label='Load Board',
+            accelerator='Ctrl+O',
+            underline=0,
+            command=self.load_board,
+        )
+        file_menu.add_command(
+            label='Save Board',
+            accelerator='Ctrl+S',
+            underline=0,
+            command=self.save_board,
+        )
+        presets_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
         presets_menu.add_command(
             label='Easy',
             command=lambda: self.load_board('presets/easy.ffmnswpr', self.DIFF_EASY),
@@ -532,7 +588,7 @@ class FreeFormMinesweeper:
             ),
         )
         file_menu.add_cascade(label='Presets', menu=presets_menu)
-        samples_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        samples_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
         samples_menu.add_command(
             label='Mine',
             command=lambda: self.load_board('sample_boards/mine.ffmnswpr'),
@@ -556,46 +612,96 @@ class FreeFormMinesweeper:
             command=lambda: LeaderboardViewDialogue(self.game_root),
         )
         file_menu.add_separator()
+        file_menu.add_command(
+            label='Quit Game',
+            accelerator='Ctrl-Q',
+            underline=0,
+            command=self.quit_game,
+        )
+        file_menu.add_separator()
         file_menu.add_command(label='Close')
         self.menubar.add_cascade(label='File', menu=file_menu)
 
-        edit_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
-        edit_menu.add_command(label='Undo', command=self.undo_history)
-        edit_menu.add_command(label='Redo', command=self.redo_history)
-        edit_menu.add_command(label='Fill Board', command=self.fill_board)
-        edit_menu.add_command(label='Clear Board', command=self.clear_board)
-        edit_menu.add_command(label='Invert Board', command=self.invert_board)
+        edit_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
+        edit_menu.add_command(
+            label='Undo',
+            accelerator='Ctrl+Z',
+            command=self.undo_history,
+        )
+        edit_menu.add_command(
+            label='Redo',
+            accelerator='Ctrl+Shift+Z',
+            command=self.redo_history,
+        )
+        edit_menu.add_command(
+            label='Fill Board',
+            accelerator='Ctrl+F',
+            underline=0,
+            command=self.fill_board,
+        )
+        edit_menu.add_command(
+            label='Clear Board',
+            accelerator='Ctrl+X',
+            underline=0,
+            command=self.clear_board,
+        )
+        edit_menu.add_command(
+            label='Invert Board',
+            accelerator='Ctrl+I',
+            underline=0,
+            command=self.invert_board,
+        )
         edit_menu.add_separator()
         edit_menu.add_command(label='Close')
         self.menubar.add_cascade(label='Edit', menu=edit_menu)
 
-        game_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        game_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
         game_menu.add_command(label='Play Game', command=self.start_game)
         game_menu.add_command(
-            label='Stop Playing', state=tk.DISABLED, command=self.stop_game
+            label='Stop Playing',
+            state=tk.DISABLED,
+            command=self.stop_game,
         )
         game_menu.add_command(
-            label='New Game', state=tk.DISABLED, command=self.new_game
+            label='New Game',
+            state=tk.DISABLED,
+            command=self.new_game,
         )
-        flagging_menu = tk.Menu(game_menu, tearoff=0, font=self.SMALL_FONT)
+        flagging_menu = tk.Menu(game_menu, font=self.SMALL_FONT)
         flagging_menu.add_radiobutton(
             label='Uncover Mines',
             value=self.ClickMode.UNCOVER,
             variable=self.click_mode,
         )
         flagging_menu.add_radiobutton(
-            label='Place Flags', value=self.ClickMode.FLAG, variable=self.click_mode
+            label='Place Flags',
+            value=self.ClickMode.FLAG,
+            variable=self.click_mode,
         )
         game_menu.add_cascade(
-            label='Flagging Mode', state=tk.DISABLED, menu=flagging_menu
+            label='Flagging Mode',
+            state=tk.DISABLED,
+            menu=flagging_menu,
         )
+        shift_menu = tk.Menu(game_menu, font=self.SMALL_FONT)
+        shift_menu.add_radiobutton(
+            label='Hold (Left Shift)',
+            value='hold',
+            variable=self.shift_behaviour,
+        )
+        shift_menu.add_radiobutton(
+            label='Toggle (Left Shift)',
+            value='toggle',
+            variable=self.shift_behaviour,
+        )
+        game_menu.add_cascade(label='Flag Mode Behaviour', menu=shift_menu)
         self.menubar.add_cascade(label='Game', menu=game_menu)
 
-        options_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        options_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
         options_menu.add_checkbutton(label='Multimine Mode', variable=self.multimine)
         options_menu.add_checkbutton(label='Grace Rule', variable=self.grace_rule)
         options_menu.add_checkbutton(label='Flagless', variable=self.flagless)
-        diff_menu = tk.Menu(options_menu, tearoff=0, font=self.SMALL_FONT)
+        diff_menu = tk.Menu(options_menu, font=self.SMALL_FONT)
         diff_menu.add_radiobutton(
             label=f'{self.DIFF_EASY:.0%} Mines',
             value=self.DIFF_EASY,
@@ -617,7 +723,7 @@ class FreeFormMinesweeper:
             variable=self.difficulty,
         )
         options_menu.add_cascade(label='Difficulty', menu=diff_menu)
-        bds_menu = tk.Menu(options_menu, tearoff=0, font=self.SMALL_FONT)
+        bds_menu = tk.Menu(options_menu, font=self.SMALL_FONT)
         bds_menu.add_radiobutton(
             label='Small',
             value=self.SMALL_SCALE,
@@ -629,7 +735,7 @@ class FreeFormMinesweeper:
             variable=self.board_scale,
         )
         options_menu.add_cascade(label='Board Scale', menu=bds_menu)
-        uis_menu = tk.Menu(options_menu, tearoff=0, font=self.SMALL_FONT)
+        uis_menu = tk.Menu(options_menu, font=self.SMALL_FONT)
         uis_menu.add_radiobutton(
             label='Small',
             value=self.SMALL_SCALE,
@@ -663,12 +769,13 @@ class FreeFormMinesweeper:
                 },
             ),
         )
+        options_menu.add_separator()
         options_menu.add_command(label='Reset Settings', command=self.reset_settings)
         options_menu.add_separator()
         options_menu.add_command(label='Close')
         self.menubar.add_cascade(label='Options', menu=options_menu)
 
-        help_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        help_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
         help_menu.add_command(
             label='About...',
             command=lambda: AcknowledgementWithLinkDialogue(
@@ -1002,6 +1109,20 @@ class FreeFormMinesweeper:
         sq.grid(row=row, column=column)
 
     # UI Interaction Methods
+
+    def quit_game(self, ask: bool = True) -> None:
+        a = tk.BooleanVar()
+        if ask:
+            YesNoDialogue(
+                self.game_root,
+                question='Are you sure you want to quit?',
+                answer=a,
+            )
+        else:
+            a.set(True)
+        if a.get():
+            self.game_root.withdraw()
+            self._hidden_root.destroy()
 
     def lock_toolbar(self) -> None:
         """Configure toolbar for options designed for sweeping mode."""
