@@ -8,7 +8,7 @@ import tkinter.ttk as ttk
 from enum import Enum, auto
 from functools import cached_property
 from itertools import chain, groupby
-from math import ceil, floor
+from math import ceil
 from pathlib import Path, PurePath
 from random import sample
 from time import sleep
@@ -1520,19 +1520,30 @@ class FreeFormMinesweeper:
 
         if playing_multimine:
             local_difficulty += self.multimine_diff_inc.get()
-        self.num_mines = min(floor(num_enabled_squares * local_difficulty), 999)
+        self.num_mines = min(int(num_enabled_squares * local_difficulty), 999)
         mines_to_place = self.num_mines
 
         if playing_multimine:
-            spread = (
-                self.mine_spread.get()
-                * (self.num_mines / num_enabled_squares)
-                * (1 - multimine_proportion)
-                / (1 - pow(multimine_proportion, 5))
-            )
+            try:
+                spread = (
+                    self.mine_spread.get()
+                    * (self.num_mines / num_enabled_squares)
+                    * (1 - multimine_proportion)
+                    / (1 - pow(multimine_proportion, 5))
+                )
+            except ZeroDivisionError:
+                # Limit of (1-p)/(1-p^5) as p -> 1
+                # Removable discontinuity
+                # Could have instead used 1/(1+p+p^2+p^3+p^4)
+                spread = (
+                    self.mine_spread.get()
+                    * (self.num_mines / num_enabled_squares)
+                    * 0.2
+                )
+
             squares_with_mines = sample(
                 enabled_squares,
-                k=floor(num_enabled_squares * spread),
+                k=ceil(num_enabled_squares * spread),
             )
         else:
             squares_with_mines = sample(enabled_squares, k=self.num_mines)
@@ -1547,7 +1558,18 @@ class FreeFormMinesweeper:
             squares_with_mines = squares_with_mines[:batch_size]
             for square in squares_with_mines:
                 if square.mine_count >= 5:
-                    raise RuntimeError('Ah shit')
+                    AcknowledgementDialogue(
+                        self.game_root,
+                        (
+                            'Uh oh! Seems there was an error placing mines for this board.\n'
+                            'This is a bug, and you can report all the settings that caused it to the GitHub page.\n'
+                            'Please include the dimensions, difficulty, difficulty increase, and multimine probability.\n'
+                            'In the meantime, try some different settings to play!'
+                        )
+
+                    )
+                    self.stop_game()
+                    raise RuntimeError('Mine placement went wrong.')
                 square.add_mine()
                 mines_to_place -= 1
                 if mines_to_place == 0:
@@ -1681,6 +1703,8 @@ class FreeFormMinesweeper:
         self.reset_timer()
         if self.click_mode is not self.ClickMode.FLAGLESS:
             self.update_flag_counter()
+        if self.click_mode is self.ClickMode.FLAG:
+            self.toggle_click_mode()
         self.state = self.State.SWEEP
 
     def stop_game(self) -> None:
