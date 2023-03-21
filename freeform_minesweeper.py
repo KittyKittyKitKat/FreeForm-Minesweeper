@@ -452,7 +452,6 @@ class FreeFormMinesweeper:
         self.style.configure(
             'FFMS.TLabel',
             font=self.LARGE_FONT,
-            borderwidth=0,
             background=self.BACKGROUND_COLOUR,
             anchor='center',
         )
@@ -1987,7 +1986,7 @@ class FreeFormMinesweeper:
                     self.ih.BOARD,
                     f'mine_{square.mine_count}',
                 )
-            elif square.flag_count and not square.mine_count:
+            elif square.flag_count and square.flag_count != square.mine_count:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
