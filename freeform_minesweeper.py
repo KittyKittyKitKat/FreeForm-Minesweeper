@@ -5,7 +5,7 @@ Play the game by executing the file with Python >= 3.11.2 as a program, and have
 
 import tkinter as tk
 import tkinter.ttk as ttk
-from enum import Enum, auto
+from enum import StrEnum, auto
 from functools import cached_property
 from itertools import chain, groupby
 from math import ceil
@@ -30,21 +30,21 @@ from releasemanager import ReleaseManager
 
 # TODO: User set mine spread?
 # TODO: Make better (un)installers. Install in local program dirs
-# TODO: Get a licence. Apache 2.0 likely
+# TODO: Key binds!
 # TODO: Add colours for everything in ttk style in order to do theming later
 # Look into json for other spec files to load in themes, including default
 # Make the dark theme built in though, I'd say, maybe
 class FreeFormMinesweeper:
     """A game of FreeForm Minesweeper."""
 
-    class State(Enum):
+    class State(StrEnum):
         """Enum representing the current state of the game."""
 
         DRAW = auto()
         SWEEP = auto()
         PAUSE = auto()
 
-    class ClickMode(Enum):
+    class ClickMode(StrEnum):
         """Enum representing the current clicking mode of the game."""
 
         UNCOVER = auto()
@@ -138,7 +138,8 @@ class FreeFormMinesweeper:
         # Game instance variables
         self.difficulty = tk.DoubleVar(value=self.DIFF_EASY)
         self.state = self.State.DRAW
-        self.click_mode = self.ClickMode.UNCOVER
+        self.click_mode = tk.StringVar(value=self.ClickMode.UNCOVER)
+        self.click_mode.trace_add('write', lambda *_: self.click_mode_trace())
         self.draw_history: list[list[BoardSquare]] = []
         self.draw_history_buffer: list[list[BoardSquare]] = []
         self.draw_history_step: list[BoardSquare] = []
@@ -158,7 +159,7 @@ class FreeFormMinesweeper:
         self.init_board()
         self.game_root.title('FreeForm Minesweeper')
 
-    # Settings Functions
+    # Traces and other Setting/Options Functions
 
     def rows_trace(self) -> None:
         """Update the number of rows in the board."""
@@ -340,9 +341,9 @@ class FreeFormMinesweeper:
     def flagless_trace(self) -> None:
         """Enter and exit flagless mode."""
         if self.flagless.get():
-            self.click_mode = self.ClickMode.FLAGLESS
+            self.click_mode.set(self.ClickMode.FLAGLESS)
         else:
-            self.click_mode = self.ClickMode.UNCOVER
+            self.click_mode.set(self.ClickMode.UNCOVER)
 
     def adaptive_ui_trace(self) -> None:
         """Respond to Adaptive UI setting."""
@@ -355,6 +356,26 @@ class FreeFormMinesweeper:
             self.menu_frame.grid_columnconfigure(4, weight=1)
             self.presets_frame.grid()
             self.menu_frame.grid_columnconfigure(0, weight=1)
+
+    def click_mode_trace(self) -> None:
+        if self.click_mode.get() == self.ClickMode.UNCOVER:
+            self.mode_switch_button.config(
+                image=self.ih.lookup(
+                    self.ui_square_size,
+                    self.theme,
+                    self.ih.UI,
+                    'uncover',
+                )
+            )
+        elif self.click_mode.get() == self.ClickMode.FLAG:
+            self.mode_switch_button.config(
+                image=self.ih.lookup(
+                    self.ui_square_size,
+                    self.theme,
+                    self.ih.UI,
+                    'flag',
+                )
+            )
 
     def reset_settings(self) -> None:
         """Reset all game settings to defaults."""
@@ -547,6 +568,28 @@ class FreeFormMinesweeper:
         edit_menu.add_separator()
         edit_menu.add_command(label='Close')
         self.menubar.add_cascade(label='Edit', menu=edit_menu)
+
+        game_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
+        game_menu.add_command(label='Play Game', command=self.start_game)
+        game_menu.add_command(
+            label='Stop Playing', state=tk.DISABLED, command=self.stop_game
+        )
+        game_menu.add_command(
+            label='New Game', state=tk.DISABLED, command=self.new_game
+        )
+        flagging_menu = tk.Menu(game_menu, tearoff=0, font=self.SMALL_FONT)
+        flagging_menu.add_radiobutton(
+            label='Uncover Mines',
+            value=self.ClickMode.UNCOVER,
+            variable=self.click_mode,
+        )
+        flagging_menu.add_radiobutton(
+            label='Place Flags', value=self.ClickMode.FLAG, variable=self.click_mode
+        )
+        game_menu.add_cascade(
+            label='Flagging Mode', state=tk.DISABLED, menu=flagging_menu
+        )
+        self.menubar.add_cascade(label='Game', menu=game_menu)
 
         options_menu = tk.Menu(self.menubar, tearoff=0, font=self.SMALL_FONT)
         options_menu.add_checkbutton(label='Multimine Mode', variable=self.multimine)
@@ -961,16 +1004,31 @@ class FreeFormMinesweeper:
     # UI Interaction Methods
 
     def lock_toolbar(self) -> None:
-        """Disable the window toolbar."""
+        """Configure toolbar for options designed for sweeping mode."""
         self.menubar.entryconfigure('File', state=tk.DISABLED)
         self.menubar.entryconfigure('Edit', state=tk.DISABLED)
         self.menubar.entryconfigure('Options', state=tk.DISABLED)
+        game_submenu: tk.Menu = self.game_root.nametowidget(
+            self.menubar.entrycget('Game', 'menu')
+        )
+        game_submenu.entryconfigure('Play Game', state=tk.DISABLED)
+        game_submenu.entryconfigure('Stop Playing', state=tk.NORMAL)
+        game_submenu.entryconfigure('New Game', state=tk.NORMAL)
+        if self.click_mode.get() != self.ClickMode.FLAGLESS:
+            game_submenu.entryconfigure('Flagging Mode', state=tk.NORMAL)
 
     def unlock_toolbar(self) -> None:
-        """Enable the window toolbar."""
+        """Configure toolbar for options designed for drawing mode."""
         self.menubar.entryconfigure('File', state=tk.NORMAL)
         self.menubar.entryconfigure('Edit', state=tk.NORMAL)
         self.menubar.entryconfigure('Options', state=tk.NORMAL)
+        game_submenu: tk.Menu = self.game_root.nametowidget(
+            self.menubar.entrycget('Game', 'menu')
+        )
+        game_submenu.entryconfigure('Play Game', state=tk.NORMAL)
+        game_submenu.entryconfigure('Stop Playing', state=tk.DISABLED)
+        game_submenu.entryconfigure('New Game', state=tk.DISABLED)
+        game_submenu.entryconfigure('Flagging Mode', state=tk.DISABLED)
 
     def set_guard(self) -> None:
         """Disable the UI while important events occur."""
@@ -1043,7 +1101,10 @@ class FreeFormMinesweeper:
             self.square_toggle_enabled(square)
             self.draw_history_step.append(square)
         elif self.state is self.State.SWEEP:
-            if self.click_mode in (self.ClickMode.UNCOVER, self.ClickMode.FLAGLESS):
+            if self.click_mode.get() in (
+                self.ClickMode.UNCOVER,
+                self.ClickMode.FLAGLESS,
+            ):
                 if not square.enabled or square.flag_count:
                     return
                 self.uncover_square(square)
@@ -1053,7 +1114,7 @@ class FreeFormMinesweeper:
                     self.chord(square)
                 if self.squares_cleared == self.squares_to_win:
                     self.game_won()
-            elif self.click_mode is self.ClickMode.FLAG:
+            elif self.click_mode.get() == self.ClickMode.FLAG:
                 self.add_flag(square)
 
     def right_mouse_press_handler(self, event: tk.Event) -> None:
@@ -1064,13 +1125,13 @@ class FreeFormMinesweeper:
         """
         square: BoardSquare = event.widget
         if self.state is self.State.SWEEP:
-            if self.click_mode is self.ClickMode.UNCOVER:
+            if self.click_mode.get() == self.ClickMode.UNCOVER:
                 if not self.multimine.get():
                     if square.flag_count:
                         self.remove_flag(square)
                     else:
                         self.add_flag(square)
-            elif self.click_mode is self.ClickMode.FLAG:
+            elif self.click_mode.get() == self.ClickMode.FLAG:
                 self.remove_flag(square)
 
     def mouse_release_handler(self, event: tk.Event) -> None:
@@ -1101,7 +1162,10 @@ class FreeFormMinesweeper:
                 self.chord(square, force=True)
             if self.squares_cleared == self.squares_to_win:
                 self.game_won()
-        elif self.state is self.State.SWEEP and self.click_mode is self.ClickMode.FLAG:
+        elif (
+            self.state is self.State.SWEEP
+            and self.click_mode.get() == self.ClickMode.FLAG
+        ):
             self.add_flag(square)
 
     def mouse_motion_handler(self, event: tk.Event) -> None:
@@ -1383,28 +1447,12 @@ class FreeFormMinesweeper:
         """Toggle the clicking mode of the game."""
         if self.state is self.State.DRAW:
             return
-        if self.click_mode is self.ClickMode.FLAGLESS:
+        if self.click_mode.get() == self.ClickMode.FLAGLESS:
             return
-        if self.click_mode is self.ClickMode.UNCOVER:
-            self.click_mode = self.ClickMode.FLAG
-            self.mode_switch_button.config(
-                image=self.ih.lookup(
-                    self.ui_square_size,
-                    self.theme,
-                    self.ih.UI,
-                    'flag',
-                )
-            )
-        elif self.click_mode is self.ClickMode.FLAG:
-            self.click_mode = self.ClickMode.UNCOVER
-            self.mode_switch_button.config(
-                image=self.ih.lookup(
-                    self.ui_square_size,
-                    self.theme,
-                    self.ih.UI,
-                    'uncover',
-                )
-            )
+        if self.click_mode.get() == self.ClickMode.UNCOVER:
+            self.click_mode.set(self.ClickMode.FLAG)
+        elif self.click_mode.get() == self.ClickMode.FLAG:
+            self.click_mode.set(self.ClickMode.UNCOVER)
 
     def fill_board(self) -> None:
         """Make all squares enabled."""
@@ -1565,8 +1613,7 @@ class FreeFormMinesweeper:
                             'This is a bug, and you can report all the settings that caused it to the GitHub page.\n'
                             'Please include the dimensions, difficulty, difficulty increase, and multimine probability.\n'
                             'In the meantime, try some different settings to play!'
-                        )
-
+                        ),
                     )
                     self.stop_game()
                     raise RuntimeError('Mine placement went wrong.')
@@ -1644,7 +1691,7 @@ class FreeFormMinesweeper:
                 button.state(['!disabled'])
             elif (
                 button is self.mode_switch_button
-                and self.click_mode is not self.ClickMode.FLAGLESS
+                and self.click_mode.get() != self.ClickMode.FLAGLESS
             ):
                 button.state(['!disabled'])
             else:
@@ -1665,7 +1712,7 @@ class FreeFormMinesweeper:
             else:
                 self.link_squares_neighbours(square)
         self.place_mines(enabled_squares)
-        if self.click_mode is not self.ClickMode.FLAGLESS:
+        if self.click_mode.get() != self.ClickMode.FLAGLESS:
             self.update_flag_counter()
         self.state = self.State.SWEEP
 
@@ -1701,9 +1748,9 @@ class FreeFormMinesweeper:
         self.flags_placed = 0
         self.time_elapsed = 0.0
         self.reset_timer()
-        if self.click_mode is not self.ClickMode.FLAGLESS:
+        if self.click_mode.get() != self.ClickMode.FLAGLESS:
             self.update_flag_counter()
-        if self.click_mode is self.ClickMode.FLAG:
+        if self.click_mode.get() == self.ClickMode.FLAG:
             self.toggle_click_mode()
         self.state = self.State.SWEEP
 
@@ -1760,7 +1807,7 @@ class FreeFormMinesweeper:
                 'new',
             )
         )
-        if self.click_mode is self.ClickMode.FLAG:
+        if self.click_mode.get() == self.ClickMode.FLAG:
             self.toggle_click_mode()
         self.state = self.State.DRAW
 
