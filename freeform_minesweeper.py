@@ -454,6 +454,7 @@ class FreeFormMinesweeper:
             font=self.LARGE_FONT,
             background=self.BACKGROUND_COLOUR,
             anchor='center',
+            borderwidth=0,
         )
         self.style.configure(
             'Link.FFMS.TLabel',
@@ -495,7 +496,7 @@ class FreeFormMinesweeper:
             False,
             self.ih.lookup(
                 self.ih.LG_SQUARE,
-                self.theme,
+                self.ih.LIGHT,
                 self.ih.UI,
                 'new',
             ),
@@ -2010,7 +2011,7 @@ class FreeFormMinesweeper:
                     self.time_elapsed = min(
                         round(self.time_elapsed + self.MAINLOOP_TIME, 2), 999
                     )
-                    if int(self.time_elapsed) == self.time_elapsed:
+                    if self.time_elapsed.is_integer():
                         try:
                             self.update_timer()
                         except tk.TclError:
