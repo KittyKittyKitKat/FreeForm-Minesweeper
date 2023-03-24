@@ -2,3 +2,5 @@
 __pycache__
 .mypy_cache
 leaderboard.json
+build/
+dist/
