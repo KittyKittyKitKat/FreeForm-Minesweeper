@@ -28,11 +28,8 @@ from imagehandler import ImageHandler
 from releasemanager import ReleaseManager
 
 
-# TODO: User set mine spread?
-# TODO: Make better (un)installers. Install in local program dirs
-# TODO: Add colours for everything in ttk style in order to do theming later
-# Look into json for other spec files to load in themes, including default
-# Make the dark theme built in though, I'd say, maybe
+# TODO: theming with Tcl files or tk set palette
+# Consider reworking installers
 class FreeFormMinesweeper:
     """A game of FreeForm Minesweeper."""
 

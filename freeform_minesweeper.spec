@@ -12,6 +12,8 @@ a = Analysis(
         ('assets/', 'assets/'),
         ('presets/', 'presets/'),
         ('sample_boards/', 'sample_boards/'),
+        ('tutorial.html', '.'),
+        ('README.md', '.'),
     ],
     hiddenimports=[],
     hookspath=[],
