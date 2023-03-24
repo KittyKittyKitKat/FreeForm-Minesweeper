@@ -2006,7 +2006,8 @@ class FreeFormMinesweeper:
                     self.squares_cleared or self.flags_placed
                 ):
                     self.time_elapsed = min(
-                        round(self.time_elapsed + self.MAINLOOP_TIME, 2), 999
+                        round(self.time_elapsed + self.MAINLOOP_TIME, 2),
+                        999.0
                     )
                     if self.time_elapsed.is_integer():
                         try:
