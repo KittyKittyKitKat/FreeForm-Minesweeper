@@ -158,6 +158,7 @@ class FreeFormMinesweeper:
         self.init_board()
         self.init_keybinds()
         self.game_root.title('FreeForm Minesweeper')
+        self.alive = True
 
     # Traces and other Setting/Options Functions
 
@@ -1120,6 +1121,7 @@ class FreeFormMinesweeper:
         if a.get():
             self.game_root.withdraw()
             self._hidden_root.destroy()
+            self.alive = False
 
     def lock_toolbar(self) -> None:
         """Configure toolbar for options designed for sweeping mode."""
@@ -1994,7 +1996,7 @@ class FreeFormMinesweeper:
 
     def mainloop(self) -> None:
         """Run the mainloop to play the game."""
-        while True:
+        while self.alive:
             try:
                 self.game_root.update_idletasks()
                 self.game_root.update()
