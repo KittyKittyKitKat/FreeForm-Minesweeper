@@ -25,11 +25,7 @@ class ReleaseManager:
             'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
         )
         self.platform = system()
-
-        # This is a dummy value for the purpose of source code.
-        # The releases will have the proper information contained within.
-        # This information will directly correlate to the release info on GitHub.
-        self.version = 'vX.X.X'
+        self.version = 'v2.0.0'
 
     def get_release_tags(self, url: str) -> list[str]:
         """Fetch the releases tags from GitHub's repo API.
@@ -71,8 +67,6 @@ class ReleaseManager:
             True if the version is the most recent, or is the development dummy version.
             False otherwise.
         """
-        if self.version == 'vX.X.X':
-            return True
         try:
             tags = self.get_release_tags(self.github_api_releases_url)
         except LookupError:
