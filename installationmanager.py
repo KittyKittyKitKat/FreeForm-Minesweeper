@@ -194,7 +194,8 @@ class InstallationManager:
             subprocess.call(
                 f'cscript {vbs_file_name}',
                 stdout=subprocess.DEVNULL,
-                creationflags=subprocess.DETACHED_PROCESS,
+                # This constant is only present on Windows, but this code is only ran on Windows
+                creationflags=subprocess.DETACHED_PROCESS,  # type: ignore
             )
 
         self.done()
