@@ -123,8 +123,8 @@ class FreeFormMinesweeper:
         self.adaptive_ui = tk.BooleanVar(value=True)
         self.adaptive_ui.trace_add('write', lambda *_: self.adaptive_ui_trace())
 
-        self.shift_behaviour = tk.StringVar(value='hold')
-        self.shift_behaviour.trace_add('write', lambda *_: self.shift_behaviour_trace())
+        self.mode_key_behaviour = tk.StringVar(value='hold')
+        self.mode_key_behaviour.trace_add('write', lambda *_: self.mode_key_behaviour_trace())
 
         # Values related to setting the options
         self.theme: Literal['light', 'dark'] = self.ih.LIGHT
@@ -133,6 +133,8 @@ class FreeFormMinesweeper:
         self.sevseg_size: Literal['13x23', '26x46'] = self.ih.LG_SEVSEG
         self.max_flags = 1
         self.board_square_size_px = int(self.board_square_size.split('x')[0])
+        self.mode_key_down = False
+        self.ignore_toggle_key_held = True
 
         # Game instance variables
         self.difficulty = tk.DoubleVar(value=self.DIFF_EASY)
@@ -378,14 +380,17 @@ class FreeFormMinesweeper:
                 )
             )
 
-    def shift_behaviour_trace(self) -> None:
-        if self.shift_behaviour.get() == 'hold':
+    def mode_key_behaviour_trace(self) -> None:
+        if self.mode_key_behaviour.get() == 'hold':
             self.game_root.bind(
                 '<KeyRelease-Shift_L>',
-                lambda *_: self.toggle_click_mode(),
+                self.toggle_click_mode,
             )
-        elif self.shift_behaviour.get() == 'toggle':
+            self.ignore_toggle_key_held = True
+        elif self.mode_key_behaviour.get() == 'toggle':
             self.game_root.unbind('<KeyRelease-Shift_L>')
+            self.ignore_toggle_key_held = False
+        self.mode_key_down = False
 
     def reset_settings(self) -> None:
         """Reset all game settings to defaults."""
@@ -542,11 +547,11 @@ class FreeFormMinesweeper:
 
         self.game_root.bind(
             '<KeyPress-Shift_L>',
-            lambda *_: self.toggle_click_mode(),
+           self.toggle_click_mode,
         )
         self.game_root.bind(
             '<KeyRelease-Shift_L>',
-            lambda *_: self.toggle_click_mode(),
+            self.toggle_click_mode,
         )
 
     def init_toolbar(self) -> None:
@@ -685,12 +690,12 @@ class FreeFormMinesweeper:
         shift_menu.add_radiobutton(
             label='Hold (Left Shift)',
             value='hold',
-            variable=self.shift_behaviour,
+            variable=self.mode_key_behaviour,
         )
         shift_menu.add_radiobutton(
             label='Toggle (Left Shift)',
             value='toggle',
-            variable=self.shift_behaviour,
+            variable=self.mode_key_behaviour,
         )
         game_menu.add_cascade(label='Flag Mode Behaviour', menu=shift_menu)
         self.menubar.add_cascade(label='Game', menu=game_menu)
@@ -892,7 +897,7 @@ class FreeFormMinesweeper:
                 'uncover',
             ),
         )
-        self.mode_switch_button.bind('<Button-1>', lambda *_: self.toggle_click_mode())
+        self.mode_switch_button.bind('<Button-1>', self.toggle_click_mode)
         self.mode_switch_button.state([tk.DISABLED])
         self.new_game_button.config(
             image=self.ih.lookup(
@@ -1563,12 +1568,19 @@ class FreeFormMinesweeper:
                     if isinstance(child_widget, BoardSquare) and child_widget.enabled:
                         square.neighbours[curr_direction] = child_widget
 
-    def toggle_click_mode(self):
+    def toggle_click_mode(self, event: tk.Event | None = None) -> None:
         """Toggle the clicking mode of the game."""
         if self.state is self.State.DRAW:
             return
         if self.click_mode.get() == self.ClickMode.FLAGLESS:
             return
+        if event is not None:
+            if event.type is tk.EventType.KeyPress:
+                if self.mode_key_down and self.ignore_toggle_key_held:
+                    return
+                self.mode_key_down = True
+            elif event.type is tk.EventType.KeyRelease:
+                self.mode_key_down = False
         if self.click_mode.get() == self.ClickMode.UNCOVER:
             self.click_mode.set(self.ClickMode.FLAG)
         elif self.click_mode.get() == self.ClickMode.FLAG:
