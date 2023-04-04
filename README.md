@@ -4,7 +4,6 @@ FreeForm Minesweeper is the game of Minesweeper as you know and love, but now wi
 ## More features on the horizon
   ### What you can expect
   * A Dark theme!
-  * A better (un)installation system!
   * A tutorial page!
 
 ## Running the game

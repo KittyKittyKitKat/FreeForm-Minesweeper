@@ -29,7 +29,6 @@ from releasemanager import ReleaseManager
 
 
 # TODO: theming with Tcl files or tk set palette
-# Consider reworking installers
 class FreeFormMinesweeper:
     """A game of FreeForm Minesweeper."""
 

@@ -28,7 +28,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='installationmanager',
+    name='ffms_installer',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
