@@ -4,9 +4,11 @@ This file is NOT meant to be executed as a Python script.
 It will not work properly. Refer to the executable version instead.
 """
 import shutil
+import subprocess
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
+from base64 import b64decode
 from pathlib import Path
 from platform import system, version
 from time import sleep
@@ -51,11 +53,16 @@ class InstallationManager:
         if self.operating_system == 'Linux':
             self.package_directory = self.home_directory / '.freeform_minesweeper'
         elif self.operating_system == 'Windows':
-            windows_version = version().rpartition('.')[0]
-            # TODO: Find package directory for windows
-            # C:\Users\YourUsername\AppData\Local\FreeFormMinesweeper
-            # Check windows version is valid (i.e. >= 6.2)
-            # messagebox if so
+            windows_version = version().partition('.')[0]
+            supported_windows_versions = ['8', '10', '11']
+            if windows_version not in supported_windows_versions:
+                showerror(
+                    title='Installation Error',
+                    message=('Oops! This version of Windows is not supported.'),
+                )
+            self.package_directory = (
+                self.home_directory / 'AppData/Local/FreeFormMinesweeper'
+            )
 
         elif self.operating_system == '':
             showerror(
@@ -152,7 +159,7 @@ class InstallationManager:
                 / '.local/share/applications/freeform_minesweeper.desktop'
             )
             binary_directory = self.package_directory / 'freeform_minesweeper'
-            desktop_lines = [
+            desktop_lines = (
                 '[Desktop Entry]\n',
                 'Name=FreeForm Minesweeper\n',
                 'StartupWMClass=FreeForm Minesweeper\n',
@@ -161,12 +168,35 @@ class InstallationManager:
                 f'Exec=sh -c "cd {binary_directory} && {binary_directory / "freeform_minesweeper.sh"}"\n',
                 f'Icon={binary_directory / self.icon}\n',
                 'Type=Application\n',
-            ]
+            )
             with open(desktop, 'w') as desktop_fp:
                 desktop_fp.writelines(desktop_lines)
         elif self.operating_system == 'Windows':
-            ...
-            # TODO: Make desktop shortcut
+            # region
+            ico_data = b'AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAABAAABMLAAATCwAAAAAAAAAAAADAwMD/wMDA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/7+/v//AwMD/gICA/39/f/+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID////////////AwMD/v7+//4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP/+/v7//////8DAwP/AwMD/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA/4CAgP+AgID/gICA///////////////////////AwMD/wMDA/8DAwP/AwMD/wMDA/8DAwP/AwMD/wMDA/wUDAf8FAwH/BQMB/wUDAf8FAwH/BQMB/wUDAf8FAwH/wMDA/8DAwP/AwMD/wMDA/8DAwP/AwMD/wMDA/8DAwP+AgID/gICA/4CAgP+AgID//////////////////////8DAwP/AwMD/wMDA/8DAwP/AwMD/wMDA/wUDAf8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/BQMB/8DAwP/AwMD/wMDA/8DAwP/AwMD/wMDA/4CAgP+AgID/gICA/4CAgP//////////////////////wMDA/8DAwP/AwMD/wMDA/8DAwP8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/BQMB/8DAwP/AwMD/wMDA/8DAwP/AwMD/gICA/4CAgP+AgID/gICA///////////////////////AwMD/wMDA/8DAwP/AwMD/BQMB/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/BQMB/8DAwP/AwMD/wMDA/8DAwP+AgID/gICA/4CAgP+AgID//////////////////////8DAwP/AwMD/wMDA/wUDAf8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/BQMB/8DAwP/AwMD/wMDA/4CAgP+AgID/gICA/4CAgP//////////////////////wMDA/8DAwP8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/BQMB/8DAwP/AwMD/gICA/4CAgP+AgID/gICA///////////////////////AwMD/BQMB/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/wUDAf8FAwH/BQMB/wUDAf8FAwH/BQMB/wUDAf8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/BQMB/8DAwP+AgID/gICA/4CAgP+AgID//////////////////////8DAwP8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8AAAD/wMDA/4CAgP+AgID/gICA/4CAgP//////////////////////BQMB/xn/9/8Z//f/Gf/3/xn/9/8Z//f/AAAA/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/gICA/4CAgP+AgID/gICA//////////////////////8FAwH/Gf/3/xn/9/8Z//f/Gf/3/wUDAf8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/Gf/3/xn/9/8Z//f/Gf/3/wUDAf+AgID/gICA/4CAgP+AgID//////////////////////wUDAf8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/BQMB/4CAgP+AgID/gICA/4CAgP//////////////////////BQMB/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/gICA/4CAgP+AgID/gICA//////////////////////8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/wUDAf+AgID/gICA/4CAgP+AgID//////////////////////wUDAf8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/BQMB/4CAgP+AgID/gICA/4CAgP//////////////////////BQMB/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/gICA/4CAgP+AgID/gICA//////////////////////8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/wUDAf+AgID/gICA/4CAgP+AgID//////////////////////8DAwP8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/BQMB/wUDAf8Z//f/Gf/3/xn/9/8Z//f/BQMB/wUDAf8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8AAAD/wMDA/4CAgP+AgID/gICA/4CAgP//////////////////////wMDA/wUDAf8Z//f/Gf/3/xn/9/8Z//f/Gf/3/wUDAf8FAwH/BQMB/xn/9/8Z//f/Gf/3/xn/9/8FAwH/BQMB/wUDAf8Z//f/Gf/3/xn/9/8Z//f/Gf/3/wAAAP/AwMD/gICA/4CAgP+AgID/gICA///////////////////////AwMD/wMDA/wUDAf8Z//f/Gf/3/xn/9/8Z//f/BQMB/wUDAf8FAwH/Gf/3/xn/9/8Z//f/Gf/3/wUDAf8FAwH/BQMB/xn/9/8Z//f/Gf/3/xn/9/8FAwH/wMDA/8DAwP+AgID/gICA/4CAgP+AgID//////////////////////8DAwP/AwMD/wMDA/wUDAf8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/BQMB/8DAwP/AwMD/wMDA/4CAgP+AgID/gICA/4CAgP//////////////////////wMDA/8DAwP/AwMD/wMDA/wUDAf8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/wUDAf/AwMD/wMDA/8DAwP/AwMD/gICA/4CAgP+AgID/gICA///////////////////////AwMD/wMDA/8DAwP/AwMD/wMDA/wUDAf8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/wMDA/8DAwP/AwMD/wMDA/8DAwP+AgID/gICA/4CAgP+AgID//////////////////////8DAwP/AwMD/wMDA/8DAwP/AwMD/wMDA/wUDAf8FAwH/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8Z//f/Gf/3/xn/9/8FAwH/BQMB/8DAwP/AwMD/wMDA/8DAwP/AwMD/wMDA/4CAgP+AgID/gICA/4CAgP//////////////////////wMDA/8DAwP/AwMD/wMDA/8DAwP/AwMD/wMDA/8DAwP8FAwH/BQMB/wUDAf8FAwH/BQMB/wUDAf8FAwH/BQMB/8DAwP/AwMD/wMDA/8DAwP/AwMD/wMDA/8DAwP/AwMD/gICA/4CAgP+AgID/gICA///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AwMD/wMDA/4CAgP+AgID//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////7+/v//AwMD/gICA/39/f//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AwMD/v7+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////+/v7//////8DAwP/AwMD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+            # endregion
+            desktop = self.home_directory / 'Desktop/FreeFormMinesweeper.lnk'
+            binary_directory = self.package_directory / 'freeform_minesweeper'
+            with open(binary_directory / 'ffms.ico', 'wb') as fp:
+                fp.write(b64decode(ico_data))
+            desktop_vbs_lines = (
+                'set fs  = CreateObject("Scripting.FileSystemObject")\n',
+                'set ws  = WScript.CreateObject("WScript.Shell")\n',
+                f'set link = ws.CreateShortcut("{desktop}")\n',
+                f'link.TargetPath = "{binary_directory / "freeform_minesweeper.exe"}"\n',
+                f'link.WorkingDirectory = "{binary_directory}"\n',
+                f'link.IconLocation = "{binary_directory / "ffms.ico"}"\n',
+                'link.Save\n',
+            )
+            vbs_file_name = self.package_directory / 'shortcut.vbs'
+            with open(vbs_file_name, 'w') as fp:
+                fp.writelines(desktop_vbs_lines)
+            subprocess.call(
+                f'cscript {vbs_file_name}',
+                stdout=subprocess.DEVNULL,
+                creationflags=subprocess.DETACHED_PROCESS,
+            )
+
         self.done()
 
     def uninstall(self) -> None:
@@ -181,8 +211,9 @@ class InstallationManager:
                 / '.local/share/applications/freeform_minesweeper.desktop'
             ).unlink(missing_ok=True)
         elif self.operating_system == 'Windows':
-            ...
-            # TODO: Remove desktop shortcut
+            Path(
+                self.home_directory / 'Desktop/FreeFormMinesweeper.lnk'
+            ).unlink(missing_ok=True)
         self.done()
 
     def done(self) -> None:
