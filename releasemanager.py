@@ -1,7 +1,5 @@
 import json
-from itertools import groupby
 from pathlib import Path
-from platform import system
 from tkinter import Toplevel
 from urllib.request import urlopen
 
@@ -24,7 +22,6 @@ class ReleaseManager:
         self.github_releases_url = (
             'https://github.com/KittyKittyKitKat/FreeForm-Minesweeper/releases'
         )
-        self.platform = system()
         self.version = 'v2.0.0'
 
     def get_release_tags(self, url: str) -> list[str]:
@@ -49,16 +46,11 @@ class ReleaseManager:
                 title='HTTP Error',
             )
             raise LookupError()
-        tags = [release['tag_name'] for release in github_release_data]
-        tags_linux, tags_windows = [
-            list(g) for _, g in groupby(sorted(tags), key=lambda s: s[0])
-        ]
-        if self.platform == 'Linux':
-            return tags_linux
-        elif self.platform == 'Windows':
-            return tags_windows
-        else:
-            return []
+        tags: list[str] = sorted(
+            release['tag_name'].rpartition('-')[2]
+            for release in github_release_data
+        )
+        return tags
 
     def is_release_up_to_date(self) -> bool:
         """Compare release to most up to date.
@@ -70,20 +62,11 @@ class ReleaseManager:
             tags = self.get_release_tags(self.github_api_releases_url)
         except LookupError:
             return True
-        if tags == [] and not Path('os_fetch_seen').is_file():
-            AcknowledgementDialogue(
-                self.parent,
-                (
-                    'Could not retrieve operating system information to queue updates.\n'
-                    'You can safely ignore this message.'
-                ),
-                title='OS Fetching Error',
-            )
-            Path('os_fetch_seen').touch()
+        try:
+            newest_release = tags[-1]
+        except IndexError:
             return True
-        up_to_date_release = tags[-1]
-        current_release = self.platform + '-' + self.version
-        return up_to_date_release == current_release
+        return newest_release == self.version
 
     def outdated_notice(self, force_message: bool = False) -> None:
         """Display pop up message detailing release is out of date."""
