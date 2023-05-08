@@ -64,8 +64,7 @@ class ReleaseManager:
         """Compare release to most up to date.
 
         Returns:
-            True if the version is the most recent, or is the development dummy version.
-            False otherwise.
+            The release is up to date.
         """
         try:
             tags = self.get_release_tags(self.github_api_releases_url)
@@ -86,9 +85,9 @@ class ReleaseManager:
         current_release = self.platform + '-' + self.version
         return up_to_date_release == current_release
 
-    def outdated_notice(self) -> None:
+    def outdated_notice(self, force_message: bool = False) -> None:
         """Display pop up message detailing release is out of date."""
-        if Path('ood_seen').is_file():
+        if (not force_message) and Path('ood_seen').is_file():
             return
         AcknowledgementWithLinkDialogue(
             self.parent,

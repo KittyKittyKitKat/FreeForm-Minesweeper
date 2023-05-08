@@ -161,6 +161,11 @@ class FreeFormMinesweeper:
         self.game_root.title('FreeForm Minesweeper')
         self.alive = True
 
+        # Release Manager
+        self.rm = ReleaseManager(self.game_root)
+        if not self.rm.is_release_up_to_date():
+            self.rm.outdated_notice()
+
     # Traces and other Setting/Options Functions
 
     def rows_trace(self) -> None:
@@ -408,6 +413,15 @@ class FreeFormMinesweeper:
             self.columns.set(30)
         self.multimine_diff_inc.set(0.25)
         self.multimine_likelihood.set(0.5)
+
+    def check_for_updates(self) -> None:
+        if self.rm.is_release_up_to_date():
+            AcknowledgementDialogue(
+                self.game_root,
+                message='This release is up to date.'
+            )
+        else:
+            self.rm.outdated_notice(force_message=True)
 
     # UI Generation Methods
 
@@ -795,6 +809,10 @@ class FreeFormMinesweeper:
                 ('Tutorial', self.TUTORIAL_PAGE),
                 title='FreeForm Minesweeper Help',
             ),
+        )
+        help_menu.add_command(
+            label='Check for Updates',
+            command=self.check_for_updates,
         )
         help_menu.add_separator()
         help_menu.add_command(label='Close')
@@ -2031,8 +2049,4 @@ class FreeFormMinesweeper:
 
 
 if __name__ == '__main__':
-    ffms = FreeFormMinesweeper()
-    rm = ReleaseManager(ffms.game_root)
-    if not rm.is_release_up_to_date():
-        rm.outdated_notice()
-    ffms.mainloop()
+    FreeFormMinesweeper().mainloop()
