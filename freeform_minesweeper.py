@@ -1566,6 +1566,8 @@ class FreeFormMinesweeper:
                     )[0]
                     if isinstance(child_widget, BoardSquare) and child_widget.enabled:
                         square.neighbours[curr_direction] = child_widget
+                    else:
+                        square.neighbours[curr_direction] = None
 
     def toggle_click_mode(self, event: tk.Event | None = None) -> None:
         """Toggle the clicking mode of the game."""
@@ -1867,7 +1869,6 @@ class FreeFormMinesweeper:
                 enabled_squares.append(square)
                 square.reset()
                 square.toggle_enable()
-                self.link_squares_neighbours(square)
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,

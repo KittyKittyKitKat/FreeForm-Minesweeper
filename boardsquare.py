@@ -149,4 +149,3 @@ class BoardSquare(ttk.Label):
         self._covered = True
         self._flag_count = 0
         self._enabled = False
-        self._neighbours = dict.fromkeys(self._directions)
