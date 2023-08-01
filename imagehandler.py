@@ -1,8 +1,8 @@
 # Copyright © Simon Harris-Palmer 2023. All rights reserved.
 
+from enum import Enum
 from pathlib import Path
 from tkinter import PhotoImage
-from typing import Final, Literal, TypeAlias
 
 
 class ImageHandler:
@@ -13,18 +13,20 @@ class ImageHandler:
     when used inside of a Tkinter widget.
     """
 
-    SM_SQUARE: Final = '16x16'
-    LG_SQUARE: Final = '32x32'
-    SM_SEVSEG: Final = '13x23'
-    LG_SEVSEG: Final = '26x46'
-    LIGHT: Final = 'light'
-    DARK: Final = 'dark'
-    BOARD: Final = 'board'
-    UI: Final = 'ui'
-    SEVSEG: Final = 'sevseg'
-    _ImageSize: TypeAlias = Literal['16x16', '32x32', '13x23', '26x46']
-    _ImageCategory: TypeAlias = Literal['board', 'ui', 'sevseg']
-    _ImageTheme: TypeAlias = Literal['light', 'dark']
+    class ImageSize(Enum):
+        SM_SQUARE = '16x16'
+        LG_SQUARE = '32x32'
+        SM_SEVSEG = '13x23'
+        LG_SEVSEG = '26x46'
+
+    class ImageTheme(Enum):
+        LIGHT = 'light'
+        DARK = 'dark'
+
+    class ImageCategory(Enum):
+        BOARD = 'board'
+        UI = 'ui'
+        SEVSEG = 'sevseg'
 
     def __init__(self) -> None:
         """Initialize an ImageHandler.
@@ -36,17 +38,17 @@ class ImageHandler:
 
     def lookup(
         self,
-        size: _ImageSize,
-        theme: _ImageTheme,
-        category: _ImageCategory,
+        size: ImageSize,
+        theme: ImageTheme,
+        category: ImageCategory,
         name: str,
     ) -> PhotoImage:
         """Fetch an image based on its size, category, and name.
 
         Args:
-            size: Size of image, one of "16x16", "32x32", "13x26", "26x46".
-            theme: Theme of the image, one of "light" or "dark".
-            category: Category of the image, one of "board", "sevseg", or "ui".
+            size: Size of image.
+            theme: Theme of the image.
+            category: Category of the image.
             name: Name of the image.
 
         Raises:
@@ -55,7 +57,13 @@ class ImageHandler:
         Returns:
             The PhotoImage instance of the image fetched.
         """
-        image_path = Path('assets') / category / theme / size / f'{name}.png'
+        image_path = (
+            Path('assets')
+            / category.value
+            / theme.value
+            / size.value
+            / f'{name}.png'
+        )
         if not image_path.exists():
             raise ValueError(f'No such image exists: {image_path}')
         if image_path in self.__image_cache:

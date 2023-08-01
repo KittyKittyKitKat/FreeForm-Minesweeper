@@ -125,15 +125,18 @@ class FreeFormMinesweeper:
         self.adaptive_ui.trace_add('write', lambda *_: self.adaptive_ui_trace())
 
         self.mode_key_behaviour = tk.StringVar(value='hold')
-        self.mode_key_behaviour.trace_add('write', lambda *_: self.mode_key_behaviour_trace())
+        self.mode_key_behaviour.trace_add(
+            'write',
+            lambda *_: self.mode_key_behaviour_trace(),
+        )
 
         # Values related to setting the options
-        self.theme: Literal['light', 'dark'] = self.ih.LIGHT
-        self.board_square_size: Literal['16x16', '32x32'] = self.ih.LG_SQUARE
-        self.ui_square_size: Literal['16x16', '32x32'] = self.ih.LG_SQUARE
-        self.sevseg_size: Literal['13x23', '26x46'] = self.ih.LG_SEVSEG
+        self.theme: ImageHandler.ImageTheme = self.ih.ImageTheme.LIGHT
+        self.board_square_size: ImageHandler.ImageSize = self.ih.ImageSize.LG_SQUARE
+        self.ui_square_size: ImageHandler.ImageSize = self.ih.ImageSize.LG_SQUARE
+        self.sevseg_size: ImageHandler.ImageSize = self.ih.ImageSize.LG_SEVSEG
         self.max_flags = 1
-        self.board_square_size_px = int(self.board_square_size.split('x')[0])
+        self.board_square_size_px = int(self.board_square_size.value.split('x')[0])
         self.mode_key_down = False
         self.ignore_toggle_key_held = True
 
@@ -224,10 +227,10 @@ class FreeFormMinesweeper:
         self.set_guard()
 
         if self.board_scale.get() == self.SMALL_SCALE:
-            self.board_square_size = self.ih.SM_SQUARE
+            self.board_square_size = self.ih.ImageSize.SM_SQUARE
         elif self.board_scale.get() == self.LARGE_SCALE:
-            self.board_square_size = self.ih.LG_SQUARE
-        self.board_square_size_px = int(self.board_square_size.split('x')[0])
+            self.board_square_size = self.ih.ImageSize.LG_SQUARE
+        self.board_square_size_px = int(self.board_square_size.value.split('x')[0])
         self.board_frame.config(
             height=self.board_square_size_px * self.rows.get(),
             width=self.board_square_size_px * self.columns.get(),
@@ -239,14 +242,14 @@ class FreeFormMinesweeper:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     'covered',
                 )
             else:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     'unlocked',
                 )
         self.ui_collapse()
@@ -258,8 +261,8 @@ class FreeFormMinesweeper:
         self.set_guard()
 
         if self.ui_scale.get() == self.SMALL_SCALE:
-            self.ui_square_size = self.ih.SM_SQUARE
-            self.sevseg_size = self.ih.SM_SEVSEG
+            self.ui_square_size = self.ih.ImageSize.SM_SQUARE
+            self.sevseg_size = self.ih.ImageSize.SM_SEVSEG
             self.style.configure(
                 'FFMS.TButton',
                 font=self.SMALL_FONT,
@@ -279,8 +282,8 @@ class FreeFormMinesweeper:
                 font=self.SMALL_FONT,
             )
         elif self.ui_scale.get() == self.LARGE_SCALE:
-            self.ui_square_size = self.ih.LG_SQUARE
-            self.sevseg_size = self.ih.LG_SEVSEG
+            self.ui_square_size = self.ih.ImageSize.LG_SQUARE
+            self.sevseg_size = self.ih.ImageSize.LG_SEVSEG
             self.style.configure(
                 'FFMS.TButton',
                 font=self.LARGE_FONT,
@@ -308,7 +311,7 @@ class FreeFormMinesweeper:
                 image=self.ih.lookup(
                     self.sevseg_size,
                     self.theme,
-                    self.ih.SEVSEG,
+                    self.ih.ImageCategory.SEVSEG,
                     '0',
                 )
             )
@@ -316,7 +319,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'uncover',
             ),
         )
@@ -324,7 +327,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'new',
             ),
         )
@@ -332,7 +335,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'leaderboard',
             ),
         )
@@ -372,7 +375,7 @@ class FreeFormMinesweeper:
                 image=self.ih.lookup(
                     self.ui_square_size,
                     self.theme,
-                    self.ih.UI,
+                    self.ih.ImageCategory.UI,
                     'uncover',
                 )
             )
@@ -381,7 +384,7 @@ class FreeFormMinesweeper:
                 image=self.ih.lookup(
                     self.ui_square_size,
                     self.theme,
-                    self.ih.UI,
+                    self.ih.ImageCategory.UI,
                     'flag',
                 )
             )
@@ -420,7 +423,7 @@ class FreeFormMinesweeper:
         if self.rm.is_release_up_to_date():
             AcknowledgementDialogue(
                 self.game_root,
-                message='This release is up to date.'
+                message='This release is up to date.',
             )
         else:
             self.rm.outdated_notice(force_message=True)
@@ -513,9 +516,9 @@ class FreeFormMinesweeper:
         self.game_root.iconphoto(
             False,
             self.ih.lookup(
-                self.ih.LG_SQUARE,
-                self.ih.LIGHT,
-                self.ih.UI,
+                self.ih.ImageSize.LG_SQUARE,
+                self.ih.ImageTheme.LIGHT,
+                self.ih.ImageCategory.UI,
                 'new',
             ),
         )
@@ -562,7 +565,7 @@ class FreeFormMinesweeper:
 
         self.game_root.bind(
             '<KeyPress-Shift_L>',
-           self.toggle_click_mode,
+            self.toggle_click_mode,
         )
         self.game_root.bind(
             '<KeyRelease-Shift_L>',
@@ -821,8 +824,8 @@ class FreeFormMinesweeper:
             command=lambda: AcknowledgementDialogue(
                 self.game_root,
                 'Copyright © Simon Harris-Palmer 2023. All rights reserved.',
-                title='FreeForm Minesweeper Copyright'
-            )
+                title='FreeForm Minesweeper Copyright',
+            ),
         )
         help_menu.add_separator()
         help_menu.add_command(label='Close')
@@ -886,7 +889,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.sevseg_size,
                 self.theme,
-                self.ih.SEVSEG,
+                self.ih.ImageCategory.SEVSEG,
                 '0',
             ),
             style='FFMS.TLabel',
@@ -896,7 +899,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.sevseg_size,
                 self.theme,
-                self.ih.SEVSEG,
+                self.ih.ImageCategory.SEVSEG,
                 '0',
             ),
             style='FFMS.TLabel',
@@ -906,7 +909,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.sevseg_size,
                 self.theme,
-                self.ih.SEVSEG,
+                self.ih.ImageCategory.SEVSEG,
                 '0',
             ),
             style='FFMS.TLabel',
@@ -920,7 +923,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'uncover',
             ),
         )
@@ -930,7 +933,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'new',
             ),
         )
@@ -942,7 +945,7 @@ class FreeFormMinesweeper:
                     image=self.ih.lookup(
                         self.ui_square_size,
                         self.theme,
-                        self.ih.UI,
+                        self.ih.ImageCategory.UI,
                         'held',
                     )
                 )
@@ -953,7 +956,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'leaderboard',
             ),
             command=lambda *_: LeaderboardViewDialogue(self.game_root),
@@ -985,7 +988,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.sevseg_size,
                 self.theme,
-                self.ih.SEVSEG,
+                self.ih.ImageCategory.SEVSEG,
                 '0',
             ),
             style='FFMS.TLabel',
@@ -995,7 +998,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.sevseg_size,
                 self.theme,
-                self.ih.SEVSEG,
+                self.ih.ImageCategory.SEVSEG,
                 '0',
             ),
             style='FFMS.TLabel',
@@ -1005,7 +1008,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.sevseg_size,
                 self.theme,
-                self.ih.SEVSEG,
+                self.ih.ImageCategory.SEVSEG,
                 '0',
             ),
             style='FFMS.TLabel',
@@ -1126,7 +1129,7 @@ class FreeFormMinesweeper:
             self.ih.lookup(
                 self.board_square_size,
                 self.theme,
-                self.ih.BOARD,
+                self.ih.ImageCategory.BOARD,
                 'unlocked',
             ),
             'FFMS.TLabel',
@@ -1451,7 +1454,7 @@ class FreeFormMinesweeper:
                 image=self.ih.lookup(
                     self.sevseg_size,
                     self.theme,
-                    self.ih.SEVSEG,
+                    self.ih.ImageCategory.SEVSEG,
                     seconds.pop(),
                 )
             )
@@ -1464,7 +1467,7 @@ class FreeFormMinesweeper:
                 image=self.ih.lookup(
                     self.sevseg_size,
                     self.theme,
-                    self.ih.SEVSEG,
+                    self.ih.ImageCategory.SEVSEG,
                     '0',
                 ),
             )
@@ -1478,7 +1481,7 @@ class FreeFormMinesweeper:
                 image=self.ih.lookup(
                     self.sevseg_size,
                     self.theme,
-                    self.ih.SEVSEG,
+                    self.ih.ImageCategory.SEVSEG,
                     flags.pop(),
                 )
             )
@@ -1491,7 +1494,7 @@ class FreeFormMinesweeper:
                 image=self.ih.lookup(
                     self.sevseg_size,
                     self.theme,
-                    self.ih.SEVSEG,
+                    self.ih.ImageCategory.SEVSEG,
                     '0',
                 ),
             )
@@ -1509,14 +1512,14 @@ class FreeFormMinesweeper:
             square.image = self.ih.lookup(
                 self.board_square_size,
                 self.theme,
-                self.ih.BOARD,
+                self.ih.ImageCategory.BOARD,
                 'covered',
             )
         else:
             square.image = self.ih.lookup(
                 self.board_square_size,
                 self.theme,
-                self.ih.BOARD,
+                self.ih.ImageCategory.BOARD,
                 'unlocked',
             )
 
@@ -1534,7 +1537,7 @@ class FreeFormMinesweeper:
             square.image = self.ih.lookup(
                 self.board_square_size,
                 self.theme,
-                self.ih.BOARD,
+                self.ih.ImageCategory.BOARD,
                 f'mine_{square.mine_count}_explode',
             )
             square.uncover()
@@ -1545,7 +1548,7 @@ class FreeFormMinesweeper:
             square.image = self.ih.lookup(
                 self.board_square_size,
                 self.theme,
-                self.ih.BOARD,
+                self.ih.ImageCategory.BOARD,
                 str(square.value),
             )
             self.squares_cleared += 1
@@ -1667,7 +1670,11 @@ class FreeFormMinesweeper:
             return
         try:
             with open(board_file, 'r') as board_load_file:
-                board_bits = [line.strip() for line in board_load_file.readlines() if not line.startswith('#')]
+                board_bits = [
+                    line.strip()
+                    for line in board_load_file.readlines()
+                    if not line.startswith('#')
+                ]
         except Exception:
             AcknowledgementDialogue(
                 self.game_root,
@@ -1806,7 +1813,7 @@ class FreeFormMinesweeper:
             square.image = self.ih.lookup(
                 self.board_square_size,
                 self.theme,
-                self.ih.BOARD,
+                self.ih.ImageCategory.BOARD,
                 f'flag_{square.flag_count}',
             )
             self.flags_placed += 1
@@ -1826,14 +1833,14 @@ class FreeFormMinesweeper:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     'covered',
                 )
             else:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     f'flag_{square.flag_count}',
                 )
             self.flags_placed -= 1
@@ -1877,7 +1884,7 @@ class FreeFormMinesweeper:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     'locked',
                 )
             else:
@@ -1896,7 +1903,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'new',
             )
         )
@@ -1910,7 +1917,7 @@ class FreeFormMinesweeper:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     'covered',
                 )
         self.place_mines(enabled_squares)
@@ -1951,7 +1958,7 @@ class FreeFormMinesweeper:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     'unlocked',
                 )
             else:
@@ -1960,7 +1967,7 @@ class FreeFormMinesweeper:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     'covered',
                 )
         self.squares_cleared = 0
@@ -1973,7 +1980,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'new',
             )
         )
@@ -1988,7 +1995,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'win',
             )
         )
@@ -1998,7 +2005,7 @@ class FreeFormMinesweeper:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     f'flag_{square.mine_count}',
                 )
         self.reset_flag_counter()
@@ -2023,7 +2030,7 @@ class FreeFormMinesweeper:
             image=self.ih.lookup(
                 self.ui_square_size,
                 self.theme,
-                self.ih.UI,
+                self.ih.ImageCategory.UI,
                 'lose',
             )
         )
@@ -2033,14 +2040,14 @@ class FreeFormMinesweeper:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     f'mine_{square.mine_count}',
                 )
             elif square.flag_count and square.flag_count != square.mine_count:
                 square.image = self.ih.lookup(
                     self.board_square_size,
                     self.theme,
-                    self.ih.BOARD,
+                    self.ih.ImageCategory.BOARD,
                     f'flag_{square.flag_count}_wrong',
                 )
 
