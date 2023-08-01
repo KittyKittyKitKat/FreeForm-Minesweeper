@@ -1,3 +1,5 @@
+# Copyright © Simon Harris-Palmer 2023. All rights reserved.
+
 from pathlib import Path
 from tkinter import PhotoImage
 from typing import Final, Literal, TypeAlias

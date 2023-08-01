@@ -1,3 +1,5 @@
+# Copyright © Simon Harris-Palmer 2023. All rights reserved.
+
 """Installation Manager for FreeForm Minesweeper.
 
 This file is NOT meant to be executed as a Python script.

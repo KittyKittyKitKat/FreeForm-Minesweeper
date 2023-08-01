@@ -1,3 +1,5 @@
+# Copyright © Simon Harris-Palmer 2023. All rights reserved.
+
 """The game FreeForm Minesweeper, bundled with MultiMinesweeper mode.
 
 Play the game by executing the file with Python >= 3.11.2 as a program, and have fun!
@@ -813,6 +815,14 @@ class FreeFormMinesweeper:
         help_menu.add_command(
             label='Check for Updates',
             command=self.check_for_updates,
+        )
+        help_menu.add_command(
+            label='Copyright',
+            command=lambda: AcknowledgementDialogue(
+                self.game_root,
+                'Copyright © Simon Harris-Palmer 2023. All rights reserved.',
+                title='FreeForm Minesweeper Copyright'
+            )
         )
         help_menu.add_separator()
         help_menu.add_command(label='Close')
@@ -1657,7 +1667,7 @@ class FreeFormMinesweeper:
             return
         try:
             with open(board_file, 'r') as board_load_file:
-                board_bits = [line.strip() for line in board_load_file.readlines()]
+                board_bits = [line.strip() for line in board_load_file.readlines() if not line.startswith('#')]
         except Exception:
             AcknowledgementDialogue(
                 self.game_root,

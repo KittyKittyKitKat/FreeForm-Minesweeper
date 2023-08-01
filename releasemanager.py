@@ -1,3 +1,5 @@
+# Copyright © Simon Harris-Palmer 2023. All rights reserved.
+
 import json
 from pathlib import Path
 from tkinter import Toplevel

@@ -1,3 +1,5 @@
+# Copyright © Simon Harris-Palmer 2023. All rights reserved.
+
 import tkinter as tk
 import tkinter.ttk as ttk
 from functools import cached_property
