@@ -1607,6 +1607,8 @@ class FreeFormMinesweeper:
 
     def fill_board(self) -> None:
         """Make all squares enabled."""
+        if self.state is not self.State.DRAW:
+            return
         for square in self.board_frame.grid_slaves():
             assert isinstance(square, BoardSquare)
             if not square.enabled:
@@ -1616,6 +1618,8 @@ class FreeFormMinesweeper:
 
     def clear_board(self) -> None:
         """Make all squares disabled."""
+        if self.state is not self.State.DRAW:
+            return
         for square in self.board_frame.grid_slaves():
             assert isinstance(square, BoardSquare)
             if square.enabled:
@@ -1625,6 +1629,8 @@ class FreeFormMinesweeper:
 
     def invert_board(self) -> None:
         """Toggle all the squares on the board between enabled and disabled."""
+        if self.state is not self.State.DRAW:
+            return
         for square in self.board_frame.grid_slaves():
             assert isinstance(square, BoardSquare)
             self.square_toggle_enabled(square)
@@ -1642,6 +1648,8 @@ class FreeFormMinesweeper:
             filename: Name of the board file to load.
             difficulty: Associated game difficulty for board loaded.
         """
+        if self.state is not self.State.DRAW:
+            return
         board_file = filename or filedialog.askopenfilename(
             initialdir=self.SAVE_LOAD_DIR, title='Open Board', filetypes=self.FILE_TYPE
         )
@@ -1680,6 +1688,8 @@ class FreeFormMinesweeper:
 
     def save_board(self) -> None:
         """Save the current board to a file."""
+        if self.state is not self.State.DRAW:
+            return
         compressed_board = self.compress_board()
         board_file = filedialog.asksaveasfilename(
             initialdir=self.SAVE_LOAD_DIR,
