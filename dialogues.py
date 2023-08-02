@@ -49,7 +49,7 @@ class AcknowledgementDialogue(Dialog):
             width=10,
             command=self.cancel,
             default=tk.ACTIVE,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.cancel)
@@ -108,7 +108,7 @@ class AcknowledgementWithLinkDialogue(Dialog):
             width=10,
             command=self.cancel,
             default=tk.ACTIVE,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.cancel)
@@ -158,7 +158,7 @@ class YesNoDialogue(Dialog):
             text='Yes',
             width=10,
             command=self.ok,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         w = ttk.Button(
@@ -167,7 +167,7 @@ class YesNoDialogue(Dialog):
             width=10,
             command=self.cancel,
             default=tk.ACTIVE,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.ok)
@@ -245,7 +245,7 @@ class SettingsDialogue(Dialog):
             width=10,
             command=self.cancel,
             default=tk.ACTIVE,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         w = ttk.Button(
@@ -253,7 +253,7 @@ class SettingsDialogue(Dialog):
             text='Apply',
             width=10,
             command=self.ok,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.ok)
@@ -350,7 +350,7 @@ class LeaderboardRenameDialog(Dialog):
             width=10,
             command=self.cancel,
             default=tk.ACTIVE,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         w = ttk.Button(
@@ -358,7 +358,7 @@ class LeaderboardRenameDialog(Dialog):
             text='Submit',
             width=10,
             command=self.ok,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.ok)
@@ -533,7 +533,7 @@ class LeaderboardEntryDialogue(Dialog):
             width=10,
             command=self.cancel,
             default=tk.ACTIVE,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         w = ttk.Button(
@@ -541,7 +541,7 @@ class LeaderboardEntryDialogue(Dialog):
             text='Submit',
             width=10,
             command=self.ok,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.ok)
@@ -612,7 +612,7 @@ class LeaderboardEntryDialogue(Dialog):
 
 
 class LeaderboardViewDialogue(Dialog):
-    """Notebook dialogue to access leaderboard database."""
+    """Treeview dialogue to access leaderboard database."""
 
     def __init__(self, parent: tk.Toplevel) -> None:
         """Initialize the dialogue.

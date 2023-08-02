@@ -15,7 +15,7 @@ from pathlib import Path, PurePath
 from random import sample
 from time import sleep
 from tkinter import filedialog
-from typing import Final, Literal
+from typing import Final
 
 from boardsquare import BoardSquare
 from dialogues import (
@@ -30,7 +30,10 @@ from imagehandler import ImageHandler
 from releasemanager import ReleaseManager
 
 
-# TODO: theming with Tcl files or tk set palette
+# TODO: Consider some way to enable a fullscreen mode and/or resizable window?
+# TODO: Add hover cursor to UI
+# TODO: Add more custom styles to account for defaults not changed in light mode
+# TODO: Prevent less than 9 squares to be played on
 class FreeFormMinesweeper:
     """A game of FreeForm Minesweeper."""
 
@@ -53,7 +56,12 @@ class FreeFormMinesweeper:
         # Constants
         self.MAINLOOP_TIME: Final = 0.01
         self.UI_PADDING: Final = 4
-        self.BACKGROUND_COLOUR: Final = '#c0c0c0'
+        self.LIGHT_BACKGROUND_COLOUR: Final = '#c0c0c0'
+        self.DARK_BACKGROUND_COLOUR: Final = '#3f3f3f'
+        self.LIGHT_UI_COLOUR: Final = '#d9d9d9'
+        self.DARK_UI_COLOUR: Final = '#666666'
+        self.LIGHT_TEXT_COLOUR: Final = '#000000'
+        self.DARK_TEXT_COLOUR: Final = '#ffffff'
         self.FILE_EXTENSION: Final = '.ffmnswpr'
         self.FILE_TYPE: Final = (
             ('FreeForm Minesweeper Board', f'*{self.FILE_EXTENSION}'),
@@ -107,6 +115,9 @@ class FreeFormMinesweeper:
         self.ui_scale = tk.StringVar(value=self.LARGE_SCALE)
         self.ui_scale.trace_add('write', lambda *_: self.ui_scale_trace())
 
+        self.theme_option = tk.StringVar(value=self.ih.ImageTheme.LIGHT.value)
+        self.theme_option.trace_add('write', lambda *_: self.theme_option_trace())
+
         self.multimine = tk.BooleanVar(value=False)
         self.multimine.trace_add('write', lambda *_: self.multimine_trace())
 
@@ -132,6 +143,9 @@ class FreeFormMinesweeper:
 
         # Values related to setting the options
         self.theme: ImageHandler.ImageTheme = self.ih.ImageTheme.LIGHT
+        self.background_colour = self.LIGHT_BACKGROUND_COLOUR
+        self.ui_colour = self.LIGHT_UI_COLOUR
+        self.text_colour = self.LIGHT_TEXT_COLOUR
         self.board_square_size: ImageHandler.ImageSize = self.ih.ImageSize.LG_SQUARE
         self.ui_square_size: ImageHandler.ImageSize = self.ih.ImageSize.LG_SQUARE
         self.sevseg_size: ImageHandler.ImageSize = self.ih.ImageSize.LG_SEVSEG
@@ -185,6 +199,7 @@ class FreeFormMinesweeper:
             num_rows_present = max(num_rows_present, row)
         self.board_frame.config(height=self.board_square_size_px * rows)
         self.game_root.update_idletasks()
+        self.game_root.update()
         if num_rows_present < rows - 1:
             for x in range(num_rows_present + 1, rows):
                 for y in range(self.columns.get()):
@@ -209,6 +224,7 @@ class FreeFormMinesweeper:
             num_columns_present = max(num_columns_present, column)
         self.board_frame.config(width=self.board_square_size_px * columns)
         self.game_root.update_idletasks()
+        self.game_root.update()
         if num_columns_present < columns - 1:
             for y in range(num_columns_present + 1, columns):
                 for x in range(self.rows.get()):
@@ -264,7 +280,7 @@ class FreeFormMinesweeper:
             self.ui_square_size = self.ih.ImageSize.SM_SQUARE
             self.sevseg_size = self.ih.ImageSize.SM_SEVSEG
             self.style.configure(
-                'FFMS.TButton',
+                'FFMS.Toolbutton',
                 font=self.SMALL_FONT,
                 padding=('1.5m', '0.5m'),
             )
@@ -285,7 +301,7 @@ class FreeFormMinesweeper:
             self.ui_square_size = self.ih.ImageSize.LG_SQUARE
             self.sevseg_size = self.ih.ImageSize.LG_SEVSEG
             self.style.configure(
-                'FFMS.TButton',
+                'FFMS.Toolbutton',
                 font=self.LARGE_FONT,
                 padding=('3m', '1m'),
             )
@@ -341,6 +357,96 @@ class FreeFormMinesweeper:
         )
         self.ui_collapse()
 
+        self.unset_guard()
+
+    def theme_option_trace(self) -> None:
+        """Change the theme."""
+        self.set_guard()
+        if self.theme_option.get() == self.ih.ImageTheme.LIGHT.value:
+            self.theme = self.ih.ImageTheme.LIGHT
+            self.background_colour = self.LIGHT_BACKGROUND_COLOUR
+            self.text_colour = self.LIGHT_TEXT_COLOUR
+            self.ui_colour = self.LIGHT_UI_COLOUR
+        elif self.theme_option.get() == self.ih.ImageTheme.DARK.value:
+            self.theme = self.ih.ImageTheme.DARK
+            self.background_colour = self.DARK_BACKGROUND_COLOUR
+            self.text_colour = self.DARK_TEXT_COLOUR
+            self.ui_colour = self.DARK_UI_COLOUR
+
+        for square in self.board_frame.grid_slaves():
+            assert isinstance(square, BoardSquare)
+            if square.enabled:
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.ImageCategory.BOARD,
+                    'covered',
+                )
+            else:
+                square.image = self.ih.lookup(
+                    self.board_square_size,
+                    self.theme,
+                    self.ih.ImageCategory.BOARD,
+                    'unlocked',
+                )
+
+        for label in chain(
+            self.flags_frame.grid_slaves(), self.timer_frame.grid_slaves()
+        ):
+            assert isinstance(label, ttk.Label)
+            label.config(
+                image=self.ih.lookup(
+                    self.sevseg_size,
+                    self.theme,
+                    self.ih.ImageCategory.SEVSEG,
+                    '0',
+                )
+            )
+        self.mode_switch_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.ImageCategory.UI,
+                'uncover',
+            ),
+        )
+        self.new_game_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.ImageCategory.UI,
+                'new',
+            ),
+        )
+        self.leaderboard_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.ImageCategory.UI,
+                'leaderboard',
+            ),
+        )
+        self.style.configure(
+            'FFMS.TFrame',
+            background=self.background_colour,
+        )
+        self.style.configure(
+            'FFMS.Toolbutton',
+            background=self.ui_colour,
+            foreground=self.text_colour,
+        )
+        self.style.configure(
+            'FFMS.TLabel',
+            background=self.background_colour,
+            foreground=self.text_colour,
+        )
+        self.style.configure(
+            'FFMS.Treeview',
+            background=self.background_colour,
+            fieldbackground=self.background_colour,
+            foreground=self.text_colour,
+        )
+        # TODO: Update things like background, font colour, etc
         self.unset_guard()
 
     def multimine_trace(self) -> None:
@@ -435,12 +541,7 @@ class FreeFormMinesweeper:
         self.style.theme_use('default')
         self.style.configure(
             'FFMS.TFrame',
-            background=self.BACKGROUND_COLOUR,
-        )
-        self.style.configure(
-            'FFMS.TButton',
-            font=self.LARGE_FONT,
-            padding=('3m', '1m'),
+            background=self.background_colour,
         )
         self.style.configure(
             'FFMS.Toolbutton',
@@ -448,34 +549,16 @@ class FreeFormMinesweeper:
             relief='raised',
             padding=('3m', '1m'),
             anchor='center',
-        )
-        self.style.map(
-            'FFMS.Toolbutton',
-            background=[
-                ('pressed', '#c3c3c3'),
-                ('active', '#ececec'),
-                ('selected', '#c3c3c3'),
-            ],
-            relief=[
-                ('disabled', 'groove'),
-                ('selected', 'sunken'),
-                ('pressed', 'sunken'),
-                ('active', 'raised'),
-            ],
-        )
-        self.style.configure(
-            'Flat.FFMS.TButton',
-            borderwidth=0,
-            padding=(0, 0),
-            background=self.BACKGROUND_COLOUR,
-            highlightthickness=0,
+            background=self.ui_colour,
+            foreground=self.text_colour,
         )
         self.style.configure(
             'FFMS.TLabel',
             font=self.LARGE_FONT,
-            background=self.BACKGROUND_COLOUR,
+            background=self.background_colour,
             anchor='center',
             borderwidth=0,
+            foreground=self.text_colour,
         )
         self.style.configure(
             'Link.FFMS.TLabel',
@@ -485,8 +568,9 @@ class FreeFormMinesweeper:
             'FFMS.Treeview',
             font=self.LARGE_FONT,
             rowheight=64,
-            background=self.BACKGROUND_COLOUR,
-            fieldbackground=self.BACKGROUND_COLOUR,
+            background=self.background_colour,
+            fieldbackground=self.background_colour,
+            foreground=self.text_colour,
         )
         self.style.configure('FFMS.Vertical.TScrollbar', width=16)
         self.main_frame.config(style='FFMS.TFrame')
@@ -500,9 +584,9 @@ class FreeFormMinesweeper:
         self.controls_frame.config(style='FFMS.TFrame')
         self.mode_switch_button.config(style='FFMS.TLabel')
         self.new_game_button.config(style='FFMS.TLabel')
-        self.play_button.config(style='FFMS.TButton')
-        self.stop_button.config(style='FFMS.TButton')
-        self.leaderboard_button.config(style='Flat.FFMS.TButton')
+        self.play_button.config(style='FFMS.Toolbutton')
+        self.stop_button.config(style='FFMS.Toolbutton')
+        self.leaderboard_button.config(style='FFMS.TLabel')
 
     def init_window(self) -> None:
         """Set up window for the game."""
@@ -767,6 +851,18 @@ class FreeFormMinesweeper:
         )
         options_menu.add_cascade(label='UI Scale', menu=uis_menu)
         options_menu.add_checkbutton(label='Adaptive UI', variable=self.adaptive_ui)
+        theme_menu = tk.Menu(options_menu, font=self.SMALL_FONT)
+        theme_menu.add_radiobutton(
+            label='Light',
+            value=self.ih.ImageTheme.LIGHT.value,
+            variable=self.theme_option,
+        )
+        theme_menu.add_radiobutton(
+            label='Dark',
+            value=self.ih.ImageTheme.DARK.value,
+            variable=self.theme_option,
+        )
+        options_menu.add_cascade(label='Theme', menu=theme_menu)
         options_menu.add_separator()
         options_menu.add_command(
             label='More...',
@@ -823,7 +919,7 @@ class FreeFormMinesweeper:
             label='Copyright',
             command=lambda: AcknowledgementDialogue(
                 self.game_root,
-                'Copyright © Simon Harris-Palmer 2023. All rights reserved.',
+                'Copyright \N{COPYRIGHT SIGN} Simon Harris-Palmer 2023. All rights reserved.',
                 title='FreeForm Minesweeper Copyright',
             ),
         )
@@ -846,7 +942,7 @@ class FreeFormMinesweeper:
             self.presets_frame,
             text='Easy',
             width=6,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
             command=lambda: self.load_board('presets/easy.ffmnswpr', self.DIFF_EASY),
             takefocus=False,
         )
@@ -854,7 +950,7 @@ class FreeFormMinesweeper:
             self.presets_frame,
             text='Medium',
             width=6,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
             command=lambda: self.load_board(
                 'presets/medium.ffmnswpr', self.DIFF_MEDIUM
             ),
@@ -864,7 +960,7 @@ class FreeFormMinesweeper:
             self.presets_frame,
             text='Hard',
             width=6,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
             command=lambda: self.load_board('presets/hard.ffmnswpr', self.DIFF_HARD),
             takefocus=False,
         )
@@ -872,7 +968,7 @@ class FreeFormMinesweeper:
             self.presets_frame,
             text='Expert',
             width=6,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
             command=lambda: self.load_board(
                 'presets/expert.ffmnswpr', self.DIFF_EXPERT
             ),
@@ -975,9 +1071,9 @@ class FreeFormMinesweeper:
             takefocus=False,
         )
 
-        self.mode_switch_button.grid(row=0, column=0, sticky=tk.NSEW)
+        self.mode_switch_button.grid(row=0, column=0, pady=3, sticky=tk.NSEW)
         self.new_game_button.grid(row=0, column=1, padx=5, pady=3, sticky=tk.NSEW)
-        self.leaderboard_button.grid(row=0, column=2, sticky=tk.NSEW)
+        self.leaderboard_button.grid(row=0, column=2, pady=3, sticky=tk.NSEW)
         self.stop_button.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW)
         self.stop_button.grid_remove()
         self.play_button.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW)
@@ -1075,7 +1171,7 @@ class FreeFormMinesweeper:
             self.controls_frame,
             text='Fill',
             width=5,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
             command=self.fill_board,
             takefocus=False,
         )
@@ -1083,7 +1179,7 @@ class FreeFormMinesweeper:
             self.controls_frame,
             text='Clear',
             width=5,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
             command=self.clear_board,
             takefocus=False,
         )
@@ -1091,7 +1187,7 @@ class FreeFormMinesweeper:
             self.controls_frame,
             text='Save',
             width=5,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
             command=self.save_board,
             takefocus=False,
         )
@@ -1099,7 +1195,7 @@ class FreeFormMinesweeper:
             self.controls_frame,
             text='Load',
             width=5,
-            style='FFMS.TButton',
+            style='FFMS.Toolbutton',
             command=self.load_board,
             takefocus=False,
         )
@@ -1187,6 +1283,7 @@ class FreeFormMinesweeper:
 
     def set_guard(self) -> None:
         """Disable the UI while important events occur."""
+        self.game_root.title('FreeForm Minesweeper (Loading...)')
         self.state = self.State.PAUSE
         self.lock_toolbar()
         for button in self.get_menu_buttons:
@@ -1201,6 +1298,7 @@ class FreeFormMinesweeper:
                 button.state(['!disabled'])
         self.unlock_toolbar()
         self.state = self.State.DRAW
+        self.game_root.title('FreeForm Minesweeper')
 
     def ui_collapse(self) -> None:
         """Hide/show parts of the UI depending on the board size."""
@@ -2066,7 +2164,7 @@ class FreeFormMinesweeper:
                 ):
                     self.time_elapsed = min(
                         round(self.time_elapsed + self.MAINLOOP_TIME, 2),
-                        999.0
+                        999.0,
                     )
                     if self.time_elapsed.is_integer():
                         try:
