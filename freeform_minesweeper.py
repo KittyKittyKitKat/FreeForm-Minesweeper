@@ -66,6 +66,7 @@ class FreeFormMinesweeper:
         self.FILE_TYPE: Final = (
             ('FreeForm Minesweeper Board', f'*{self.FILE_EXTENSION}'),
         )
+        Path('README.txt').write_text(Path('README.md').read_text())
         self.TUTORIAL_PAGE: Final = Path('tutorial.html').absolute().as_uri()
         self.GITHUB_PAGE: Final = 'https://github.com/KittyKittyKitKat/'
         self.SAVE_LOAD_DIR: Final = str(Path.home())
@@ -2172,6 +2173,8 @@ class FreeFormMinesweeper:
                         except tk.TclError:
                             break
 
-
 if __name__ == '__main__':
-    FreeFormMinesweeper().mainloop()
+    try:
+        FreeFormMinesweeper().mainloop()
+    finally:
+        Path('README.txt').unlink(missing_ok=True)
