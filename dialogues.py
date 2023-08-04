@@ -659,7 +659,6 @@ class LeaderboardViewDialogue(Dialog):
             parent,
             orient=tk.VERTICAL,
             command=self.tree.yview,
-            style='FFMS.Vertical.TScrollbar',
         )
         # Mypy does not like this configure call
         self.tree.configure(yscroll=scrollbar.set)  # type: ignore

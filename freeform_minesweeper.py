@@ -447,9 +447,6 @@ class FreeFormMinesweeper:
             fieldbackground=self.background_colour,
             foreground=self.text_colour,
         )
-        # self.style.configure(
-        #     'FFMS.Vertical.TScrollbar',
-        # )
         self.style.configure(
             'FFMS.TMenu',
             background=self.ui_colour,
@@ -595,10 +592,6 @@ class FreeFormMinesweeper:
             fieldbackground=self.background_colour,
             foreground=self.text_colour,
             borderwidth=0,
-        )
-        self.style.configure(
-            'FFMS.Vertical.TScrollbar',
-            width=16,
         )
         # There is no ttk.Menu widget. This acts as a pseudo-theme
         # so other areas of the code can access these settings
