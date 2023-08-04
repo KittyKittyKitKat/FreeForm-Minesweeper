@@ -302,7 +302,7 @@ class LeaderboardRenameDialog(Dialog):
         self.entry_var = tk.StringVar()
         self.attr_renaming: Literal['board', 'player'] = attr_renaming
         self.old_player_name = old_player_name
-        self.old_board_name = old_board_name
+        self.old_board_name = old_board_name.split('@')[-1]
         if self.attr_renaming == 'player':
             self.entry_var.set(self.old_player_name)
         elif self.attr_renaming == 'board':
@@ -637,7 +637,7 @@ class LeaderboardViewDialogue(Dialog):
 
     def body(self, parent: tk.Frame) -> tk.Frame:
         """Internal method."""
-        self.resizable(True, False)
+        self.resizable(False, False)
         background = ttk.Style().configure('FFMS.TFrame')['background']
         self['bg'] = background
         parent['bg'] = background
@@ -686,7 +686,7 @@ class LeaderboardViewDialogue(Dialog):
                 self.tree.insert(
                     p_name,
                     tk.END,
-                    iid=b_name,
+                    iid=f'{p_name}@{b_name}',
                     text=f'  Board: {b_name.title()}',
                     image=self.generate_board_thumbnail(entry['Board']),
                     values=(
@@ -696,7 +696,7 @@ class LeaderboardViewDialogue(Dialog):
                 )
                 for time in sorted(entry['Entries'], key=lambda e: e['Time']):
                     self.tree.insert(
-                        b_name,
+                        f'{p_name}@{b_name}',
                         tk.END,
                         text=f'{time["Time"]} seconds',
                         values=(time['Date'],),
@@ -831,7 +831,7 @@ class LeaderboardViewDialogue(Dialog):
             )
             if not a.get():
                 return
-            self.leaderboard[p].pop(row)
+            self.leaderboard[p].pop(row.split('@')[-1])
             if not self.leaderboard[p]:
                 self.leaderboard.pop(p)
             self.load_tree()
@@ -865,6 +865,7 @@ class LeaderboardViewDialogue(Dialog):
         date = self.tree.item(row)['values'][0]
 
         def delete():
+            bn = b.split('@')[-1]
             a = tk.BooleanVar()
             YesNoDialogue(
                 self,
@@ -874,15 +875,15 @@ class LeaderboardViewDialogue(Dialog):
             )
             if not a.get():
                 return
-            entries = self.leaderboard[p][b]['Entries']
+            entries = self.leaderboard[p][bn]['Entries']
             for i, e in enumerate(entries):
                 if e['Time'] == time and e['Date'] == date:
                     break
             entries.pop(i)
             if not entries:
-                self.leaderboard[p].pop(b)
+                self.leaderboard[p].pop(bn)
             else:
-                self.leaderboard[p][b]['Entries'] = entries
+                self.leaderboard[p][bn]['Entries'] = entries
             self.load_tree()
             if entries:
                 self.tree.see(b)
