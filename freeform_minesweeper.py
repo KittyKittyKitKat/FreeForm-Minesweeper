@@ -1301,7 +1301,7 @@ class FreeFormMinesweeper:
         fill_button = ttk.Button(
             self.controls_frame,
             text='Fill',
-            width=5,
+            width=6,
             style='FFMS.Toolbutton',
             command=self.fill_board,
             takefocus=False,
@@ -1310,35 +1310,35 @@ class FreeFormMinesweeper:
         clear_button = ttk.Button(
             self.controls_frame,
             text='Clear',
-            width=5,
+            width=6,
             style='FFMS.Toolbutton',
             command=self.clear_board,
             takefocus=False,
             cursor='hand2',
         )
-        save_board_button = ttk.Button(
+        invert_board_button = ttk.Button(
             self.controls_frame,
-            text='Save',
-            width=5,
+            text='Invert',
+            width=6,
             style='FFMS.Toolbutton',
-            command=self.save_board,
+            command=self.invert_board,
             takefocus=False,
             cursor='hand2',
         )
-        load_board_button = ttk.Button(
+        center_board_button = ttk.Button(
             self.controls_frame,
-            text='Load',
-            width=5,
+            text='Center',
+            width=6,
             style='FFMS.Toolbutton',
-            command=self.load_board,
+            command=self.center_board,
             takefocus=False,
             cursor='hand2',
         )
 
         fill_button.grid(row=0, column=1, sticky=tk.NSEW)
         clear_button.grid(row=1, column=1, sticky=tk.NSEW)
-        save_board_button.grid(row=0, column=2, sticky=tk.NSEW)
-        load_board_button.grid(row=1, column=2, sticky=tk.NSEW)
+        invert_board_button.grid(row=0, column=2, sticky=tk.NSEW)
+        center_board_button.grid(row=1, column=2, sticky=tk.NSEW)
         self.controls_frame.grid(row=0, column=5)
 
     def init_board(self) -> None:
@@ -1891,15 +1891,9 @@ class FreeFormMinesweeper:
         if not board_bits:
             return
         longest_row_len = len(max(board_bits, key=len))
-        padded_right_bits = [
-            row.ljust(longest_row_len, '0')
-            for row in board_bits
-        ]
+        padded_right_bits = [row.ljust(longest_row_len, '0') for row in board_bits]
         columns = self.columns.get()
-        centered_board_bits = [
-            row.center(columns, '0')
-            for row in padded_right_bits
-        ]
+        centered_board_bits = [row.center(columns, '0') for row in padded_right_bits]
         rows = self.rows.get()
         num_empty_rows = rows - len(centered_board_bits)
         num_rows_before = num_empty_rows // 2
