@@ -32,8 +32,6 @@ from releasemanager import ReleaseManager
 
 # TODO: Consider some way to enable a fullscreen mode and/or resizable window?
 # TODO: Add hover cursor to UI
-# TODO: Add more custom styles to account for defaults not changed in light mode
-# TODO: Prevent less than 9 squares to be played on
 class FreeFormMinesweeper:
     """A game of FreeForm Minesweeper."""
 
@@ -2072,10 +2070,10 @@ class FreeFormMinesweeper:
             assert isinstance(square, BoardSquare)
             if square.enabled:
                 enabled_squares.append(square)
-        if len(enabled_squares) == 0:
+        if len(enabled_squares) < 9:
             AcknowledgementDialogue(
                 self.game_root,
-                'Cannot start a game with no active squares.',
+                'Cannot start a game with less than 9 active squares',
             )
             self.stop_game()
             return
