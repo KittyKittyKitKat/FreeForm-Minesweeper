@@ -1015,7 +1015,10 @@ class FreeFormMinesweeper:
             label='About...',
             command=lambda: AcknowledgementWithLinkDialogue(
                 self.game_root,
-                'FreeForm Minesweeper, created by KittyKittyKitKat.\nCheck out my GitHub!',
+                (
+                    f'FreeForm Minesweeper ({self.rm.version}), created by KittyKittyKitKat.\n'
+                    'Check out my GitHub!'
+                ),
                 ('GitHub Page', self.GITHUB_PAGE),
                 title='FreeForm Minesweeper About',
             ),
