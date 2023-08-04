@@ -49,8 +49,7 @@ class ReleaseManager:
             )
             raise LookupError()
         tags: list[str] = sorted(
-            release['tag_name'].rpartition('-')[2]
-            for release in github_release_data
+            release['tag_name'].rpartition('-')[2] for release in github_release_data
         )
         return tags
 

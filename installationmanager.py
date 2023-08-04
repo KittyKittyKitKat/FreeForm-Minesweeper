@@ -98,7 +98,11 @@ class InstallationManager:
                 ),
             )
 
-            update_button = ttk.Button(button_frame, text='Update')
+            update_button = ttk.Button(
+                button_frame,
+                text='Update',
+                cursor='hand2',
+            )
 
             def update_callback():
                 update_button.state([tk.DISABLED])
@@ -108,7 +112,11 @@ class InstallationManager:
             update_button.config(command=update_callback)
             update_button.grid(row=0, column=0)
 
-            uninstall_button = ttk.Button(button_frame, text='Uninstall')
+            uninstall_button = ttk.Button(
+                button_frame,
+                text='Uninstall',
+                cursor='hand2',
+            )
 
             def uninstall_callback():
                 update_button.state([tk.DISABLED])
@@ -122,7 +130,11 @@ class InstallationManager:
             install_label.config(
                 text='Press the button below to install FreeForm Minesweeper.'
             )
-            install_button = ttk.Button(button_frame, text='Install')
+            install_button = ttk.Button(
+                button_frame,
+                text='Install',
+                cursor='hand2',
+            )
 
             def install_callback():
                 install_button.state([tk.DISABLED])
@@ -135,6 +147,7 @@ class InstallationManager:
             button_frame,
             text='Close',
             command=self.close,
+            cursor='hand2',
         )
         close_button.grid(row=0, column=2)
 
@@ -214,9 +227,9 @@ class InstallationManager:
                 / '.local/share/applications/freeform_minesweeper.desktop'
             ).unlink(missing_ok=True)
         elif self.operating_system == 'Windows':
-            Path(
-                self.home_directory / 'Desktop/FreeFormMinesweeper.lnk'
-            ).unlink(missing_ok=True)
+            Path(self.home_directory / 'Desktop/FreeFormMinesweeper.lnk').unlink(
+                missing_ok=True
+            )
         self.done()
 
     def done(self) -> None:
@@ -231,6 +244,7 @@ class InstallationManager:
             self.main_frame,
             text='Close',
             command=self.close,
+            cursor='hand2',
         )
         done_label.grid(row=0, column=0)
         close_button.grid(row=1, column=0, pady=5)

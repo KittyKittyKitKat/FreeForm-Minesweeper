@@ -50,6 +50,7 @@ class AcknowledgementDialogue(Dialog):
             command=self.cancel,
             default=tk.ACTIVE,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.cancel)
@@ -109,6 +110,7 @@ class AcknowledgementWithLinkDialogue(Dialog):
             command=self.cancel,
             default=tk.ACTIVE,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.cancel)
@@ -159,6 +161,7 @@ class YesNoDialogue(Dialog):
             width=10,
             command=self.ok,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         w = ttk.Button(
@@ -168,6 +171,7 @@ class YesNoDialogue(Dialog):
             command=self.cancel,
             default=tk.ACTIVE,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.ok)
@@ -229,6 +233,7 @@ class SettingsDialogue(Dialog):
                 relief=tk.FLAT,
                 highlightthickness=0,
                 takefocus=False,
+                cursor='hand2',
             )
             s.set(var.get())
             s.grid(row=r, column=1)
@@ -246,6 +251,7 @@ class SettingsDialogue(Dialog):
             command=self.cancel,
             default=tk.ACTIVE,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         w = ttk.Button(
@@ -254,6 +260,7 @@ class SettingsDialogue(Dialog):
             width=10,
             command=self.ok,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.ok)
@@ -351,6 +358,7 @@ class LeaderboardRenameDialog(Dialog):
             command=self.cancel,
             default=tk.ACTIVE,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         w = ttk.Button(
@@ -359,6 +367,7 @@ class LeaderboardRenameDialog(Dialog):
             width=10,
             command=self.ok,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.ok)
@@ -534,6 +543,7 @@ class LeaderboardEntryDialogue(Dialog):
             command=self.cancel,
             default=tk.ACTIVE,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         w = ttk.Button(
@@ -542,6 +552,7 @@ class LeaderboardEntryDialogue(Dialog):
             width=10,
             command=self.ok,
             style='FFMS.Toolbutton',
+            cursor='hand2',
         )
         w.pack(side=tk.LEFT, padx=5, pady=5)
         self.bind('<Return>', self.ok)

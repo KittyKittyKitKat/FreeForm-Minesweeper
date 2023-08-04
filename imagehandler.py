@@ -58,11 +58,7 @@ class ImageHandler:
             The PhotoImage instance of the image fetched.
         """
         image_path = (
-            Path('assets')
-            / category.value
-            / theme.value
-            / size.value
-            / f'{name}.png'
+            Path('assets') / category.value / theme.value / size.value / f'{name}.png'
         )
         if not image_path.exists():
             raise ValueError(f'No such image exists: {image_path}')

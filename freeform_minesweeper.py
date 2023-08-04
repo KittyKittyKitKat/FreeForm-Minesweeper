@@ -1062,6 +1062,7 @@ class FreeFormMinesweeper:
             style='FFMS.Toolbutton',
             command=lambda: self.load_board('presets/easy.ffmnswpr', self.DIFF_EASY),
             takefocus=False,
+            cursor='hand2',
         )
         preset_medium = ttk.Button(
             self.presets_frame,
@@ -1072,6 +1073,7 @@ class FreeFormMinesweeper:
                 'presets/medium.ffmnswpr', self.DIFF_MEDIUM
             ),
             takefocus=False,
+            cursor='hand2',
         )
         preset_hard = ttk.Button(
             self.presets_frame,
@@ -1080,6 +1082,7 @@ class FreeFormMinesweeper:
             style='FFMS.Toolbutton',
             command=lambda: self.load_board('presets/hard.ffmnswpr', self.DIFF_HARD),
             takefocus=False,
+            cursor='hand2',
         )
         preset_expert = ttk.Button(
             self.presets_frame,
@@ -1090,6 +1093,7 @@ class FreeFormMinesweeper:
                 'presets/expert.ffmnswpr', self.DIFF_EXPERT
             ),
             takefocus=False,
+            cursor='hand2',
         )
         preset_easy.grid(row=0, column=0, sticky=tk.NSEW)
         preset_medium.grid(row=0, column=1, sticky=tk.NSEW)
@@ -1139,6 +1143,7 @@ class FreeFormMinesweeper:
                 self.ih.ImageCategory.UI,
                 'uncover',
             ),
+            cursor='hand2',
         )
         self.mode_switch_button.bind('<Button-1>', self.toggle_click_mode)
         self.mode_switch_button.state([tk.DISABLED])
@@ -1149,6 +1154,7 @@ class FreeFormMinesweeper:
                 self.ih.ImageCategory.UI,
                 'new',
             ),
+            cursor='hand2',
         )
         self.new_game_button.state([tk.DISABLED])
 
@@ -1174,18 +1180,21 @@ class FreeFormMinesweeper:
             ),
             command=lambda *_: LeaderboardViewDialogue(self.game_root),
             takefocus=False,
+            cursor='hand2',
         )
         self.play_button.config(
             text='Play',
             width=5,
             command=self.start_game,
             takefocus=False,
+            cursor='hand2',
         )
         self.stop_button.config(
             text='Stop',
             width=5,
             command=self.stop_game,
             takefocus=False,
+            cursor='hand2',
         )
 
         self.mode_switch_button.grid(row=0, column=0, pady=3, sticky=tk.NSEW)
@@ -1244,6 +1253,7 @@ class FreeFormMinesweeper:
             variable=self.difficulty,
             style='FFMS.Toolbutton',
             takefocus=False,
+            cursor='hand2',
         )
         diff_2 = ttk.Radiobutton(
             self.diff_frame,
@@ -1253,6 +1263,7 @@ class FreeFormMinesweeper:
             variable=self.difficulty,
             style='FFMS.Toolbutton',
             takefocus=False,
+            cursor='hand2',
         )
         diff_3 = ttk.Radiobutton(
             self.diff_frame,
@@ -1261,6 +1272,7 @@ class FreeFormMinesweeper:
             variable=self.difficulty,
             style='FFMS.Toolbutton',
             takefocus=False,
+            cursor='hand2',
         )
         diff_4 = ttk.Radiobutton(
             self.diff_frame,
@@ -1269,6 +1281,7 @@ class FreeFormMinesweeper:
             variable=self.difficulty,
             style='FFMS.Toolbutton',
             takefocus=False,
+            cursor='hand2',
         )
 
         diff_label.grid(
@@ -1291,6 +1304,7 @@ class FreeFormMinesweeper:
             style='FFMS.Toolbutton',
             command=self.fill_board,
             takefocus=False,
+            cursor='hand2',
         )
         clear_button = ttk.Button(
             self.controls_frame,
@@ -1299,6 +1313,7 @@ class FreeFormMinesweeper:
             style='FFMS.Toolbutton',
             command=self.clear_board,
             takefocus=False,
+            cursor='hand2',
         )
         save_board_button = ttk.Button(
             self.controls_frame,
@@ -1307,6 +1322,7 @@ class FreeFormMinesweeper:
             style='FFMS.Toolbutton',
             command=self.save_board,
             takefocus=False,
+            cursor='hand2',
         )
         load_board_button = ttk.Button(
             self.controls_frame,
@@ -1315,6 +1331,7 @@ class FreeFormMinesweeper:
             style='FFMS.Toolbutton',
             command=self.load_board,
             takefocus=False,
+            cursor='hand2',
         )
 
         fill_button.grid(row=0, column=1, sticky=tk.NSEW)
