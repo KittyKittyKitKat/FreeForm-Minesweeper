@@ -30,8 +30,6 @@ from imagehandler import ImageHandler
 from releasemanager import ReleaseManager
 
 
-# TODO: Consider some way to enable a fullscreen mode and/or resizable window?
-# TODO: Add hover cursor to UI
 class FreeFormMinesweeper:
     """A game of FreeForm Minesweeper."""
 
@@ -673,6 +671,10 @@ class FreeFormMinesweeper:
             '<Control-KeyPress-i>',
             lambda *_: self.invert_board(),
         )
+        self.game_root.bind(
+            '<Control-KeyPress-c>',
+            lambda *_: self.center_board(),
+        )
 
         self.game_root.bind(
             '<KeyPress-Shift_L>',
@@ -702,13 +704,11 @@ class FreeFormMinesweeper:
         file_menu.add_command(
             label='Load Board',
             accelerator='Ctrl+O',
-            underline=0,
             command=self.load_board,
         )
         file_menu.add_command(
             label='Save Board',
             accelerator='Ctrl+S',
-            underline=0,
             command=self.save_board,
         )
         presets_menu = tk.Menu(
@@ -773,8 +773,7 @@ class FreeFormMinesweeper:
         file_menu.add_separator()
         file_menu.add_command(
             label='Quit Game',
-            accelerator='Ctrl-Q',
-            underline=0,
+            accelerator='Ctrl+Q',
             command=self.quit_game,
         )
         file_menu.add_separator()
@@ -802,20 +801,22 @@ class FreeFormMinesweeper:
         edit_menu.add_command(
             label='Fill Board',
             accelerator='Ctrl+F',
-            underline=0,
             command=self.fill_board,
         )
         edit_menu.add_command(
             label='Clear Board',
             accelerator='Ctrl+X',
-            underline=0,
             command=self.clear_board,
         )
         edit_menu.add_command(
             label='Invert Board',
             accelerator='Ctrl+I',
-            underline=0,
             command=self.invert_board,
+        )
+        edit_menu.add_command(
+            label='Center Board',
+            accelerator='Ctrl+C',
+            command=self.center_board,
         )
         edit_menu.add_separator()
         edit_menu.add_command(label='Close')
@@ -1880,6 +1881,38 @@ class FreeFormMinesweeper:
             assert isinstance(square, BoardSquare)
             self.square_toggle_enabled(square)
             self.draw_history_step.append(square)
+        self.inc_history()
+
+    def center_board(self) -> None:
+        if self.state is not self.State.DRAW:
+            return
+
+        board_bits = self.compress_board()
+        if not board_bits:
+            return
+        longest_row_len = len(max(board_bits, key=len))
+        padded_right_bits = [
+            row.ljust(longest_row_len, '0')
+            for row in board_bits
+        ]
+        columns = self.columns.get()
+        centered_board_bits = [
+            row.center(columns, '0')
+            for row in padded_right_bits
+        ]
+        rows = self.rows.get()
+        num_empty_rows = rows - len(centered_board_bits)
+        num_rows_before = num_empty_rows // 2
+        num_rows_after = num_empty_rows - num_rows_before
+        for _ in range(num_rows_before):
+            centered_board_bits.insert(0, '0' * columns)
+        for _ in range(num_rows_after):
+            centered_board_bits.append('0' * columns)
+        bit_string = ''.join(centered_board_bits)
+        for square, bit in zip(self.board_frame.grid_slaves(), reversed(bit_string)):
+            if isinstance(square, BoardSquare) and square.enabled != bool(int(bit)):
+                self.square_toggle_enabled(square)
+                self.draw_history_step.append(square)
         self.inc_history()
 
     def load_board(
