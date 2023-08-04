@@ -447,7 +447,29 @@ class FreeFormMinesweeper:
             fieldbackground=self.background_colour,
             foreground=self.text_colour,
         )
-        # TODO: Update things like background, font colour, etc
+        # self.style.configure(
+        #     'FFMS.Vertical.TScrollbar',
+        # )
+        self.style.configure(
+            'FFMS.TMenu',
+            background=self.ui_colour,
+            foreground=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
+        menu_q = [self.menubar]
+        while menu_q:
+            current_menu = menu_q.pop(0)
+            for child in current_menu.children.values():
+                if isinstance(child, tk.Menu):
+                    menu_q.append(child)
+            current_menu.config(
+                font=self.SMALL_FONT,
+                bg=self.ui_colour,
+                fg=self.text_colour,
+                activebackground=self.background_colour,
+                activeforeground=self.text_colour,
+            )
         self.unset_guard()
 
     def multimine_trace(self) -> None:
@@ -572,8 +594,21 @@ class FreeFormMinesweeper:
             background=self.background_colour,
             fieldbackground=self.background_colour,
             foreground=self.text_colour,
+            borderwidth=0,
         )
-        self.style.configure('FFMS.Vertical.TScrollbar', width=16)
+        self.style.configure(
+            'FFMS.Vertical.TScrollbar',
+            width=16,
+        )
+        # There is no ttk.Menu widget. This acts as a pseudo-theme
+        # so other areas of the code can access these settings
+        self.style.configure(
+            'FFMS.TMenu',
+            background=self.ui_colour,
+            foreground=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         self.main_frame.config(style='FFMS.TFrame')
         self.menu_frame.config(style='FFMS.TFrame')
         self.board_frame.config(style='FFMS.TFrame')
@@ -658,8 +693,21 @@ class FreeFormMinesweeper:
         )
 
     def init_toolbar(self) -> None:
-        self.menubar.config(font=self.SMALL_FONT)
-        file_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
+        self.menubar.config(
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
+        file_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         file_menu.add_command(
             label='Load Board',
             accelerator='Ctrl+O',
@@ -672,7 +720,14 @@ class FreeFormMinesweeper:
             underline=0,
             command=self.save_board,
         )
-        presets_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
+        presets_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         presets_menu.add_command(
             label='Easy',
             command=lambda: self.load_board('presets/easy.ffmnswpr', self.DIFF_EASY),
@@ -694,7 +749,14 @@ class FreeFormMinesweeper:
             ),
         )
         file_menu.add_cascade(label='Presets', menu=presets_menu)
-        samples_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
+        samples_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         samples_menu.add_command(
             label='Mine',
             command=lambda: self.load_board('sample_boards/mine.ffmnswpr'),
@@ -728,7 +790,14 @@ class FreeFormMinesweeper:
         file_menu.add_command(label='Close')
         self.menubar.add_cascade(label='File', menu=file_menu)
 
-        edit_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
+        edit_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         edit_menu.add_command(
             label='Undo',
             accelerator='Ctrl+Z',
@@ -761,7 +830,14 @@ class FreeFormMinesweeper:
         edit_menu.add_command(label='Close')
         self.menubar.add_cascade(label='Edit', menu=edit_menu)
 
-        game_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
+        game_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         game_menu.add_command(label='Play Game', command=self.start_game)
         game_menu.add_command(
             label='Stop Playing',
@@ -773,7 +849,14 @@ class FreeFormMinesweeper:
             state=tk.DISABLED,
             command=self.new_game,
         )
-        flagging_menu = tk.Menu(game_menu, font=self.SMALL_FONT)
+        flagging_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         flagging_menu.add_radiobutton(
             label='Uncover Mines',
             value=self.ClickMode.UNCOVER,
@@ -789,7 +872,14 @@ class FreeFormMinesweeper:
             state=tk.DISABLED,
             menu=flagging_menu,
         )
-        shift_menu = tk.Menu(game_menu, font=self.SMALL_FONT)
+        shift_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         shift_menu.add_radiobutton(
             label='Hold (Left Shift)',
             value='hold',
@@ -803,7 +893,14 @@ class FreeFormMinesweeper:
         game_menu.add_cascade(label='Flag Mode Behaviour', menu=shift_menu)
         self.menubar.add_cascade(label='Game', menu=game_menu)
 
-        options_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
+        options_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         options_menu.add_checkbutton(label='Multimine Mode', variable=self.multimine)
         options_menu.add_checkbutton(label='Grace Rule', variable=self.grace_rule)
         options_menu.add_checkbutton(label='Flagless', variable=self.flagless)
@@ -829,7 +926,14 @@ class FreeFormMinesweeper:
             variable=self.difficulty,
         )
         options_menu.add_cascade(label='Difficulty', menu=diff_menu)
-        bds_menu = tk.Menu(options_menu, font=self.SMALL_FONT)
+        bds_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         bds_menu.add_radiobutton(
             label='Small',
             value=self.SMALL_SCALE,
@@ -841,7 +945,14 @@ class FreeFormMinesweeper:
             variable=self.board_scale,
         )
         options_menu.add_cascade(label='Board Scale', menu=bds_menu)
-        uis_menu = tk.Menu(options_menu, font=self.SMALL_FONT)
+        uis_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         uis_menu.add_radiobutton(
             label='Small',
             value=self.SMALL_SCALE,
@@ -852,7 +963,14 @@ class FreeFormMinesweeper:
         )
         options_menu.add_cascade(label='UI Scale', menu=uis_menu)
         options_menu.add_checkbutton(label='Adaptive UI', variable=self.adaptive_ui)
-        theme_menu = tk.Menu(options_menu, font=self.SMALL_FONT)
+        theme_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         theme_menu.add_radiobutton(
             label='Light',
             value=self.ih.ImageTheme.LIGHT.value,
@@ -893,7 +1011,14 @@ class FreeFormMinesweeper:
         options_menu.add_command(label='Close')
         self.menubar.add_cascade(label='Options', menu=options_menu)
 
-        help_menu = tk.Menu(self.menubar, font=self.SMALL_FONT)
+        help_menu = tk.Menu(
+            self.menubar,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+        )
         help_menu.add_command(
             label='About...',
             command=lambda: AcknowledgementWithLinkDialogue(
@@ -2172,6 +2297,7 @@ class FreeFormMinesweeper:
                             self.update_timer()
                         except tk.TclError:
                             break
+
 
 if __name__ == '__main__':
     try:

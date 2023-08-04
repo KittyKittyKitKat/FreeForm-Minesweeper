@@ -622,6 +622,11 @@ class LeaderboardViewDialogue(Dialog):
         """
         self.leaderboard: LeaderboardJSON = {}
         self.images: set[tk.PhotoImage] = set()
+        style = ttk.Style()
+        self.menu_bg = style.configure('FFMS.TMenu')['background']
+        self.menu_fg = style.configure('FFMS.TMenu')['foreground']
+        self.menu_abg = style.configure('FFMS.TMenu')['activebackground']
+        self.menu_afg = style.configure('FFMS.TMenu')['activeforeground']
         try:
             with open(_LEADERBOARD_FILENAME, mode='r') as fp:
                 self.leaderboard = json.load(fp)
@@ -633,12 +638,16 @@ class LeaderboardViewDialogue(Dialog):
     def body(self, parent: tk.Frame) -> tk.Frame:
         """Internal method."""
         self.resizable(True, False)
+        background = ttk.Style().configure('FFMS.TFrame')['background']
+        self['bg'] = background
+        parent['bg'] = background
         self.tree = ttk.Treeview(
             parent,
             columns=('date',),
             selectmode='none',
             style='FFMS.Treeview',
             takefocus=False,
+            show='tree',
         )
         self.tree.column('#0', width=300, minwidth=64, stretch=True)
         self.load_tree()
@@ -783,7 +792,13 @@ class LeaderboardViewDialogue(Dialog):
             self.load_tree()
             self.save_leaderboard()
 
-        menu = tk.Menu(event.widget, tearoff=0)
+        menu = tk.Menu(
+            event.widget,
+            background=self.menu_bg,
+            foreground=self.menu_fg,
+            activebackground=self.menu_abg,
+            activeforeground=self.menu_afg,
+        )
         menu.add_command(label='Rename', command=rename)
         menu.add_command(label='Delete', command=delete)
         menu.add_separator()
@@ -824,7 +839,13 @@ class LeaderboardViewDialogue(Dialog):
                 self.tree.item(p, open=True)
             self.save_leaderboard()
 
-        menu = tk.Menu(event.widget, tearoff=0)
+        menu = tk.Menu(
+            event.widget,
+            background=self.menu_bg,
+            foreground=self.menu_fg,
+            activebackground=self.menu_abg,
+            activeforeground=self.menu_afg,
+        )
         menu.add_command(label='Rename', command=rename)
         menu.add_command(label='Delete', command=delete)
         menu.add_separator()
@@ -870,7 +891,13 @@ class LeaderboardViewDialogue(Dialog):
                 self.tree.item(p, open=True)
             self.save_leaderboard()
 
-        menu = tk.Menu(event.widget, tearoff=0)
+        menu = tk.Menu(
+            event.widget,
+            background=self.menu_bg,
+            foreground=self.menu_fg,
+            activebackground=self.menu_abg,
+            activeforeground=self.menu_afg,
+        )
         menu.add_command(label='Delete', command=delete)
         menu.add_separator()
         menu.add_command(label='Close')
