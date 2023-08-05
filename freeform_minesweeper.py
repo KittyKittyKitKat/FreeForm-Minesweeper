@@ -30,6 +30,7 @@ from imagehandler import ImageHandler
 from releasemanager import ReleaseManager
 
 
+# TODO: Access installer from game itself
 class FreeFormMinesweeper:
     """A game of FreeForm Minesweeper."""
 
@@ -137,6 +138,8 @@ class FreeFormMinesweeper:
             'write',
             lambda *_: self.mode_key_behaviour_trace(),
         )
+
+        self.prompt_leaderboard_save = tk.BooleanVar(value=True)
 
         # Values related to setting the options
         self.theme: ImageHandler.ImageTheme = self.ih.ImageTheme.LIGHT
@@ -449,6 +452,7 @@ class FreeFormMinesweeper:
             foreground=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         menu_q = [self.menubar]
         while menu_q:
@@ -462,6 +466,7 @@ class FreeFormMinesweeper:
                 fg=self.text_colour,
                 activebackground=self.background_colour,
                 activeforeground=self.text_colour,
+                selectcolor=self.text_colour,
             )
         self.unset_guard()
 
@@ -540,6 +545,8 @@ class FreeFormMinesweeper:
             self.columns.set(30)
         self.multimine_diff_inc.set(0.25)
         self.multimine_likelihood.set(0.5)
+        self.theme_option.set(self.ih.ImageTheme.LIGHT.value)
+        self.prompt_leaderboard_save.set(True)
 
     def check_for_updates(self) -> None:
         if self.rm.is_release_up_to_date():
@@ -597,6 +604,7 @@ class FreeFormMinesweeper:
             foreground=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         self.main_frame.config(style='FFMS.TFrame')
         self.menu_frame.config(style='FFMS.TFrame')
@@ -700,6 +708,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         file_menu.add_command(
             label='Load Board',
@@ -718,6 +727,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         presets_menu.add_command(
             label='Easy',
@@ -747,6 +757,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         samples_menu.add_command(
             label='Mine',
@@ -787,6 +798,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         edit_menu.add_command(
             label='Undo',
@@ -829,6 +841,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         game_menu.add_command(label='Play Game', command=self.start_game)
         game_menu.add_command(
@@ -848,6 +861,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         flagging_menu.add_radiobutton(
             label='Uncover Mines',
@@ -871,6 +885,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         shift_menu.add_radiobutton(
             label='Hold (Left Shift)',
@@ -883,6 +898,10 @@ class FreeFormMinesweeper:
             variable=self.mode_key_behaviour,
         )
         game_menu.add_cascade(label='Flag Mode Behaviour', menu=shift_menu)
+        game_menu.add_checkbutton(
+            label='Leaderboard Save Prompt',
+            variable=self.prompt_leaderboard_save,
+        )
         self.menubar.add_cascade(label='Game', menu=game_menu)
 
         options_menu = tk.Menu(
@@ -892,11 +911,29 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
-        options_menu.add_checkbutton(label='Multimine Mode', variable=self.multimine)
-        options_menu.add_checkbutton(label='Grace Rule', variable=self.grace_rule)
-        options_menu.add_checkbutton(label='Flagless', variable=self.flagless)
-        diff_menu = tk.Menu(options_menu, font=self.SMALL_FONT)
+        options_menu.add_checkbutton(
+            label='Multimine Mode',
+            variable=self.multimine,
+        )
+        options_menu.add_checkbutton(
+            label='Grace Rule',
+            variable=self.grace_rule,
+        )
+        options_menu.add_checkbutton(
+            label='Flagless',
+            variable=self.flagless,
+        )
+        diff_menu = tk.Menu(
+            options_menu,
+            font=self.SMALL_FONT,
+            bg=self.ui_colour,
+            fg=self.text_colour,
+            activebackground=self.background_colour,
+            activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
+        )
         diff_menu.add_radiobutton(
             label=f'{self.DIFF_EASY:.0%} Mines',
             value=self.DIFF_EASY,
@@ -925,6 +962,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         bds_menu.add_radiobutton(
             label='Small',
@@ -944,6 +982,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         uis_menu.add_radiobutton(
             label='Small',
@@ -951,10 +990,15 @@ class FreeFormMinesweeper:
             variable=self.ui_scale,
         )
         uis_menu.add_radiobutton(
-            label='Large', value=self.LARGE_SCALE, variable=self.ui_scale
+            label='Large',
+            value=self.LARGE_SCALE,
+            variable=self.ui_scale,
         )
         options_menu.add_cascade(label='UI Scale', menu=uis_menu)
-        options_menu.add_checkbutton(label='Adaptive UI', variable=self.adaptive_ui)
+        options_menu.add_checkbutton(
+            label='Adaptive UI',
+            variable=self.adaptive_ui,
+        )
         theme_menu = tk.Menu(
             self.menubar,
             font=self.SMALL_FONT,
@@ -962,6 +1006,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         theme_menu.add_radiobutton(
             label='Light',
@@ -1010,6 +1055,7 @@ class FreeFormMinesweeper:
             fg=self.text_colour,
             activebackground=self.background_colour,
             activeforeground=self.text_colour,
+            selectcolor=self.text_colour,
         )
         help_menu.add_command(
             label='About...',
@@ -2271,6 +2317,8 @@ class FreeFormMinesweeper:
                     f'flag_{square.mine_count}',
                 )
         self.reset_flag_counter()
+        if not self.prompt_leaderboard_save.get():
+            return
         a = tk.BooleanVar()
         YesNoDialogue(
             self.game_root,

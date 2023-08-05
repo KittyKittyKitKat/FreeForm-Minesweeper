@@ -638,6 +638,7 @@ class LeaderboardViewDialogue(Dialog):
         self.menu_fg = style.configure('FFMS.TMenu')['foreground']
         self.menu_abg = style.configure('FFMS.TMenu')['activebackground']
         self.menu_afg = style.configure('FFMS.TMenu')['activeforeground']
+        self.menu_sc = style.configure('FFMS.TMenu')['selectcolor']
         try:
             with open(_LEADERBOARD_FILENAME, mode='r') as fp:
                 self.leaderboard = json.load(fp)
@@ -808,6 +809,7 @@ class LeaderboardViewDialogue(Dialog):
             foreground=self.menu_fg,
             activebackground=self.menu_abg,
             activeforeground=self.menu_afg,
+            selectcolor=self.menu_sc,
         )
         menu.add_command(label='Rename', command=rename)
         menu.add_command(label='Delete', command=delete)
@@ -855,6 +857,7 @@ class LeaderboardViewDialogue(Dialog):
             foreground=self.menu_fg,
             activebackground=self.menu_abg,
             activeforeground=self.menu_afg,
+            selectcolor=self.menu_sc,
         )
         menu.add_command(label='Rename', command=rename)
         menu.add_command(label='Delete', command=delete)
@@ -908,6 +911,7 @@ class LeaderboardViewDialogue(Dialog):
             foreground=self.menu_fg,
             activebackground=self.menu_abg,
             activeforeground=self.menu_afg,
+            selectcolor=self.menu_sc,
         )
         menu.add_command(label='Delete', command=delete)
         menu.add_separator()
