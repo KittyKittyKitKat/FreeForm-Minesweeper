@@ -2,7 +2,7 @@
 
 """The game FreeForm Minesweeper, bundled with MultiMinesweeper mode.
 
-Play the game by executing the file with Python >= 3.11.2 as a program, and have fun!
+Play the game by executing the file with Python >= 3.11 as a program, and have fun!
 """
 
 import tkinter as tk
@@ -27,10 +27,10 @@ from dialogues import (
     YesNoDialogue,
 )
 from imagehandler import ImageHandler
+from installationmanager import InstallationManager
 from releasemanager import ReleaseManager
 
 
-# TODO: Access installer from game itself
 class FreeFormMinesweeper:
     """A game of FreeForm Minesweeper."""
 
@@ -557,6 +557,21 @@ class FreeFormMinesweeper:
         else:
             self.rm.outdated_notice(force_message=True)
 
+    def uninstall_game(self) -> None:
+        a = tk.BooleanVar()
+        YesNoDialogue(
+            self.game_root,
+            title='Uninstall FreeForm Minesweeper?',
+            question=(
+                'Are you sure you wish to uninstall FreeForm Minesweeper?\n'
+                'This cannot be undone without reinstalling the game.'
+            ),
+            answer=a,
+        )
+        if a.get():
+            InstallationManager(Path()).uninstall()
+            self.quit_game(False)
+
     # UI Generation Methods
 
     def init_style(self) -> None:
@@ -1081,6 +1096,10 @@ class FreeFormMinesweeper:
         help_menu.add_command(
             label='Check for Updates',
             command=self.check_for_updates,
+        )
+        help_menu.add_command(
+            label='Uninstall',
+            command=self.uninstall_game,
         )
         help_menu.add_command(
             label='Copyright',
