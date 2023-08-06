@@ -569,7 +569,7 @@ class FreeFormMinesweeper:
             answer=a,
         )
         if a.get():
-            InstallationManager(Path()).uninstall()
+            InstallationManager(Path(), False).uninstall()
             self.quit_game(False)
 
     # UI Generation Methods

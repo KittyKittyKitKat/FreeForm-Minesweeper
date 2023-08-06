@@ -24,7 +24,7 @@ ICON = b'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAG9XpUWHRSYXcgcHJvZmlsZSB
 class InstallationManager:
     """Install, update, and uninstall FreeForm Minesweeper."""
 
-    def __init__(self, prepend: Path) -> None:
+    def __init__(self, prepend: Path, create_window: bool = True) -> None:
         """Initialize the Installation Manager.
 
         Args:
@@ -32,13 +32,14 @@ class InstallationManager:
         """
         self.alive = False
         self.game_files = prepend / Path('freeform_minesweeper')
-        self.root = tk.Tk()
-        self.root.iconphoto(False, tk.PhotoImage(data=b64decode(ICON)))
-        self.root.iconname('Install FreeForm Minesweeper')
-        self.root.title('Install FreeForm Minesweeper')
-        self.root.resizable(False, False)
-        self.root.wm_protocol('WM_DELETE_WINDOW', self.close)
-        self.main_frame = ttk.Frame(self.root, padding=5)
+        if create_window:
+            self.root = tk.Tk()
+            self.root.iconphoto(False, tk.PhotoImage(data=b64decode(ICON)))
+            self.root.iconname('Install FreeForm Minesweeper')
+            self.root.title('Install FreeForm Minesweeper')
+            self.root.resizable(False, False)
+            self.root.wm_protocol('WM_DELETE_WINDOW', self.close)
+            self.main_frame = ttk.Frame(self.root, padding=5)
         try:
             self.home_directory = Path.home()
         except RuntimeError:
@@ -82,8 +83,9 @@ class InstallationManager:
             )
             return
 
-        self.init_ui()
-        self.alive = True
+        if create_window:
+            self.init_ui()
+            self.alive = True
 
     def init_ui(self) -> None:
         """Construct UI."""
@@ -239,6 +241,8 @@ class InstallationManager:
 
     def done(self) -> None:
         """Finished screen."""
+        if not hasattr(self, 'main_frame'):
+            return
         for widget in self.main_frame.winfo_children():
             widget.destroy()
         done_label = ttk.Label(
