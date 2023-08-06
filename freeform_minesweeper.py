@@ -557,21 +557,6 @@ class FreeFormMinesweeper:
         else:
             self.rm.outdated_notice(force_message=True)
 
-    def uninstall_game(self) -> None:
-        a = tk.BooleanVar()
-        YesNoDialogue(
-            self.game_root,
-            title='Uninstall FreeForm Minesweeper?',
-            question=(
-                'Are you sure you wish to uninstall FreeForm Minesweeper?\n'
-                'This cannot be undone without reinstalling the game.'
-            ),
-            answer=a,
-        )
-        if a.get():
-            InstallationManager(Path(), False).uninstall()
-            self.quit_game(False)
-
     # UI Generation Methods
 
     def init_style(self) -> None:
@@ -1096,10 +1081,6 @@ class FreeFormMinesweeper:
         help_menu.add_command(
             label='Check for Updates',
             command=self.check_for_updates,
-        )
-        help_menu.add_command(
-            label='Uninstall',
-            command=self.uninstall_game,
         )
         help_menu.add_command(
             label='Copyright',
