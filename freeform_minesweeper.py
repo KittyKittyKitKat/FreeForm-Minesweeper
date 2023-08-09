@@ -27,10 +27,10 @@ from dialogues import (
     YesNoDialogue,
 )
 from imagehandler import ImageHandler
-from installationmanager import InstallationManager
 from releasemanager import ReleaseManager
 
 
+# Potential rework of dark mode square graphics
 class FreeFormMinesweeper:
     """A game of FreeForm Minesweeper."""
 
@@ -141,6 +141,9 @@ class FreeFormMinesweeper:
 
         self.prompt_leaderboard_save = tk.BooleanVar(value=True)
 
+        self.classic_ui = tk.BooleanVar(value=False)
+        self.classic_ui.trace_add('write', lambda *_: self.classic_ui_trace())
+
         # Values related to setting the options
         self.theme: ImageHandler.ImageTheme = self.ih.ImageTheme.LIGHT
         self.background_colour = self.LIGHT_BACKGROUND_COLOUR
@@ -172,9 +175,8 @@ class FreeFormMinesweeper:
         self.init_style()
         self.init_window()
         self.init_toolbar()
-        self.game_root.update_idletasks()
         self.init_menu()
-        self.game_root.update_idletasks()
+        self.game_root.update()
         self.init_board()
         self.init_keybinds()
         self.game_root.title('FreeForm Minesweeper')
@@ -488,7 +490,7 @@ class FreeFormMinesweeper:
         """Respond to Adaptive UI setting."""
         if self.adaptive_ui.get():
             self.ui_collapse()
-        else:
+        elif not self.classic_ui.get():
             self.controls_frame.grid()
             self.menu_frame.grid_columnconfigure(5, weight=1)
             self.diff_frame.grid()
@@ -528,11 +530,34 @@ class FreeFormMinesweeper:
             self.ignore_toggle_key_held = False
         self.mode_key_down = False
 
+    def classic_ui_trace(self) -> None:
+        if self.classic_ui.get():
+            self.presets_frame.grid_remove()
+            self.menu_frame.grid_columnconfigure(0, weight=0)
+
+            self.diff_frame.grid_remove()
+            self.menu_frame.grid_columnconfigure(4, weight=0)
+
+            self.controls_frame.grid_remove()
+            self.menu_frame.grid_columnconfigure(5, weight=0)
+
+            self.leaderboard_button.grid_remove()
+            self.new_game_button.grid_configure(padx=0)
+
+            self.mode_switch_button.grid_remove()
+
+            self.play_button.grid_remove()
+        else:
+            self.mode_switch_button.grid()
+            self.play_button.grid()
+            self.ui_collapse()
+
     def reset_settings(self) -> None:
         """Reset all game settings to defaults."""
         self.multimine.set(False)
         self.grace_rule.set(True)
         self.flagless.set(False)
+        self.classic_ui.set(False)
         self.difficulty.set(self.DIFF_EASY)
         if self.board_scale.get() == self.SMALL_SCALE:
             self.board_scale.set(self.LARGE_SCALE)
@@ -642,7 +667,10 @@ class FreeFormMinesweeper:
 
         self.board_frame.grid_propagate(False)
         self.main_frame.grid(row=0, column=0, sticky=tk.NSEW)
-        self.menu_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        self.board_frame.config(
+            height=self.board_square_size_px * self.rows.get(),
+            width=self.board_square_size_px * self.columns.get(),
+        )
         self.board_frame.grid(row=1, column=0, sticky=tk.NSEW)
 
     def init_keybinds(self) -> None:
@@ -999,6 +1027,10 @@ class FreeFormMinesweeper:
             label='Adaptive UI',
             variable=self.adaptive_ui,
         )
+        options_menu.add_checkbutton(
+            label='Classic UI',
+            variable=self.classic_ui,
+        )
         theme_menu = tk.Menu(
             self.menubar,
             font=self.SMALL_FONT,
@@ -1105,6 +1137,9 @@ class FreeFormMinesweeper:
         self.menu_frame.grid_columnconfigure(3, weight=1)
         self.menu_frame.grid_columnconfigure(4, weight=1)
         self.menu_frame.grid_columnconfigure(5, weight=1)
+
+        self.presets_frame.grid_columnconfigure(0, weight=1)
+        self.presets_frame.grid_columnconfigure(1, weight=1)
         preset_easy = ttk.Button(
             self.presets_frame,
             text='Easy',
@@ -1151,6 +1186,9 @@ class FreeFormMinesweeper:
         preset_expert.grid(row=1, column=1, sticky=tk.NSEW)
         self.presets_frame.grid(row=0, column=0)
 
+        self.flags_frame.grid_columnconfigure(0, weight=1)
+        self.flags_frame.grid_columnconfigure(1, weight=1)
+        self.flags_frame.grid_columnconfigure(2, weight=1)
         flag_left = ttk.Label(
             self.flags_frame,
             image=self.ih.lookup(
@@ -1247,14 +1285,26 @@ class FreeFormMinesweeper:
             cursor='hand2',
         )
 
+        self.mswpr_frame.grid_columnconfigure(0, weight=1)
+        self.mswpr_frame.grid_columnconfigure(1, weight=1)
+        self.mswpr_frame.grid_columnconfigure(2, weight=1)
         self.mode_switch_button.grid(row=0, column=0, pady=3, sticky=tk.NSEW)
-        self.new_game_button.grid(row=0, column=1, padx=5, pady=3, sticky=tk.NSEW)
+        self.new_game_button.grid(
+            row=0,
+            column=1,
+            padx=self.UI_PADDING,
+            pady=3,
+            sticky=tk.NSEW,
+        )
         self.leaderboard_button.grid(row=0, column=2, pady=3, sticky=tk.NSEW)
         self.stop_button.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW)
         self.stop_button.grid_remove()
         self.play_button.grid(row=1, column=0, columnspan=3, sticky=tk.NSEW)
         self.mswpr_frame.grid(row=0, column=2)
 
+        self.timer_frame.grid_columnconfigure(0, weight=1)
+        self.timer_frame.grid_columnconfigure(1, weight=1)
+        self.timer_frame.grid_columnconfigure(2, weight=1)
         timer_left = ttk.Label(
             self.timer_frame,
             image=self.ih.lookup(
@@ -1290,6 +1340,10 @@ class FreeFormMinesweeper:
         timer_right.grid(row=0, column=2, sticky=tk.NSEW)
         self.timer_frame.grid(row=0, column=3)
 
+        self.diff_frame.grid_columnconfigure(0, weight=1)
+        self.diff_frame.grid_columnconfigure(1, weight=1)
+        self.diff_frame.grid_columnconfigure(2, weight=1)
+        self.diff_frame.grid_columnconfigure(3, weight=1)
         diff_label = ttk.Label(
             self.diff_frame,
             text='Difficulty',
@@ -1336,17 +1390,19 @@ class FreeFormMinesweeper:
 
         diff_label.grid(
             row=0,
-            column=1,
+            column=0,
             columnspan=4,
             sticky=tk.NSEW,
             pady=(0, self.UI_PADDING),
         )
-        diff_1.grid(row=1, column=1, sticky=tk.NSEW)
-        diff_2.grid(row=1, column=2, sticky=tk.NSEW)
-        diff_3.grid(row=1, column=3, sticky=tk.NSEW)
-        diff_4.grid(row=1, column=4, sticky=tk.NSEW)
+        diff_1.grid(row=1, column=0, sticky=tk.NSEW)
+        diff_2.grid(row=1, column=1, sticky=tk.NSEW)
+        diff_3.grid(row=1, column=2, sticky=tk.NSEW)
+        diff_4.grid(row=1, column=3, sticky=tk.NSEW)
         self.diff_frame.grid(row=0, column=4)
 
+        self.controls_frame.grid_columnconfigure(0, weight=1)
+        self.controls_frame.grid_columnconfigure(1, weight=1)
         fill_button = ttk.Button(
             self.controls_frame,
             text='Fill',
@@ -1390,12 +1446,11 @@ class FreeFormMinesweeper:
         center_board_button.grid(row=1, column=2, sticky=tk.NSEW)
         self.controls_frame.grid(row=0, column=5)
 
+        self.menu_frame.grid(row=0, column=0, sticky=tk.NSEW)
+
     def init_board(self) -> None:
         """Set up the squares on the board."""
-        self.board_frame.config(
-            height=self.board_square_size_px * self.rows.get(),
-            width=self.board_square_size_px * self.columns.get(),
-        )
+
         for x in range(self.rows.get()):
             for y in range(self.columns.get()):
                 # self.game_root.update_idletasks()
@@ -1507,25 +1562,30 @@ class FreeFormMinesweeper:
         if curr_columns < thresholds[0]:
             self.controls_frame.grid_remove()
             self.menu_frame.grid_columnconfigure(5, weight=0)
-        else:
+        elif not self.classic_ui.get():
             self.controls_frame.grid()
             self.menu_frame.grid_columnconfigure(5, weight=1)
+
         if curr_columns < thresholds[1]:
             self.diff_frame.grid_remove()
             self.menu_frame.grid_columnconfigure(4, weight=0)
-        else:
+        elif not self.classic_ui.get():
             self.diff_frame.grid()
             self.menu_frame.grid_columnconfigure(4, weight=1)
+
         if curr_columns < thresholds[2]:
             self.presets_frame.grid_remove()
             self.menu_frame.grid_columnconfigure(0, weight=0)
-        else:
+        elif not self.classic_ui.get():
             self.presets_frame.grid()
             self.menu_frame.grid_columnconfigure(0, weight=1)
+
         if curr_columns < thresholds[3]:
             self.leaderboard_button.grid_remove()
-        else:
+            self.new_game_button.grid_configure(padx=0)
+        elif not self.classic_ui.get():
             self.leaderboard_button.grid()
+            self.new_game_button.grid_configure(padx=self.UI_PADDING)
 
     def left_mouse_press_handler(self, event: tk.Event) -> None:
         """Handle mouse press events in the board.
@@ -2184,7 +2244,8 @@ class FreeFormMinesweeper:
                 button.state(['disabled'])
         self.lock_toolbar()
         self.play_button.grid_remove()
-        self.stop_button.grid()
+        if not self.classic_ui.get():
+            self.stop_button.grid()
         self.clear_history()
         for square in squares:
             assert isinstance(square, BoardSquare)
@@ -2259,7 +2320,8 @@ class FreeFormMinesweeper:
                 button.state(['!disabled'])
         self.unlock_toolbar()
         self.stop_button.grid_remove()
-        self.play_button.grid()
+        if not self.classic_ui.get():
+            self.play_button.grid()
         for square in self.board_frame.grid_slaves():
             assert isinstance(square, BoardSquare)
             if not square.enabled:
