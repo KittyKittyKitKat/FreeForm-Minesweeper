@@ -170,6 +170,7 @@ class FreeFormMinesweeper:
         self.flags_placed = 0
         self.squares_to_win = 0
         self.time_elapsed = 0.0
+        self.currently_held_square = None
 
         # Set up all UI elements, split into methods for readability
         self.init_style()
@@ -1587,6 +1588,32 @@ class FreeFormMinesweeper:
             self.leaderboard_button.grid()
             self.new_game_button.grid_configure(padx=self.UI_PADDING)
 
+    def sweep_click_hold_handler(self, square: BoardSquare) -> None:
+        if not square.enabled or not square.covered:
+                return
+        self.new_game_button.config(
+            image=self.ih.lookup(
+                self.ui_square_size,
+                self.theme,
+                self.ih.ImageCategory.UI,
+                'shocked',
+            )
+        )
+        if self.currently_held_square is not None:
+            self.currently_held_square.image = self.ih.lookup(
+                self.board_square_size,
+                self.theme,
+                self.ih.ImageCategory.BOARD,
+                'covered',
+            )
+        self.currently_held_square = square
+        square.image = self.ih.lookup(
+            self.board_square_size,
+            self.theme,
+            self.ih.ImageCategory.BOARD,
+            '0',
+        )
+
     def left_mouse_press_handler(self, event: tk.Event) -> None:
         """Handle mouse press events in the board.
 
@@ -1598,21 +1625,7 @@ class FreeFormMinesweeper:
             self.square_toggle_enabled(square)
             self.draw_history_step.append(square)
         elif self.state is self.State.SWEEP:
-            if self.click_mode.get() in (
-                self.ClickMode.UNCOVER,
-                self.ClickMode.FLAGLESS,
-            ):
-                if not square.enabled or square.flag_count:
-                    return
-                self.uncover_square(square)
-                if square.mine_count:
-                    return
-                if square.value == 0:
-                    self.chord(square)
-                if self.squares_cleared == self.squares_to_win:
-                    self.game_won()
-            elif self.click_mode.get() == self.ClickMode.FLAG:
-                self.add_flag(square)
+            self.sweep_click_hold_handler(square)
 
     def right_mouse_press_handler(self, event: tk.Event) -> None:
         """Handle mouse press events in the board.
@@ -1639,6 +1652,63 @@ class FreeFormMinesweeper:
         """
         if self.state is self.State.DRAW:
             self.inc_history()
+        elif self.state is self.State.SWEEP:
+            square = self.currently_held_square
+            if square is None:
+                return
+            x = (
+                event.x_root - square.master.winfo_rootx()
+            ) // self.board_square_size_px
+            y = (
+                event.y_root - square.master.winfo_rooty()
+            ) // self.board_square_size_px
+            square = None
+            if y in range(self.rows.get()) and x in range(self.columns.get()):
+                square = self.board_frame.grid_slaves(row=y, column=x)[0]
+
+            if square is None or not square.enabled or not square.covered:
+                self.new_game_button.config(
+                    image=self.ih.lookup(
+                        self.ui_square_size,
+                        self.theme,
+                        self.ih.ImageCategory.UI,
+                        'new',
+                    )
+                )
+                if self.currently_held_square is not None:
+                    self.currently_held_square.image = self.ih.lookup(
+                        self.ui_square_size,
+                        self.theme,
+                        self.ih.ImageCategory.BOARD,
+                        'covered',
+                    )
+                    self.currently_held_square = None
+                return
+
+            self.currently_held_square = None
+            self.new_game_button.config(
+                image=self.ih.lookup(
+                    self.ui_square_size,
+                    self.theme,
+                    self.ih.ImageCategory.UI,
+                    'new',
+                )
+            )
+            if self.click_mode.get() in (
+                self.ClickMode.UNCOVER,
+                self.ClickMode.FLAGLESS,
+            ):
+                if not square.enabled or square.flag_count:
+                    return
+                self.uncover_square(square)
+                if square.mine_count:
+                    return
+                if square.value == 0:
+                    self.chord(square)
+                if self.squares_cleared == self.squares_to_win:
+                    self.game_won()
+            elif self.click_mode.get() == self.ClickMode.FLAG:
+                self.add_flag(square)
 
     def double_mouse_handler(self, event: tk.Event) -> None:
         """Handle double mouse press events in the board.
@@ -1671,20 +1741,27 @@ class FreeFormMinesweeper:
         Args:
             event: Tkinter event.
         """
-        if self.state is self.State.DRAW:
-            initial_square: BoardSquare = event.widget
-            x = (
+        initial_square: BoardSquare = event.widget
+        x = (
                 event.x_root - initial_square.master.winfo_rootx()
-            ) // self.board_square_size_px
-            y = (
-                event.y_root - initial_square.master.winfo_rooty()
-            ) // self.board_square_size_px
-            if y in range(self.rows.get()) and x in range(self.columns.get()):
-                square = self.board_frame.grid_slaves(row=y, column=x)[0]
-                assert isinstance(square, BoardSquare)
-                if square.enabled != initial_square.enabled:
-                    self.square_toggle_enabled(square)
-                    self.draw_history_step.append(square)
+        ) // self.board_square_size_px
+        y = (
+            event.y_root - initial_square.master.winfo_rooty()
+        ) // self.board_square_size_px
+        square = None
+        if y in range(self.rows.get()) and x in range(self.columns.get()):
+            square = self.board_frame.grid_slaves(row=y, column=x)[0]
+
+        if not isinstance(square, BoardSquare):
+            return
+
+        if self.state is self.State.DRAW:
+            if square.enabled != initial_square.enabled:
+                self.square_toggle_enabled(square)
+                self.draw_history_step.append(square)
+        elif self.state is self.State.SWEEP:
+            if self.currently_held_square is not None:
+                self.sweep_click_hold_handler(square)
 
     def inc_history(self) -> None:
         """Add the current history step to the history."""
