@@ -683,7 +683,7 @@ class FreeFormMinesweeper:
             lambda *_: self.save_board(),
         )
         self.game_root.bind(
-            '<Control-KeyPress-s>',
+            '<Control-KeyPress-q>',
             lambda *_: self.quit_game(),
         )
 
