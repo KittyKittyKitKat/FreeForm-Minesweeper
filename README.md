@@ -1,4 +1,4 @@
-[comment]: <> (Copyright © Simon Harris-Palmer 2023. All rights reserved.)
+[comment]: <> (Copyright © Nyxian Harris-Palmer 2024. All rights reserved.)
 
 # FreeForm Minesweeper
 FreeForm Minesweeper is the game of Minesweeper as you know and love, but now with the ability to play the classic game on any shape of board you can draw!

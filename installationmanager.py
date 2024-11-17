@@ -1,4 +1,4 @@
-# Copyright © Simon Harris-Palmer 2023. All rights reserved.
+# Copyright © Nyxian Harris-Palmer 2024. All rights reserved.
 
 """Installation Manager for FreeForm Minesweeper.
 

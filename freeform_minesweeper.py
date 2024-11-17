@@ -1,4 +1,4 @@
-# Copyright © Simon Harris-Palmer 2023. All rights reserved.
+# Copyright © Nyxian Harris-Palmer 2024. All rights reserved.
 
 """The game FreeForm Minesweeper, bundled with MultiMinesweeper mode.
 
@@ -1119,7 +1119,7 @@ class FreeFormMinesweeper:
             label='Copyright',
             command=lambda: AcknowledgementDialogue(
                 self.game_root,
-                'Copyright \N{COPYRIGHT SIGN} Simon Harris-Palmer 2023. All rights reserved.',
+                'Copyright \N{COPYRIGHT SIGN} Nyxian Harris-Palmer 2024. All rights reserved.',
                 title='FreeForm Minesweeper Copyright',
             ),
         )
